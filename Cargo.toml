@@ -4,5 +4,9 @@ version = "0.1.0"
 authors = ["Andrew Gaspar <andrew.gaspar@outlook.com>"]
 
 [dependencies]
-cargo_metadata = "0.5.1"
 clap = { version = "2.31.1", default-features=false }
+
+[dependencies.cargo_metadata]
+version = "0.5.1"
+git = "https://github.com/AndrewGaspar/cargo_metadata"
+branch = "target_directory"

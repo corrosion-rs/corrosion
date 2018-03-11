@@ -91,7 +91,7 @@ function(add_cargo_build target_name path_to_toml)
 
     if (CMAKE_VS_PLATFORM_NAME)
         set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
-    elseif(CMAKE_CONFIGURE_DEPENDS)
+    elseif(CMAKE_CONFIGURATION_TYPES)
         set (build_dir "$<CONFIG>")
     else()
         set (build_dir .)
