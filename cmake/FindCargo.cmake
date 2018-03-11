@@ -1,0 +1,102 @@
+# search for Cargo here and set up a bunch of cool flags and stuff
+
+find_program(CARGO
+    cargo
+    HINTS $ENV{HOME}/.cargo/bin)
+
+message(STATUS "Found Cargo: ${CARGO}")
+
+set(CARGO_BUILD_FLAGS "" CACHE STRING "Flags to pass to cargo build")
+set(CARGO_BUILD_FLAGS_DEBUG "" CACHE STRING
+    "Flags to pass to cargo build in Debug configuration")
+set(CARGO_BUILD_FLAGS_RELEASE --release CACHE STRING
+    "Flags to pass to cargo build in Release configuration")
+set(CARGO_BUILD_FLAGS_MINSIZEREL --release CACHE STRING
+    "Flags to pass to cargo build in MinSizeRel configuration")
+set(CARGO_BUILD_FLAGS_RELWITHDEBINFO --release CACHE STRING
+    "Flags to pass to cargo build in RelWithDebInfo configuration")
+
+set(CARGO_RUST_FLAGS "" CACHE STRING "Flags to pass to rustc")
+set(CARGO_RUST_FLAGS_DEBUG "" CACHE STRING
+    "Flags to pass to rustc in Debug Configuration")
+set(CARGO_RUST_FLAGS_RELEASE "" CACHE STRING
+    "Flags to pass to rustc in Release Configuration")
+set(CARGO_RUST_FLAGS_MINSIZEREL -C opt-level=z CACHE STRING
+    "Flags to pass to rustc in MinSizeRel Configuration")
+set(CARGO_RUST_FLAGS_RELWITHDEBINFO -g CACHE STRING
+    "Flags to pass to rustc in RelWithDebInfo Configuration")
+    
+if (WIN32)
+    set(CARGO_BUILD_SCRIPT cargo_build.cmd)
+    set(CARGO_BUILD ${CARGO_BUILD_SCRIPT})
+else()
+    set(CARGO_BUILD_SCRIPT cargo_build.sh)
+    set(CARGO_BUILD ./${CARGO_BUILD_SCRIPT})
+endif()
+
+function(_gen_config config_type use_config_dir)
+    string(TOUPPER "${config_type}" UPPER_CONFIG_TYPE)
+
+    if(use_config_dir)
+        set(_DESTINATION_DIR ${CMAKE_BINARY_DIR}/${CMAKE_VS_PLATFORM_NAME}/${config_type})
+    else()
+        set(_DESTINATION_DIR ${CMAKE_BINARY_DIR})
+    endif()
+
+    set(CARGO_CONFIG ${_DESTINATION_DIR}/.cargo/config)
+
+    file(WRITE ${CARGO_CONFIG}
+"\
+[build]
+target-dir=\"cargo/build\"
+")
+
+    string(REPLACE ";" "\", \"" RUSTFLAGS "${CARGO_RUST_FLAGS}" "${CARGO_RUST_FLAGS_${UPPER_CONFIG_TYPE}}")
+
+    if (RUSTFLAGS)
+        file(APPEND ${CARGO_CONFIG}
+            "rustflags = [\"${RUSTFLAGS}\"]\n")
+    endif()
+
+    set(_CARGO_BUILD_FLAGS ${CARGO_BUILD_FLAGS} ${CARGO_BUILD_FLAGS_${UPPER_CONFIG_TYPE}})
+
+    get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
+
+
+    configure_file(
+        ${_moddir}/cmds/${CARGO_BUILD_SCRIPT}.in
+        ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${CARGO_BUILD_SCRIPT})
+
+    file(COPY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${CARGO_BUILD_SCRIPT}
+        DESTINATION ${_DESTINATION_DIR}
+        FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ
+        GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+endfunction(_gen_config)
+
+if (CMAKE_CONFIGURATION_TYPES)
+    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+        _gen_config(${config_type} ON)
+    endforeach()
+elseif(CMAKE_BUILD_TYPE)
+    _gen_config(${CMAKE_BUILD_TYPE} OFF)
+else()
+    message(STATUS "Defaulting Cargo to build debug")
+    _gen_config(Debug OFF)
+endif()
+
+function(add_cargo_build target_name path_to_toml)
+    if (NOT IS_ABSOLUTE "${path_to_toml}")
+        set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
+    endif()
+
+    ExternalProject_Add(
+        ${target_name}
+        DOWNLOAD_COMMAND ""
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${_BUILD_DIR} ${CARGO_BUILD} --manifest-path ${path_to_toml}
+        BINARY_DIR "${CMAKE_BINARY_DIR}"
+        INSTALL_COMMAND ""
+        PREFIX cargo
+        BUILD_ALWAYS ON
+    )
+endfunction()
