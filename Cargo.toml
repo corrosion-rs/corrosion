@@ -1,5 +1,5 @@
 [package]
-name = "cmake-gen"
+name = "cmake-cargo-gen"
 version = "0.1.0"
 authors = ["Andrew Gaspar <andrew.gaspar@outlook.com>"]
 

@@ -1,15 +1,16 @@
 extern crate cargo_metadata;
 extern crate clap;
 
-use clap::{App, Arg};
+use clap::{App, Arg, SubCommand};
 
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::io::{stdout, Write};
 use std::path::Path;
 use std::process::exit;
 
 const MANIFEST_PATH: &str = "manifest-path";
 const OUT_FILE: &str = "out-file";
+const PRINT_ROOT: &str = "print-root";
 
 fn main() {
     let matches = App::new("CMake Generator for Cargo")
@@ -29,6 +30,9 @@ fn main() {
                 .long("out-file")
                 .help("Output CMake file name. Defaults to stdout.")
                 .takes_value(true),
+        )
+        .subcommand(
+            SubCommand::with_name(PRINT_ROOT)
         )
         .get_matches();
 
@@ -50,8 +54,17 @@ fn main() {
         }
     };
 
+    if let Some(_) = matches.subcommand_matches(PRINT_ROOT) {
+        println!("{}", metadata.workspace_root);
+        std::process::exit(0);
+    }
+
     let mut out_file: Box<Write> = if let Some(path) = matches.value_of(OUT_FILE) {
-        let file = File::create(Path::new(path)).expect("Unable to open out-file!");
+        let path = Path::new(path);
+        if let Some(parent) = path.parent() {
+            create_dir_all(parent).expect("Failed to create directory!");
+        }
+        let file = File::create(path).expect("Unable to open out-file!");
         Box::new(file)
     } else {
         Box::new(stdout())
@@ -61,13 +74,13 @@ fn main() {
 "\
 cmake_minimum_required (VERSION 3.0)
 find_package(Cargo REQUIRED)
-
-
 ").unwrap();
 
-    // writeln!(out_file)
-
-    // for package in metadata.packages {
-    //     write!(out_file, "{:?}", package).expect("File I/O error!");
-    // }
+    for package in &metadata.packages {
+        writeln!(out_file,
+"\
+add_cargo_build({} \"{}\")
+",
+        package.name, package.manifest_path.replace("\\", "\\\\")).unwrap();
+    }
 }

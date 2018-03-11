@@ -1,4 +1,5 @@
 # search for Cargo here and set up a bunch of cool flags and stuff
+include(ExternalProject)
 
 find_program(CARGO
     cargo
@@ -62,7 +63,6 @@ target-dir=\"cargo/build\"
 
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
 
-
     configure_file(
         ${_moddir}/cmds/${CARGO_BUILD_SCRIPT}.in
         ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${CARGO_BUILD_SCRIPT})
@@ -89,11 +89,19 @@ function(add_cargo_build target_name path_to_toml)
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
     endif()
 
+    if (CMAKE_VS_PLATFORM_NAME)
+        set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
+    elseif(CMAKE_CONFIGURE_DEPENDS)
+        set (build_dir "$<CONFIG>")
+    else()
+        set (build_dir .)
+    endif()
+
     ExternalProject_Add(
         ${target_name}
         DOWNLOAD_COMMAND ""
         CONFIGURE_COMMAND ""
-        BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${_BUILD_DIR} ${CARGO_BUILD} --manifest-path ${path_to_toml}
+        BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_BUILD} --manifest-path ${path_to_toml}
         BINARY_DIR "${CMAKE_BINARY_DIR}"
         INSTALL_COMMAND ""
         PREFIX cargo

@@ -57,7 +57,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmake-gen"
+name = "cmake-cargo-gen"
 version = "0.1.0"
 dependencies = [
  "cargo_metadata 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
