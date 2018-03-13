@@ -2,7 +2,8 @@
 name = "cmake-cargo-gen"
 version = "0.1.0"
 authors = ["Andrew Gaspar <andrew.gaspar@outlook.com>"]
+license = "MIT"
 
 [dependencies]
-clap = { version = "2.31.1", default-features=false }
+clap = { version = "2.31.1", default-features = false }
 cargo_metadata = "0.5.2"

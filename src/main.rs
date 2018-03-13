@@ -9,11 +9,21 @@ use std::path::Path;
 use std::process::exit;
 
 const MANIFEST_PATH: &str = "manifest-path";
-const TARGET_DIRECTORY: &str = "target-directory";
 const OUT_FILE: &str = "out-file";
+const CONFIGURATION_TYPE: &str = "configuration-type";
+const CONFIGURATION_TYPES: &str = "configuration-types";
+const CONFIGURATION_ROOT: &str = "configuration-root";
 
 const PRINT_ROOT: &str = "print-root";
 const GEN_CMAKE: &str = "gen-cmake";
+
+fn config_type_target_folder(config_type: Option<&str>) -> &'static str {
+    match config_type {
+        Some("Debug") | None => "debug",
+        Some("Release") | Some("RelWithDebInfo") | Some("MinSizeRel") => "release",
+        Some(config_type) => panic!("Unknown config_type {}!", config_type),
+    }
+}
 
 fn main() {
     let matches = App::new("CMake Generator for Cargo")
@@ -31,12 +41,38 @@ fn main() {
         .subcommand(
             SubCommand::with_name(GEN_CMAKE)
                 .arg(
-                    Arg::with_name(TARGET_DIRECTORY)
-                        .long("target-directory")
+                    Arg::with_name(CONFIGURATION_ROOT)
+                        .long("configuration-root")
                         .value_name("DIRECTORY")
-                        .help("Specifies the directory where build artifacts are located")
                         .takes_value(true)
-                        .required(true),
+                        .help(
+                            "Specifies a root directory for configuration folders. E.g. Win32 \
+                             in VS Generator.",
+                        ),
+                )
+                .arg(
+                    Arg::with_name(CONFIGURATION_TYPE)
+                        .long("configuration-type")
+                        .value_name("type")
+                        .takes_value(true)
+                        .conflicts_with(CONFIGURATION_TYPES)
+                        .help(
+                            "Specifies the configuration type to use in a single configuration \
+                             environment.",
+                        ),
+                )
+                .arg(
+                    Arg::with_name(CONFIGURATION_TYPES)
+                        .long("configuration-types")
+                        .value_name("types")
+                        .takes_value(true)
+                        .multiple(true)
+                        .require_delimiter(true)
+                        .conflicts_with(CONFIGURATION_TYPE)
+                        .help(
+                            "Specifies the configuration types to use in a multi-configuration \
+                             environment.",
+                        ),
                 )
                 .arg(
                     Arg::with_name(OUT_FILE)
@@ -73,8 +109,6 @@ fn main() {
     }
 
     let matches = matches.subcommand_matches(GEN_CMAKE).unwrap();
-
-    let target_directory = matches.value_of(TARGET_DIRECTORY).unwrap();
 
     let mut out_file: Box<Write> = if let Some(path) = matches.value_of(OUT_FILE) {
         let path = Path::new(path);
@@ -126,7 +160,30 @@ find_package(Cargo REQUIRED)
 
     writeln!(out_file).unwrap();
 
-    // Output staticlib information
+    let config_root = Path::new(matches.value_of(CONFIGURATION_ROOT).unwrap_or("."));
+
+    let mut config_folders = Vec::new();
+    if let Some(config_types) = matches.values_of(CONFIGURATION_TYPES) {
+        for config_type in config_types {
+            let config_folder = config_root.join(config_type);
+            assert!(
+                config_folder.join(".cargo/config").exists(),
+                "Target config_folder '{}' must contain a '.cargo/config'.",
+                config_folder.display()
+            );
+            config_folders.push((Some(config_type), config_folder));
+        }
+    } else {
+        let config_type = matches.value_of(CONFIGURATION_TYPE);
+        let config_folder = config_root;
+        assert!(
+            config_folder.join(".cargo/config").exists(),
+            "Target config_folder '{}' must contain a '.cargo/config'.",
+            config_folder.display()
+        );
+        config_folders.push((config_type, config_folder.to_path_buf()));
+    }
+
     for package in &metadata.packages {
         for staticlib in package
             .targets
@@ -134,56 +191,6 @@ find_package(Cargo REQUIRED)
             .filter(|t| t.kind.iter().any(|k| k == "staticlib"))
         {
             writeln!(out_file, "add_library({} STATIC IMPORTED)", staticlib.name).unwrap();
-
-            writeln!(
-                out_file,
-                "\
-if (WIN32)
-    set_property(TARGET {} PROPERTY IMPORTED_LOCATION {}/debug/{}.lib)
-    set_property(TARGET {} PROPERTY IMPORTED_LOCATION_DEBUG {}/debug/{}.lib)
-else()
-    set_property(TARGET {} PROPERTY IMPORTED_LOCATION {}/debug/lib{}.a)
-    set_property(TARGET {} PROPERTY IMPORTED_LOCATION_DEBUG {}/debug/lib{}.a)
-endif()",
-                // WIN32 set_property
-                staticlib.name,
-                target_directory.replace("\\", "\\\\"),
-                staticlib.name.replace("-", "_"),
-                // WIN32 set_property
-                staticlib.name,
-                target_directory.replace("\\", "\\\\"),
-                staticlib.name.replace("-", "_"),
-                // set_property
-                staticlib.name,
-                target_directory.replace("\\", "\\\\"),
-                staticlib.name.replace("-", "_"),
-                // set_property
-                staticlib.name,
-                target_directory.replace("\\", "\\\\"),
-                staticlib.name.replace("-", "_"),
-            ).unwrap();
-
-            for config in &["Release", "MinSizeRel", "RelWithDebInfo"] {
-                writeln!(
-                    out_file,
-                    "\
-if (WIN32)
-    set_property(TARGET {} PROPERTY IMPORTED_LOCATION_{} {}/release/{}.lib)
-else()
-    set_property(TARGET {} PROPERTY IMPORTED_LOCATION_{} {}/release/lib{}.a)
-endif()",
-                    // WIN32 set_property
-                    staticlib.name,
-                    config.to_uppercase(),
-                    target_directory.replace("\\", "\\\\"),
-                    staticlib.name.replace("-", "_"),
-                    // set_property
-                    staticlib.name,
-                    config.to_uppercase(),
-                    target_directory.replace("\\", "\\\\"),
-                    staticlib.name.replace("-", "_"),
-                ).unwrap();
-            }
 
             writeln!(
                 out_file,
@@ -197,7 +204,8 @@ endif()",
                 out_file,
                 "\
 if (WIN32)
-    set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES advapi32 kernel32 shell32 userenv ws2_32)
+    set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES advapi32 kernel32 shell32 userenv \
+        ws2_32)
     set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES_DEBUG msvcrtd)
     set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES_RELEASE msvcrt)
     set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES_MINSIZEREL msvcrt)
@@ -213,5 +221,65 @@ endif()",
                 staticlib.name,
             ).unwrap();
         }
+    }
+
+    let metadata_manifest_path = Path::new(&metadata.workspace_root).join("Cargo.toml");
+
+    for (config_type, config_folder) in config_folders {
+        let current_dir = std::env::current_dir().expect("Could not get current directory!");
+        std::env::set_current_dir(config_folder)
+            .expect("Could not change directory to the Config directory!");
+
+        // Re-gathering the cargo metadata from here gets us a target_directory scoped to the
+        // configuration type.
+        let local_metadata = cargo_metadata::metadata(Some(&metadata_manifest_path))
+            .expect("Could not open Crate specific metadata!");
+
+        let imported_location = config_type.map_or("IMPORTED_LOCATION".to_owned(), |config_type| {
+            format!("IMPORTED_LOCATION_{}", config_type.to_uppercase())
+        });
+
+        let build_path = Path::new(&local_metadata.target_directory)
+            .join(config_type_target_folder(config_type));
+
+        // Output staticlib information
+        for package in &local_metadata.packages {
+            for staticlib in package
+                .targets
+                .iter()
+                .filter(|t| t.kind.iter().any(|k| k == "staticlib"))
+            {
+                let static_lib_name = staticlib.name.replace("-", "_");
+
+                writeln!(
+                    out_file,
+                    "\
+if (WIN32)
+    set_property(TARGET {} PROPERTY {} {})
+else()
+    set_property(TARGET {} PROPERTY {} {})
+endif()",
+                    // WIN32 set_property
+                    staticlib.name,
+                    imported_location,
+                    build_path
+                        .join(format!("{}.lib", static_lib_name))
+                        .to_str()
+                        .unwrap()
+                        .replace("\\", "\\\\"),
+                    // set_property
+                    staticlib.name,
+                    imported_location,
+                    build_path
+                        .join(format!("lib{}.a", static_lib_name))
+                        .to_str()
+                        .unwrap()
+                        .replace("\\", "\\\\"),
+                ).unwrap();
+            }
+        }
+
+        std::env::set_current_dir(current_dir)
+            .expect("Could not return to the build root directory!")
     }
 }

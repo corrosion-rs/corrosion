@@ -30,19 +30,27 @@ function(add_crate path_to_toml)
         ${CMAKE_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/cmake-cargo/${toml_dir_name}.dir/cargo-build.cmake)
 
     if (CMAKE_VS_PLATFORM_NAME)
-        set (build_dir "${CMAKE_VS_PLATFORM_NAME}/${CMAKE_CFG_INTDIR}")
-    elseif(CMAKE_CONFIGURATION_TYPES)
-        set (build_dir "${CMAKE_CFG_INTDIR}")
+        set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root
+            ${CMAKE_VS_PLATFORM_NAME})
+    endif()
+    
+    if(CMAKE_CONFIGURATION_TYPES)
+        string (REPLACE ";" "," _CONFIGURATION_TYPES
+            "${CMAKE_CONFIGURATION_TYPES}")
+        set (_CMAKE_CARGO_CONFIGURATION_TYPES --configuration-types
+            ${_CONFIGURATION_TYPES})
     elseif(CMAKE_BUILD_TYPE)
-        set (build_dir ".")
+        set (_CMAKE_CARGO_CONFIGURATION_TYPES --configuration-type
+            ${CMAKE_BUILD_TYPE})
     else()
-        set (build_dir ".")
+        # uses default build type
     endif()
 
     exec_program(
         ${_CMAKE_CARGO_GEN}
         ARGS ${_CMAKE_CARGO_GEN_ARGS} --manifest-path ${path_to_toml}
-            gen-cmake --target-directory "${build_dir}/cargo/build" -o ${generated_cmake})
+            gen-cmake ${_CMAKE_CARGO_CONFIGURATION_ROOT}
+            ${_CMAKE_CARGO_CONFIGURATION_TYPES} -o ${generated_cmake})
 
     include(${generated_cmake})
 endfunction(add_crate)
