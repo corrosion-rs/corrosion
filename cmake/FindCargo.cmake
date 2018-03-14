@@ -35,6 +35,8 @@ else()
     set(CARGO_BUILD ./${CARGO_BUILD_SCRIPT})
 endif()
 
+set(CARGO_TARGET "" CACHE STRING "The target triple to build for")
+
 function(_gen_config config_type use_config_dir)
     string(TOUPPER "${config_type}" UPPER_CONFIG_TYPE)
 
@@ -59,7 +61,12 @@ target-dir=\"cargo/build\"
             "rustflags = [\"${RUSTFLAGS}\"]\n")
     endif()
 
-    set(_CARGO_BUILD_FLAGS ${CARGO_BUILD_FLAGS} ${CARGO_BUILD_FLAGS_${UPPER_CONFIG_TYPE}})
+    if (CARGO_TARGET)
+        set(CARGO_BUILD_FLAGS ${CARGO_BUILD_FLAGS} --target ${CARGO_TARGET})
+    endif()
+
+    string(REPLACE ";" " " _CARGO_BUILD_FLAGS
+        "${CARGO_BUILD_FLAGS} ${CARGO_BUILD_FLAGS_${UPPER_CONFIG_TYPE}}")
 
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
 

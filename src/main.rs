@@ -13,6 +13,7 @@ const OUT_FILE: &str = "out-file";
 const CONFIGURATION_TYPE: &str = "configuration-type";
 const CONFIGURATION_TYPES: &str = "configuration-types";
 const CONFIGURATION_ROOT: &str = "configuration-root";
+const TARGET: &str = "target";
 
 const PRINT_ROOT: &str = "print-root";
 const GEN_CMAKE: &str = "gen-cmake";
@@ -75,6 +76,13 @@ fn main() {
                         ),
                 )
                 .arg(
+                    Arg::with_name(TARGET)
+                        .long("target")
+                        .value_name("triple")
+                        .takes_value(true)
+                        .help("The build target being used."),
+                )
+                .arg(
                     Arg::with_name(OUT_FILE)
                         .short("o")
                         .long("out-file")
@@ -133,8 +141,7 @@ find_package(Cargo REQUIRED)
     for package in &metadata.packages {
         writeln!(
             out_file,
-            "\
-             add_cargo_build(cargo_{} \"{}\")",
+            "add_cargo_build(cargo_{} \"{}\")",
             package.name,
             package.manifest_path.replace("\\", "\\\\")
         ).unwrap();
@@ -151,8 +158,7 @@ find_package(Cargo REQUIRED)
         for dependency in &package.dependencies {
             writeln!(
                 out_file,
-                "\
-                 add_dependencies(cargo_{} cargo_{})",
+                "add_dependencies(cargo_{} cargo_{})",
                 package.name, dependency.name
             ).unwrap();
         }
@@ -240,6 +246,7 @@ endif()",
         });
 
         let build_path = Path::new(&local_metadata.target_directory)
+            .join(matches.value_of(TARGET).unwrap_or(""))
             .join(config_type_target_folder(config_type));
 
         // Output staticlib information

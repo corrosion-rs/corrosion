@@ -1,5 +1,17 @@
 set(CARGO_DEV_MODE OFF CACHE INTERNAL
     "Only for use when making changes to cmake-cargo.")
+
+if (CMAKE_VS_PLATFORM_NAME)
+    if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+        set(CARGO_TARGET i686-pc-windows-msvc CACHE STRING
+            "The target triple to build for")
+    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        set(CARGO_TARGET x86_64-pc-windows-msvc CACHE STRING
+            "The target triple to build for")
+    else()
+        message(WARNING "VS Platform '${CMAKE_VS_PLATFORM_NAME}' not recognized")
+    endif()
+endif()
     
 if (CARGO_DEV_MODE)
     find_package(Cargo REQUIRED)
@@ -33,6 +45,10 @@ function(add_crate path_to_toml)
         set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root
             ${CMAKE_VS_PLATFORM_NAME})
     endif()
+
+    if (CARGO_TARGET)
+        set(_CMAKE_CARGO_TARGET --target ${CARGO_TARGET})
+    endif()
     
     if(CMAKE_CONFIGURATION_TYPES)
         string (REPLACE ";" "," _CONFIGURATION_TYPES
@@ -49,7 +65,7 @@ function(add_crate path_to_toml)
     exec_program(
         ${_CMAKE_CARGO_GEN}
         ARGS ${_CMAKE_CARGO_GEN_ARGS} --manifest-path ${path_to_toml}
-            gen-cmake ${_CMAKE_CARGO_CONFIGURATION_ROOT}
+            gen-cmake ${_CMAKE_CARGO_CONFIGURATION_ROOT} ${_CMAKE_CARGO_TARGET}
             ${_CMAKE_CARGO_CONFIGURATION_TYPES} -o ${generated_cmake})
 
     include(${generated_cmake})
