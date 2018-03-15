@@ -1,5 +1,4 @@
-set(CARGO_DEV_MODE OFF CACHE INTERNAL
-    "Only for use when making changes to cmake-cargo.")
+option(CARGO_DEV_MODE OFF "Only for use when making changes to cmake-cargo.")
 
 if (CMAKE_VS_PLATFORM_NAME)
     if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
@@ -14,6 +13,8 @@ if (CMAKE_VS_PLATFORM_NAME)
 endif()
     
 if (CARGO_DEV_MODE)
+    message(STATUS "Running in cmake-cargo dev mode")
+
     find_package(Cargo REQUIRED)
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
 
