@@ -149,23 +149,6 @@ find_package(Cargo REQUIRED)
 
     writeln!(out_file).unwrap();
 
-    // Add dependencies to CMake DAG
-    for package in metadata
-        .packages
-        .iter()
-        .filter(|p| !p.dependencies.is_empty())
-    {
-        for dependency in &package.dependencies {
-            writeln!(
-                out_file,
-                "add_dependencies(cargo_{} cargo_{})",
-                package.name, dependency.name
-            ).unwrap();
-        }
-    }
-
-    writeln!(out_file).unwrap();
-
     let config_root = Path::new(matches.value_of(CONFIGURATION_ROOT).unwrap_or("."));
 
     let mut config_folders = Vec::new();
