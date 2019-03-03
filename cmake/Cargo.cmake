@@ -21,8 +21,6 @@ if (WIN32)
 
     set(CARGO_VENDOR "pc-windows" CACHE STRING "Build for Microsoft Windows")
 
-    message(STATUS "${CMAKE_CXX_COMPILER_ID}")
-
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         set(CARGO_ABI gnu CACHE STRING "Build for linking with GNU")
     else()
