@@ -1,12 +1,8 @@
-extern crate cargo_metadata;
-extern crate clap;
-
 use clap::{App, Arg, SubCommand};
 
 use std::fs::{create_dir_all, File};
 use std::io::{stdout, Write};
 use std::path::Path;
-use std::process::exit;
 
 const MANIFEST_PATH: &str = "manifest-path";
 const OUT_FILE: &str = "out-file";
@@ -93,26 +89,16 @@ fn main() {
         )
         .get_matches();
 
-    let metadata = if let Some(manifest_path) = matches.value_of(MANIFEST_PATH) {
-        match cargo_metadata::metadata(Some(Path::new(manifest_path))) {
-            Ok(metadata) => metadata,
-            Err(_) => {
-                eprintln!("{} is not a valid crate!", manifest_path);
-                exit(1);
-            }
-        }
-    } else {
-        match cargo_metadata::metadata(None) {
-            Ok(metadata) => metadata,
-            Err(_) => {
-                eprintln!("No crate found in the pwd.");
-                exit(1)
-            }
-        }
-    };
+    let mut cmd = cargo_metadata::MetadataCommand::new();
+
+    if let Some(manifest_path) = matches.value_of(MANIFEST_PATH) {
+        cmd.manifest_path(Path::new(manifest_path));
+    }
+
+    let metadata = cmd.exec().unwrap();
 
     if let Some(_) = matches.subcommand_matches(PRINT_ROOT) {
-        println!("{}", metadata.workspace_root);
+        println!("{}", metadata.workspace_root.to_str().unwrap());
         std::process::exit(0);
     }
 
@@ -135,7 +121,8 @@ fn main() {
 cmake_minimum_required (VERSION 3.0)
 find_package(Cargo REQUIRED)
 "
-    ).unwrap();
+    )
+    .unwrap();
 
     // Print out all packages
     for package in &metadata.packages {
@@ -143,8 +130,13 @@ find_package(Cargo REQUIRED)
             out_file,
             "add_cargo_build(cargo_{} \"{}\")",
             package.name,
-            package.manifest_path.replace("\\", "\\\\")
-        ).unwrap();
+            package
+                .manifest_path
+                .to_str()
+                .unwrap()
+                .replace("\\", "\\\\")
+        )
+        .unwrap();
     }
 
     writeln!(out_file).unwrap();
@@ -187,7 +179,8 @@ find_package(Cargo REQUIRED)
                 // add_dependencies
                 staticlib.name,
                 package.name
-            ).unwrap();
+            )
+            .unwrap();
 
             writeln!(
                 out_file,
@@ -208,7 +201,8 @@ endif()",
                 staticlib.name,
                 staticlib.name,
                 staticlib.name,
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
 
@@ -219,9 +213,13 @@ endif()",
         std::env::set_current_dir(config_folder)
             .expect("Could not change directory to the Config directory!");
 
+        let mut local_metadata_cmd = cargo_metadata::MetadataCommand::new();
+        local_metadata_cmd.manifest_path(Path::new(&metadata_manifest_path));
+
         // Re-gathering the cargo metadata from here gets us a target_directory scoped to the
         // configuration type.
-        let local_metadata = cargo_metadata::metadata(Some(&metadata_manifest_path))
+        let local_metadata = local_metadata_cmd
+            .exec()
             .expect("Could not open Crate specific metadata!");
 
         let imported_location = config_type.map_or("IMPORTED_LOCATION".to_owned(), |config_type| {
@@ -265,7 +263,8 @@ endif()",
                         .to_str()
                         .unwrap()
                         .replace("\\", "\\\\"),
-                ).unwrap();
+                )
+                .unwrap();
             }
         }
 
