@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(ExternalProject)
 

@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+
 option(CARGO_DEV_MODE OFF "Only for use when making changes to cmake-cargo.")
 
 if (WIN32)
