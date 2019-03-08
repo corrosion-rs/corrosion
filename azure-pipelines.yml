@@ -1,0 +1,19 @@
+strategy:
+  matrix:
+#    linux:
+#      imageName: 'ubuntu-16.04'
+#    mac:
+#      imageName: 'macos-10.13'
+#    windows:
+#      imageName: 'vs2017-win2016'
+
+pool:
+  vmImage: $(imageName)
+
+steps:
+- bash: |
+    curl https://win.rustup.rs/x86_64 > rustup-init.exe
+    ./rustup-init.exe -y
+  displayName: Install Rust
+    
+- task: CMake@1
