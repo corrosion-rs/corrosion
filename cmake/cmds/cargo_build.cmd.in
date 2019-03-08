@@ -1,2 +1,2 @@
 @echo off
-"@CARGO@" build @_CARGO_BUILD_FLAGS@ %*
+"@CARGO_EXECUTABLE@" build @_CARGO_BUILD_FLAGS@ %*

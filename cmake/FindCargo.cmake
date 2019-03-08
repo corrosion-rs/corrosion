@@ -2,12 +2,11 @@ cmake_minimum_required(VERSION 3.10)
 
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(ExternalProject)
+include(FindPackageHandleStandardArgs)
 
-find_program(CARGO
+find_program(CARGO_EXECUTABLE
     cargo
     HINTS $ENV{HOME}/.cargo/bin)
-
-message(STATUS "Found Cargo: ${CARGO}")
 
 set(CARGO_BUILD_FLAGS "" CACHE STRING "Flags to pass to cargo build")
 set(CARGO_BUILD_FLAGS_DEBUG "" CACHE STRING
@@ -38,6 +37,25 @@ else()
 endif()
 
 set(CARGO_TARGET "" CACHE STRING "The target triple to build for")
+
+execute_process(
+    COMMAND ${CARGO_EXECUTABLE} --version OUTPUT_VARIABLE CARGO_VERSION_RAW)
+
+if (CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+    set(CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    set(CARGO_VERSION_MINOR "${CMAKE_MATCH_2}")
+    set(CARGO_VERSION_PATCH "${CMAKE_MATCH_3}")
+    set(CARGO_VERSION "${CARGO_VERSION_MAJOR}.${CARGO_VERSION_MINOR}.${CARGO_VERSION_PATCH}")
+else()
+    message(
+        FATAL_ERROR
+        "Failed to parse cargo version. `cargo --version` evaluated to (${CARGO_VERSION_RAW})")
+endif()
+
+find_package_handle_standard_args(
+    Cargo
+    REQUIRED_VARS CARGO_EXECUTABLE
+    VERSION_VAR CARGO_VERSION)
 
 function(_gen_config config_type use_config_dir)
     string(TOUPPER "${config_type}" UPPER_CONFIG_TYPE)

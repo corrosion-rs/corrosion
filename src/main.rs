@@ -1,5 +1,6 @@
 use clap::{App, Arg, SubCommand};
 
+use semver::Version;
 use std::fs::{create_dir_all, File};
 use std::io::{stdout, Write};
 use std::path::Path;
@@ -10,6 +11,7 @@ const CONFIGURATION_TYPE: &str = "configuration-type";
 const CONFIGURATION_TYPES: &str = "configuration-types";
 const CONFIGURATION_ROOT: &str = "configuration-root";
 const TARGET: &str = "target";
+const CARGO_VERSION: &str = "cargo-version";
 
 const PRINT_ROOT: &str = "print-root";
 const GEN_CMAKE: &str = "gen-cmake";
@@ -79,6 +81,14 @@ fn main() {
                         .help("The build target being used."),
                 )
                 .arg(
+                    Arg::with_name(CARGO_VERSION)
+                        .long(CARGO_VERSION)
+                        .value_name("version")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Version of target cargo"),
+                )
+                .arg(
                     Arg::with_name(OUT_FILE)
                         .short("o")
                         .long("out-file")
@@ -103,6 +113,8 @@ fn main() {
     }
 
     let matches = matches.subcommand_matches(GEN_CMAKE).unwrap();
+
+    let cargo_version = matches.value_of(CARGO_VERSION).unwrap();
 
     let mut out_file: Box<Write> = if let Some(path) = matches.value_of(OUT_FILE) {
         let path = Path::new(path);
@@ -182,25 +194,31 @@ find_package(Cargo REQUIRED)
             )
             .unwrap();
 
+            let mut windows_libs = vec!["advapi32", "userenv", "ws2_32"];
+            let windows_debug_libs = vec!["msvcrtd"];
+            let windows_release_libs = vec!["msvcrt"];
+
+            if Version::parse(cargo_version) < Version::parse("1.33.0") {
+                windows_libs.push("shell32");
+                windows_libs.push("kernel32");
+            }
+
             writeln!(
                 out_file,
                 "\
 if (WIN32)
-    set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES advapi32 kernel32 shell32 userenv \
-        ws2_32)
-    set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES_DEBUG msvcrtd)
-    set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES_RELEASE msvcrt)
-    set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES_MINSIZEREL msvcrt)
-    set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES_RELWITHDEBINFO msvcrt)
+    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES {1})
+    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES_DEBUG {2})
+    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES_RELEASE {3})
+    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES_MINSIZEREL {3})
+    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES_RELWITHDEBINFO {3})
 else()
-    set_property(TARGET {} PROPERTY INTERFACE_LINK_LIBRARIES dl rt pthread gcc_s c m util)
+    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES dl rt pthread gcc_s c m util)
 endif()",
                 staticlib.name,
-                staticlib.name,
-                staticlib.name,
-                staticlib.name,
-                staticlib.name,
-                staticlib.name,
+                windows_libs.join(" "),
+                windows_debug_libs.join(" "),
+                windows_release_libs.join(" ")
             )
             .unwrap();
         }
