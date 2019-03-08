@@ -1,5 +1,7 @@
 strategy:
   matrix:
+    windows:
+      imageName: 'vs2017-win2016'
 #    linux:
 #      imageName: 'ubuntu-16.04'
 #    mac:
