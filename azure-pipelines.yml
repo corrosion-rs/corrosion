@@ -16,7 +16,7 @@ steps:
 - bash: |
     curl https://win.rustup.rs/x86_64 > rustup-init.exe
     ./rustup-init.exe -y
-    echo "##vso[task.prependpath]$HOME\.cargo\bin"
+    echo "##vso[task.prependpath]$USERPROFILE\.cargo\bin"
   displayName: Install Rust
     
 - task: CMake@1
