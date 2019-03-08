@@ -17,17 +17,19 @@ steps:
     curl https://win.rustup.rs/x86_64 > rustup-init.exe
     ./rustup-init.exe -y
     echo "##vso[task.prependpath]$USERPROFILE\.cargo\bin"
+  displayName: Install Rust
 
+- bash: |
     # Explicitly install all targets
     rustup target add i686-pc-windows-msvc
     rustup target add x86_64-pc-windows-msvc
     rustup target add i686-pc-windows-gnu
     rustup target add x86_64-pc-windows-gnu
-  displayName: Install Rust
+  displayName: Add Rust Targets
 
 - bash: |
     cargo build -p cmake-cargo-gen
-  displayName: Explicitly build cmake-cargo-gen for the default target
+  displayName: Build cmake-cargo-gen
     
 - task: CMake@1
   inputs:
@@ -37,4 +39,4 @@ steps:
 - task: CMake@1
   inputs:
     cmakeArgs: --build . --target cmake-cargo-gen
-  displayName: Build 
+  displayName: Build cmake-cargo-gen for target platform
