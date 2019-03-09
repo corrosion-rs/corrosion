@@ -130,28 +130,10 @@ fn main() {
     writeln!(
         out_file,
         "\
-cmake_minimum_required (VERSION 3.0)
-find_package(Cargo REQUIRED)
+cmake_minimum_required (VERSION 3.10)
 "
     )
     .unwrap();
-
-    // Print out all packages
-    for package in &metadata.packages {
-        writeln!(
-            out_file,
-            "add_cargo_build(cargo_{} \"{}\")",
-            package.name,
-            package
-                .manifest_path
-                .to_str()
-                .unwrap()
-                .replace("\\", "\\\\")
-        )
-        .unwrap();
-    }
-
-    writeln!(out_file).unwrap();
 
     let config_root = Path::new(matches.value_of(CONFIGURATION_ROOT).unwrap_or("."));
 
@@ -183,6 +165,18 @@ find_package(Cargo REQUIRED)
             .iter()
             .filter(|t| t.kind.iter().any(|k| k == "staticlib"))
         {
+            writeln!(
+                out_file,
+                "add_cargo_build({} \"{}\")",
+                package.name,
+                package
+                    .manifest_path
+                    .to_str()
+                    .unwrap()
+                    .replace("\\", "\\\\")
+            )
+            .unwrap();
+
             writeln!(out_file, "add_library({} STATIC IMPORTED)", staticlib.name).unwrap();
 
             writeln!(
@@ -224,6 +218,8 @@ endif()",
         }
     }
 
+    writeln!(out_file).unwrap();
+
     let metadata_manifest_path = Path::new(&metadata.workspace_root).join("Cargo.toml");
 
     for (config_type, config_folder) in config_folders {
@@ -257,30 +253,48 @@ endif()",
             {
                 let static_lib_name = staticlib.name.replace("-", "_");
 
+                let static_lib_path_windows = build_path
+                    .join(format!("{}.lib", static_lib_name))
+                    .to_str()
+                    .unwrap()
+                    .replace("\\", "\\\\");
+
+                let static_lib_path = build_path
+                    .join(format!("lib{}.a", static_lib_name))
+                    .to_str()
+                    .unwrap()
+                    .replace("\\", "\\\\");
+
                 writeln!(
                     out_file,
                     "\
 if (WIN32)
-    set_property(TARGET {} PROPERTY {} {})
+    set_property(TARGET {0} PROPERTY {1} {2})
 else()
-    set_property(TARGET {} PROPERTY {} {})
+    set_property(TARGET {0} PROPERTY {1} {3})
 endif()",
+                    staticlib.name,
+                    imported_location,
                     // WIN32 set_property
-                    staticlib.name,
-                    imported_location,
-                    build_path
-                        .join(format!("{}.lib", static_lib_name))
-                        .to_str()
-                        .unwrap()
-                        .replace("\\", "\\\\"),
+                    static_lib_path_windows,
                     // set_property
+                    static_lib_path,
+                )
+                .unwrap();
+
+                writeln!(
+                    out_file,
+                    "\
+if (WIN32)
+    set_property(TARGET {0} APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES {1})
+else()
+    set_property(TARGET {0} APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES {2})
+endif()",
                     staticlib.name,
-                    imported_location,
-                    build_path
-                        .join(format!("lib{}.a", static_lib_name))
-                        .to_str()
-                        .unwrap()
-                        .replace("\\", "\\\\"),
+                    // WIN32 set_property
+                    static_lib_path_windows,
+                    // set_property
+                    static_lib_path,
                 )
                 .unwrap();
             }

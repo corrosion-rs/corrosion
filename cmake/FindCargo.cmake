@@ -4,9 +4,8 @@ cmake_minimum_required(VERSION 3.10)
 include(ExternalProject)
 include(FindPackageHandleStandardArgs)
 
-find_program(CARGO_EXECUTABLE
-    cargo
-    HINTS $ENV{HOME}/.cargo/bin)
+find_program(CARGO_EXECUTABLE cargo HINTS $ENV{HOME}/.cargo/bin)
+find_program(RUSTC_EXECUTABLE rustc HINTS $ENV{HOME}/.cargo/bin)
 
 set(CARGO_BUILD_FLAGS "" CACHE STRING "Flags to pass to cargo build")
 set(CARGO_BUILD_FLAGS_DEBUG "" CACHE STRING
@@ -36,10 +35,10 @@ else()
     set(CARGO_BUILD ./${CARGO_BUILD_SCRIPT})
 endif()
 
-set(CARGO_TARGET "" CACHE STRING "The target triple to build for")
 
 execute_process(
-    COMMAND ${CARGO_EXECUTABLE} --version OUTPUT_VARIABLE CARGO_VERSION_RAW)
+    COMMAND ${CARGO_EXECUTABLE} --version --verbose
+    OUTPUT_VARIABLE CARGO_VERSION_RAW)
 
 if (CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
     set(CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}")
@@ -51,6 +50,52 @@ else()
         FATAL_ERROR
         "Failed to parse cargo version. `cargo --version` evaluated to (${CARGO_VERSION_RAW})")
 endif()
+
+execute_process(
+    COMMAND ${RUSTC_EXECUTABLE} --version --verbose
+    OUTPUT_VARIABLE RUSTC_VERSION_RAW)
+
+if (NOT CARGO_TARGET)
+    if (WIN32)
+        if (CMAKE_VS_PLATFORM_NAME)
+            if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+                set(CARGO_ARCH i686 CACHE STRING "Build for 32-bit x86")
+            elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+                set(CARGO_ARCH x86_64 CACHE STRING "Build for 64-bit x86")
+            elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM64")
+                set(CARGO_ARCH aarch64 CACHE STRING "Build for 64-bit ARM")
+            else()
+                message(WARNING "VS Platform '${CMAKE_VS_PLATFORM_NAME}' not recognized")
+            endif()
+        else ()
+            if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+                set(CARGO_ARCH x86_64 CACHE STRING "Build for 64-bit x86")
+            else()
+                set(CARGO_ARCH i686 CACHE STRING "Build for 32-bit x86")
+            endif()
+        endif()
+
+        set(CARGO_VENDOR "pc-windows" CACHE STRING "Build for Microsoft Windows")
+
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+            set(CARGO_ABI gnu CACHE STRING "Build for linking with GNU")
+        else()
+            set(CARGO_ABI msvc CACHE STRING "Build for linking with MSVC")
+        endif()
+
+        set(CARGO_TARGET "${CARGO_ARCH}-${CARGO_VENDOR}-${CARGO_ABI}"
+            CACHE STRING "Windows Target")
+    elseif (RUSTC_VERSION_RAW MATCHES "host: ([a-zA-Z0-9_\\-]*)\n")
+        set(CARGO_TARGET "${CMAKE_MATCH_1}" CACHE STRING "Default Host Target")
+    else()
+        message(
+            FATAL_ERROR
+            "Failed to parse rustc host target. `rustc --version --verbose` evaluated to:\n${RUSTC_VERSION_RAW}"
+        )
+    endif()
+endif()
+
+message(STATUS "Rust Target: ${CARGO_TARGET}")
 
 find_package_handle_standard_args(
     Cargo
@@ -111,21 +156,28 @@ else()
     _gen_config(Debug OFF)
 endif()
 
+if (CMAKE_VS_PLATFORM_NAME)
+    set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
+elseif(CMAKE_CONFIGURATION_TYPES)
+    set (build_dir "$<CONFIG>")
+else()
+    set (build_dir .)
+endif()
+
+add_custom_target(
+    cargo-clean
+    COMMAND
+        ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_EXECUTABLE} clean
+        --target ${CARGO_TARGET}
+)
+
 function(add_cargo_build target_name path_to_toml)
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
     endif()
 
-    if (CMAKE_VS_PLATFORM_NAME)
-        set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
-    elseif(CMAKE_CONFIGURATION_TYPES)
-        set (build_dir "$<CONFIG>")
-    else()
-        set (build_dir .)
-    endif()
-
     ExternalProject_Add(
-        ${target_name}
+        cargo_${target_name}
         DOWNLOAD_COMMAND ""
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_BUILD} --manifest-path ${path_to_toml}
@@ -133,5 +185,12 @@ function(add_cargo_build target_name path_to_toml)
         INSTALL_COMMAND ""
         PREFIX cargo
         BUILD_ALWAYS ON
+    )
+
+    add_custom_target(
+        cargo-clean_${target_name}
+        COMMAND
+            ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_EXECUTABLE} clean
+            --target ${CARGO_TARGET} -p ${target_name}
     )
 endfunction()
