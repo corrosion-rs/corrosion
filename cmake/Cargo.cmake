@@ -19,7 +19,7 @@ endif()
 
 function(add_crate path_to_toml)
     if (NOT IS_ABSOLUTE "${path_to_toml}")
-        set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
+        set(path_to_toml "${CMAKE_CURRENT_SOURCE_DIR}/${path_to_toml}")
     endif()
 
     execute_process(
