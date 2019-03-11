@@ -43,7 +43,17 @@ impl Platform {
 
                     (libs, libs_debug, libs_release)
                 }
-                _ => (
+                OS::MacOS => (
+                    vec![
+                        "System".to_string(),
+                        "resolv".to_string(),
+                        "c".to_string(),
+                        "m".to_string(),
+                    ],
+                    vec![],
+                    vec![],
+                ),
+                OS::Linux => (
                     vec![
                         "dl".to_string(),
                         "rt".to_string(),
@@ -56,6 +66,7 @@ impl Platform {
                     vec![],
                     vec![],
                 ),
+                _ => (vec![], vec![], vec![]),
             }
         } else {
             (vec![], vec![], vec![])
