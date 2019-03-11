@@ -168,10 +168,9 @@ add_custom_target(
     cargo-clean
     COMMAND
         ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_EXECUTABLE} clean
-        --target ${CARGO_TARGET}
-)
+        --target ${CARGO_TARGET})
 
-function(add_cargo_build target_name path_to_toml)
+function(add_cargo_build package_name target_name path_to_toml)
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
     endif()
@@ -180,7 +179,8 @@ function(add_cargo_build target_name path_to_toml)
         cargo_${target_name}
         DOWNLOAD_COMMAND ""
         CONFIGURE_COMMAND ""
-        BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_BUILD} --manifest-path ${path_to_toml}
+        BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_BUILD}
+            -p ${package_name} --manifest-path ${path_to_toml}
         BINARY_DIR "${CMAKE_BINARY_DIR}"
         INSTALL_COMMAND ""
         PREFIX cargo
@@ -191,6 +191,6 @@ function(add_cargo_build target_name path_to_toml)
         cargo-clean_${target_name}
         COMMAND
             ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_EXECUTABLE} clean
-            --target ${CARGO_TARGET} -p ${target_name}
+            --target ${CARGO_TARGET} -p ${package_name}
     )
 endfunction()

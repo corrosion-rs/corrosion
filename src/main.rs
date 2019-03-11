@@ -4,6 +4,10 @@ use semver::Version;
 use std::fs::{create_dir_all, File};
 use std::io::{stdout, Write};
 use std::path::Path;
+use std::rc::Rc;
+
+mod platform;
+mod target;
 
 const MANIFEST_PATH: &str = "manifest-path";
 const OUT_FILE: &str = "out-file";
@@ -24,7 +28,7 @@ fn config_type_target_folder(config_type: Option<&str>) -> &'static str {
     }
 }
 
-fn main() {
+fn main() -> Result<(), Box<std::error::Error>> {
     let matches = App::new("CMake Generator for Cargo")
         .version("0.1")
         .author("Andrew Gaspar <andrew.gaspar@outlook.com>")
@@ -78,6 +82,7 @@ fn main() {
                         .long("target")
                         .value_name("triple")
                         .takes_value(true)
+                        .required(true)
                         .help("The build target being used."),
                 )
                 .arg(
@@ -114,7 +119,16 @@ fn main() {
 
     let matches = matches.subcommand_matches(GEN_CMAKE).unwrap();
 
-    let cargo_version = matches.value_of(CARGO_VERSION).unwrap();
+    let cargo_version = Version::parse(matches.value_of(CARGO_VERSION).unwrap())
+        .expect("cargo-version must be a semver-compatible version!");
+
+    let cargo_target = matches.value_of(TARGET).and_then(platforms::find).cloned();
+
+    if cargo_target.is_none() {
+        println!("WARNING: The target was not recognized.");
+    }
+
+    let cargo_platform = platform::Platform::from_rust_version_target(cargo_version, cargo_target);
 
     let mut out_file: Box<Write> = if let Some(path) = matches.value_of(OUT_FILE) {
         let path = Path::new(path);
@@ -132,8 +146,7 @@ fn main() {
         "\
 cmake_minimum_required (VERSION 3.10)
 "
-    )
-    .unwrap();
+    )?;
 
     let config_root = Path::new(matches.value_of(CONFIGURATION_ROOT).unwrap_or("."));
 
@@ -159,66 +172,29 @@ cmake_minimum_required (VERSION 3.10)
         config_folders.push((config_type, config_folder.to_path_buf()));
     }
 
-    for package in &metadata.packages {
-        for staticlib in package
-            .targets
-            .iter()
-            .filter(|t| t.kind.iter().any(|k| k == "staticlib"))
-        {
-            writeln!(
-                out_file,
-                "add_cargo_build({} \"{}\")",
-                package.name,
-                package
-                    .manifest_path
-                    .to_str()
-                    .unwrap()
-                    .replace("\\", "\\\\")
-            )
+    let targets: Vec<_> = metadata
+        .packages
+        .iter()
+        .filter(|p| metadata.workspace_members.contains(&p.id))
+        .cloned()
+        .map(Rc::new)
+        .flat_map(|package| {
+            let package2 = package.clone();
+            package
+                .targets
+                .clone()
+                .into_iter()
+                .filter_map(move |t| target::CargoTarget::from_metadata(package2.clone(), t))
+        })
+        .collect();
+
+    for target in &targets {
+        target
+            .emit_cmake_target(&mut out_file, &cargo_platform)
             .unwrap();
-
-            writeln!(out_file, "add_library({} STATIC IMPORTED)", staticlib.name).unwrap();
-
-            writeln!(
-                out_file,
-                "add_dependencies({} cargo_{})",
-                // add_dependencies
-                staticlib.name,
-                package.name
-            )
-            .unwrap();
-
-            let mut windows_libs = vec!["advapi32", "userenv", "ws2_32"];
-            let windows_debug_libs = vec!["msvcrtd"];
-            let windows_release_libs = vec!["msvcrt"];
-
-            if Version::parse(cargo_version) < Version::parse("1.33.0") {
-                windows_libs.push("shell32");
-                windows_libs.push("kernel32");
-            }
-
-            writeln!(
-                out_file,
-                "\
-if (WIN32)
-    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES {1})
-    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES_DEBUG {2})
-    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES_RELEASE {3})
-    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES_MINSIZEREL {3})
-    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES_RELWITHDEBINFO {3})
-else()
-    set_property(TARGET {0} PROPERTY INTERFACE_LINK_LIBRARIES dl rt pthread gcc_s c m util)
-endif()",
-                staticlib.name,
-                windows_libs.join(" "),
-                windows_debug_libs.join(" "),
-                windows_release_libs.join(" ")
-            )
-            .unwrap();
-        }
     }
 
-    writeln!(out_file).unwrap();
+    writeln!(out_file)?;
 
     let metadata_manifest_path = Path::new(&metadata.workspace_root).join("Cargo.toml");
 
@@ -236,71 +212,22 @@ endif()",
             .exec()
             .expect("Could not open Crate specific metadata!");
 
-        let imported_location = config_type.map_or("IMPORTED_LOCATION".to_owned(), |config_type| {
-            format!("IMPORTED_LOCATION_{}", config_type.to_uppercase())
-        });
-
         let build_path = Path::new(&local_metadata.target_directory)
             .join(matches.value_of(TARGET).unwrap_or(""))
             .join(config_type_target_folder(config_type));
 
-        // Output staticlib information
-        for package in &local_metadata.packages {
-            for staticlib in package
-                .targets
-                .iter()
-                .filter(|t| t.kind.iter().any(|k| k == "staticlib"))
-            {
-                let static_lib_name = staticlib.name.replace("-", "_");
-
-                let static_lib_path_windows = build_path
-                    .join(format!("{}.lib", static_lib_name))
-                    .to_str()
-                    .unwrap()
-                    .replace("\\", "\\\\");
-
-                let static_lib_path = build_path
-                    .join(format!("lib{}.a", static_lib_name))
-                    .to_str()
-                    .unwrap()
-                    .replace("\\", "\\\\");
-
-                writeln!(
-                    out_file,
-                    "\
-if (WIN32)
-    set_property(TARGET {0} PROPERTY {1} {2})
-else()
-    set_property(TARGET {0} PROPERTY {1} {3})
-endif()",
-                    staticlib.name,
-                    imported_location,
-                    // WIN32 set_property
-                    static_lib_path_windows,
-                    // set_property
-                    static_lib_path,
-                )
-                .unwrap();
-
-                writeln!(
-                    out_file,
-                    "\
-if (WIN32)
-    set_property(TARGET {0} APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES {1})
-else()
-    set_property(TARGET {0} APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES {2})
-endif()",
-                    staticlib.name,
-                    // WIN32 set_property
-                    static_lib_path_windows,
-                    // set_property
-                    static_lib_path,
-                )
-                .unwrap();
-            }
+        for target in &targets {
+            target.emit_cmake_config_info(
+                &mut out_file,
+                &cargo_platform,
+                &build_path,
+                &config_type,
+            )?;
         }
 
         std::env::set_current_dir(current_dir)
             .expect("Could not return to the build root directory!")
     }
+
+    Ok(())
 }

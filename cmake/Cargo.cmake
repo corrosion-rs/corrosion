@@ -22,10 +22,18 @@ function(add_crate path_to_toml)
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
     endif()
 
-    exec_program(
-        ${_CMAKE_CARGO_GEN}
-        ARGS ${_CMAKE_CARGO_GEN_ARGS} --manifest-path ${path_to_toml} print-root
-        OUTPUT_VARIABLE toml_dir)
+    execute_process(
+        COMMAND
+            ${_CMAKE_CARGO_GEN} ${_CMAKE_CARGO_GEN_ARGS}
+            --manifest-path ${path_to_toml} print-root
+        OUTPUT_VARIABLE toml_dir
+        RESULT_VARIABLE ret)
+
+    if (NOT ret EQUAL "0")
+        message(FATAL_ERROR "cmake-cargo-gen failed")
+    endif()
+
+    string(STRIP "${toml_dir}" toml_dir)
 
     get_filename_component(toml_dir_name ${toml_dir} NAME)
 
@@ -56,10 +64,15 @@ function(add_crate path_to_toml)
 
     execute_process(
         COMMAND ${_CMAKE_CARGO_GEN} ${_CMAKE_CARGO_GEN_ARGS} --manifest-path
-        ${path_to_toml} gen-cmake ${_CMAKE_CARGO_CONFIGURATION_ROOT}
-        ${_CMAKE_CARGO_TARGET} ${_CMAKE_CARGO_CONFIGURATION_TYPES}
-        --cargo-version ${CARGO_VERSION} -o
-        ${generated_cmake})
+            ${path_to_toml} gen-cmake ${_CMAKE_CARGO_CONFIGURATION_ROOT}
+            ${_CMAKE_CARGO_TARGET} ${_CMAKE_CARGO_CONFIGURATION_TYPES}
+            --cargo-version ${CARGO_VERSION} -o
+            ${generated_cmake}
+        RESULT_VARIABLE ret)
+
+    if (NOT ret EQUAL "0")
+        message(FATAL_ERROR "cmake-cargo-gen failed")
+    endif()
 
     include(${generated_cmake})
 endfunction(add_crate)
