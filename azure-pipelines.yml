@@ -38,5 +38,5 @@ steps:
         
 - task: CMake@1
   inputs:
-    cmakeArgs: --build . --target cmake-cargo-gen
+    cmakeArgs: --build . --target cargo_cmake-cargo-gen
   displayName: Build cmake-cargo-gen for target platform
