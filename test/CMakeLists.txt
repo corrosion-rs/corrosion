@@ -1,7 +1,4 @@
 cmake_minimum_required(VERSION 3.10)
-project(cmake-cargo-test LANGUAGES CXX)
+project(cmake-cargo-tests LANGUAGES NONE)
 
-add_crate(rust/Cargo.toml)
-
-add_executable(cmake-cargo-test main.cpp)
-target_link_libraries(cmake-cargo-test PUBLIC cmake-cargo-test-lib)
+add_subdirectory(rust2cpp)

@@ -1,4 +1,4 @@
 [[package]]
-name = "cmake-cargo-test-lib"
+name = "rust-lib"
 version = "0.1.0"
 
