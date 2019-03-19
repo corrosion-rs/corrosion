@@ -43,5 +43,5 @@ steps:
         
 - task: CMake@1
   inputs:
-    cmakeArgs: --build . --target cmake-cargo-test
+    cmakeArgs: --build . --target rust-lib-cpp-exe
   displayName: Build library linking test
