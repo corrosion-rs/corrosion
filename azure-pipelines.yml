@@ -28,7 +28,7 @@ steps:
   displayName: Add Rust Targets
 
 - bash: |
-    cargo build -p cmake-cargo-gen
+    cargo build --manifest-path generator/Cargo.toml -p cmake-cargo-gen
   displayName: Build cmake-cargo-gen
     
 - task: CMake@1
