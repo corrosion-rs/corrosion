@@ -6,6 +6,6 @@ set(CARGO_DEV_MODE ON CACHE INTERNAL "")
 
 include(Cargo)
 
-add_crate(Cargo.toml)
+add_crate(generator/Cargo.toml)
 
 add_subdirectory(test)

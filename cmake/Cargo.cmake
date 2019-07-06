@@ -10,7 +10,7 @@ if (CARGO_DEV_MODE)
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
 
     set(_CMAKE_CARGO_GEN ${CARGO_EXECUTABLE})
-    set(_CMAKE_CARGO_GEN_ARGS run --quiet --manifest-path ${_moddir}/../Cargo.toml --)
+    set(_CMAKE_CARGO_GEN_ARGS run --quiet --manifest-path ${_moddir}/../generator/Cargo.toml --)
 else()
     find_program(
         _CMAKE_CARGO_GEN cmake-cargo-gen
