@@ -35,8 +35,6 @@ function(_add_cargo_build package_name target_name path_to_toml)
 
     add_custom_target(
         cargo-build_${target_name}
-        COMMAND ${CMAKE_COMMAND} -E echo "Linking: ${link_libs}"
-        COMMAND ${CMAKE_COMMAND} -E echo "Searching: ${search_dirs}"
         COMMAND
             ${CMAKE_COMMAND} -E env
                 CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
