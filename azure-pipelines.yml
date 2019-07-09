@@ -30,18 +30,23 @@ steps:
 - bash: |
     cargo build --manifest-path generator/Cargo.toml -p cmake-cargo-gen
   displayName: Build cmake-cargo-gen
-    
+
 - task: CMake@1
   inputs:
     cmakeArgs: -G "Visual Studio 15 2017 Win64" ..
   displayName: Generate CMake Build Folder
-        
+
 - task: CMake@1
   inputs:
     cmakeArgs: --build . --target cargo-build_cmake-cargo-gen
   displayName: Build cmake-cargo-gen for target platform
-        
+
 - task: CMake@1
   inputs:
     cmakeArgs: --build . --target cpp-exe
-  displayName: Build library linking test
+  displayName: Build C++ program linking Rust
+
+- task: CMake@1
+  inputs:
+    cmakeArgs: --build . --target cargo-build_rust-exe
+  displayName: Build Rust program linking C++

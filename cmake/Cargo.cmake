@@ -30,10 +30,18 @@ function(_add_cargo_build package_name target_name path_to_toml)
         set (build_dir .)
     endif()
 
+    set(link_libs "$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINK_LIBRARIES>>")
+    set(search_dirs "$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINK_DIRECTORIES>>")
+
     add_custom_target(
         cargo-build_${target_name}
+        COMMAND ${CMAKE_COMMAND} -E echo "Linking: ${link_libs}"
+        COMMAND ${CMAKE_COMMAND} -E echo "Searching: ${search_dirs}"
         COMMAND
-            ${CMAKE_COMMAND} -E env CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+            ${CMAKE_COMMAND} -E env
+                CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                CMAKECARGO_LINK_LIBRARIES=${link_libs}
+                CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
             ${CARGO_BUILD} -p ${package_name} --manifest-path ${path_to_toml}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
@@ -108,3 +116,13 @@ function(add_crate path_to_toml)
 
     include(${generated_cmake})
 endfunction(add_crate)
+
+function(cargo_link_libraries target_name)
+    add_dependencies(cargo-build_${target_name} ${ARGN})
+    foreach(library ${ARGN})
+        set_property(TARGET cargo-build_${target_name} APPEND PROPERTY CARGO_LINK_DIRECTORIES $<TARGET_LINKER_FILE_DIR:${library}>)
+
+        # TODO: The output name of the library can be overridden - find a way to support that.
+        set_property(TARGET cargo-build_${target_name} APPEND PROPERTY CARGO_LINK_LIBRARIES ${library})
+    endforeach()
+endfunction(cargo_link_libraries)

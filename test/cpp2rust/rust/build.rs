@@ -1,3 +1,3 @@
 fn main() {
-    cmake_cargo_build::integrate();
+    cmake_cargo_build::build_script();
 }
