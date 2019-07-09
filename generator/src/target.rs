@@ -53,7 +53,7 @@ impl CargoTarget {
     ) -> Result<(), Box<Error>> {
         writeln!(
             out_file,
-            "add_cargo_build({} {} \"{}\")",
+            "_add_cargo_build({} {} \"{}\")",
             self.cargo_package.name,
             self.cargo_target.name,
             self.cargo_package
@@ -74,7 +74,7 @@ impl CargoTarget {
                     writeln!(
                         out_file,
                         "add_library({0}-static STATIC IMPORTED GLOBAL)\n\
-                         add_dependencies({0}-static cargo_{0})",
+                         add_dependencies({0}-static cargo-build_{0})",
                         self.cargo_target.name
                     )?;
 
@@ -116,7 +116,7 @@ impl CargoTarget {
                     writeln!(
                         out_file,
                         "add_library({0}-shared SHARED IMPORTED GLOBAL)\n\
-                         add_dependencies({0}-shared cargo_{0})",
+                         add_dependencies({0}-shared cargo-build_{0})",
                         self.cargo_target.name
                     )?;
                 }
@@ -156,7 +156,7 @@ endif()",
                 writeln!(
                     out_file,
                     "add_executable({0} IMPORTED GLOBAL)\n\
-                     add_dependencies({0} cargo_{0})",
+                     add_dependencies({0} cargo-build_{0})",
                     self.cargo_target.name
                 )?;
             }

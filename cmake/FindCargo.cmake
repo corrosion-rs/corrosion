@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
 # search for Cargo here and set up a bunch of cool flags and stuff
-include(ExternalProject)
 include(FindPackageHandleStandardArgs)
 
 find_program(CARGO_EXECUTABLE cargo HINTS $ENV{HOME}/.cargo/bin)
@@ -155,42 +154,3 @@ else()
     message(STATUS "Defaulting Cargo to build debug")
     _gen_config(Debug OFF)
 endif()
-
-if (CMAKE_VS_PLATFORM_NAME)
-    set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
-elseif(CMAKE_CONFIGURATION_TYPES)
-    set (build_dir "$<CONFIG>")
-else()
-    set (build_dir .)
-endif()
-
-add_custom_target(
-    cargo-clean
-    COMMAND
-        ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_EXECUTABLE} clean
-        --target ${CARGO_TARGET})
-
-function(add_cargo_build package_name target_name path_to_toml)
-    if (NOT IS_ABSOLUTE "${path_to_toml}")
-        set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
-    endif()
-
-    ExternalProject_Add(
-        cargo_${target_name}
-        DOWNLOAD_COMMAND ""
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_BUILD}
-            -p ${package_name} --manifest-path ${path_to_toml}
-        BINARY_DIR "${CMAKE_BINARY_DIR}"
-        INSTALL_COMMAND ""
-        PREFIX cargo
-        BUILD_ALWAYS ON
-    )
-
-    add_custom_target(
-        cargo-clean_${target_name}
-        COMMAND
-            ${CMAKE_COMMAND} -E chdir ${build_dir} ${CARGO_EXECUTABLE} clean
-            --target ${CARGO_TARGET} -p ${package_name}
-    )
-endfunction()

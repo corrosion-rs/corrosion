@@ -17,6 +17,38 @@ else()
         HINTS $ENV{HOME}/.cargo/bin)
 endif()
 
+function(_add_cargo_build package_name target_name path_to_toml)
+    if (NOT IS_ABSOLUTE "${path_to_toml}")
+        set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
+    endif()
+    
+    if (CMAKE_VS_PLATFORM_NAME)
+        set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
+    elseif(CMAKE_CONFIGURATION_TYPES)
+        set (build_dir "$<CONFIG>")
+    else()
+        set (build_dir .)
+    endif()
+
+    add_custom_target(
+        cargo-build_${target_name}
+        COMMAND
+            ${CMAKE_COMMAND} -E env CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+            ${CARGO_BUILD} -p ${package_name} --manifest-path ${path_to_toml}
+        # The build is conducted in root build directory so that cargo
+        # dependencies are shared
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
+    )
+
+    add_custom_target(
+        cargo-clean_${target_name}
+        COMMAND
+            ${CARGO_EXECUTABLE} clean --target ${CARGO_TARGET}
+            -p ${package_name} --manifest-path ${path_to_toml}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
+    )
+endfunction(_add_cargo_build)
+
 function(add_crate path_to_toml)
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_CURRENT_SOURCE_DIR}/${path_to_toml}")
@@ -39,7 +71,7 @@ function(add_crate path_to_toml)
 
     set(
         generated_cmake
-        ${CMAKE_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/cmake-cargo/${toml_dir_name}.dir/cargo-build.cmake)
+        ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/cmake-cargo/${toml_dir_name}.dir/cargo-build.cmake)
 
     if (CMAKE_VS_PLATFORM_NAME)
         set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root
