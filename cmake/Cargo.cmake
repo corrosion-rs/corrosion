@@ -3,18 +3,18 @@ cmake_minimum_required(VERSION 3.10)
 option(CARGO_DEV_MODE OFF "Only for use when making changes to cmake-cargo.")
 
 find_package(Cargo REQUIRED)
-    
-if (CARGO_DEV_MODE)
+
+find_program(
+        _CMAKE_CARGO_GEN cmake-cargo-gen
+        HINTS "$ENV{HOME}/.cargo/bin" "${CMAKE_CURRENT_BINARY_DIR}/cargo/build/debug")
+
+if (CARGO_DEV_MODE OR (NOT _CMAKE_CARGO_GEN))
     message(STATUS "Running in cmake-cargo dev mode")
 
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
 
     set(_CMAKE_CARGO_GEN ${CARGO_EXECUTABLE})
     set(_CMAKE_CARGO_GEN_ARGS run --quiet --manifest-path ${_moddir}/../generator/Cargo.toml --)
-else()
-    find_program(
-        _CMAKE_CARGO_GEN cmake-cargo-gen
-        HINTS $ENV{HOME}/.cargo/bin)
 endif()
 
 function(_add_cargo_build package_name target_name path_to_toml)
