@@ -10,7 +10,7 @@ if (CARGO_DEV_MODE)
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
 
     set(_CMAKE_CARGO_GEN ${CARGO_EXECUTABLE})
-    set(_CMAKE_CARGO_GEN_ARGS run --quiet --manifest-path ${_moddir}/../generator/Cargo.toml --)
+    set(_CMAKE_CARGO_GEN_ARGS run --quiet --manifest-path "${_moddir}/../generator/Cargo.toml" --)
 else()
     find_program(
         _CMAKE_CARGO_GEN cmake-cargo-gen
@@ -63,7 +63,7 @@ function(add_crate path_to_toml)
     execute_process(
         COMMAND
             ${_CMAKE_CARGO_GEN} ${_CMAKE_CARGO_GEN_ARGS}
-            --manifest-path ${path_to_toml} print-root
+            --manifest-path "${path_to_toml}" print-root
         OUTPUT_VARIABLE toml_dir
         RESULT_VARIABLE ret)
 
@@ -102,7 +102,7 @@ function(add_crate path_to_toml)
 
     execute_process(
         COMMAND ${_CMAKE_CARGO_GEN} ${_CMAKE_CARGO_GEN_ARGS} --manifest-path
-            ${path_to_toml} gen-cmake ${_CMAKE_CARGO_CONFIGURATION_ROOT}
+            "${path_to_toml}" gen-cmake ${_CMAKE_CARGO_CONFIGURATION_ROOT}
             ${_CMAKE_CARGO_TARGET} ${_CMAKE_CARGO_CONFIGURATION_TYPES}
             --cargo-version ${CARGO_VERSION} -o
             ${generated_cmake}

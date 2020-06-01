@@ -222,7 +222,7 @@ endif()",
 
                     writeln!(
                         out_file,
-                        "set_property(TARGET {0}-static PROPERTY {1} {2})",
+                        "set_property(TARGET {0}-static PROPERTY {1} \"{2}\")",
                         self.cargo_target.name, imported_location, lib_path
                     )?;
                 }
@@ -244,7 +244,7 @@ endif()",
 
                     writeln!(
                         out_file,
-                        "set_property(TARGET {0}-shared PROPERTY {1} {2})",
+                        "set_property(TARGET {0}-shared PROPERTY {1} \"{2}\")",
                         self.cargo_target.name, imported_location, lib_path
                     )?;
 
@@ -289,7 +289,7 @@ endif()",
 
                 writeln!(
                     out_file,
-                    "set_property(TARGET {0} PROPERTY {1} {2})",
+                    "set_property(TARGET {0} PROPERTY {1} \"{2}\")",
                     self.cargo_target.name, imported_location, exe_path
                 )?;
             }
