@@ -50,7 +50,7 @@ impl CargoTarget {
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &crate::platform::Platform,
-    ) -> Result<(), Box<Error>> {
+    ) -> Result<(), Box<dyn Error>> {
         writeln!(
             out_file,
             "_add_cargo_build({} {} \"{}\")",
@@ -173,7 +173,7 @@ endif()",
         platform: &crate::platform::Platform,
         build_path: &Path,
         config_type: &Option<&str>,
-    ) -> Result<(), Box<Error>> {
+    ) -> Result<(), Box<dyn Error>> {
         let is_windows = platform
             .cargo_target
             .as_ref()

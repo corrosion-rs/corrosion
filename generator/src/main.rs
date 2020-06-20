@@ -28,7 +28,7 @@ fn config_type_target_folder(config_type: Option<&str>) -> &'static str {
     }
 }
 
-fn main() -> Result<(), Box<std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = App::new("CMake Generator for Cargo")
         .version("0.1")
         .author("Andrew Gaspar <andrew.gaspar@outlook.com>")
@@ -130,7 +130,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     let cargo_platform = platform::Platform::from_rust_version_target(cargo_version, cargo_target);
 
-    let mut out_file: Box<Write> = if let Some(path) = matches.value_of(OUT_FILE) {
+    let mut out_file: Box<dyn Write> = if let Some(path) = matches.value_of(OUT_FILE) {
         let path = Path::new(path);
         if let Some(parent) = path.parent() {
             create_dir_all(parent).expect("Failed to create directory!");
