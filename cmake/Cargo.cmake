@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 
 option(CARGO_DEV_MODE OFF "Only for use when making changes to cmake-cargo.")
 

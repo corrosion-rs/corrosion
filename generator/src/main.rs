@@ -144,7 +144,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     writeln!(
         out_file,
         "\
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.12)
 "
     )?;
 
