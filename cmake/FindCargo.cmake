@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.12)
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(FindPackageHandleStandardArgs)
 
-find_program(CARGO_EXECUTABLE cargo HINTS $ENV{HOME}/.cargo/bin)
-find_program(RUSTC_EXECUTABLE rustc HINTS $ENV{HOME}/.cargo/bin)
+find_program(CARGO_EXECUTABLE cargo PATHS $ENV{HOME}/.cargo/bin)
+find_program(RUSTC_EXECUTABLE rustc PATHS $ENV{HOME}/.cargo/bin)
 
 set(CARGO_BUILD_FLAGS "" CACHE STRING "Flags to pass to cargo build")
 set(CARGO_BUILD_FLAGS_DEBUG "" CACHE STRING
