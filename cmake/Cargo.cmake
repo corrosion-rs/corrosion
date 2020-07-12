@@ -40,7 +40,11 @@ function(_add_cargo_build package_name target_name path_to_toml)
                 CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
                 CMAKECARGO_LINK_LIBRARIES=${link_libs}
                 CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
-            ${CARGO_BUILD} -p ${package_name} --manifest-path ${path_to_toml}
+            ${CARGO_EXECUTABLE} build
+                $<$<NOT:$<CONFIG:Debug>>:--release>
+                --target ${CARGO_TARGET}
+                -p ${package_name}
+                --manifest-path ${path_to_toml}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}

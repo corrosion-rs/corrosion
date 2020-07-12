@@ -6,16 +6,6 @@ include(FindPackageHandleStandardArgs)
 find_program(CARGO_EXECUTABLE cargo PATHS $ENV{HOME}/.cargo/bin)
 find_program(RUSTC_EXECUTABLE rustc PATHS $ENV{HOME}/.cargo/bin)
 
-set(CARGO_BUILD_FLAGS "" CACHE STRING "Flags to pass to cargo build")
-set(CARGO_BUILD_FLAGS_DEBUG "" CACHE STRING
-    "Flags to pass to cargo build in Debug configuration")
-set(CARGO_BUILD_FLAGS_RELEASE --release CACHE STRING
-    "Flags to pass to cargo build in Release configuration")
-set(CARGO_BUILD_FLAGS_MINSIZEREL --release CACHE STRING
-    "Flags to pass to cargo build in MinSizeRel configuration")
-set(CARGO_BUILD_FLAGS_RELWITHDEBINFO --release CACHE STRING
-    "Flags to pass to cargo build in RelWithDebInfo configuration")
-
 set(CARGO_RUST_FLAGS "" CACHE STRING "Flags to pass to rustc")
 set(CARGO_RUST_FLAGS_DEBUG "" CACHE STRING
     "Flags to pass to rustc in Debug Configuration")
@@ -25,15 +15,6 @@ set(CARGO_RUST_FLAGS_MINSIZEREL -C opt-level=z CACHE STRING
     "Flags to pass to rustc in MinSizeRel Configuration")
 set(CARGO_RUST_FLAGS_RELWITHDEBINFO -g CACHE STRING
     "Flags to pass to rustc in RelWithDebInfo Configuration")
-    
-if (WIN32)
-    set(CARGO_BUILD_SCRIPT cargo_build.cmd)
-    set(CARGO_BUILD ${CARGO_BUILD_SCRIPT})
-else()
-    set(CARGO_BUILD_SCRIPT cargo_build.sh)
-    set(CARGO_BUILD ./${CARGO_BUILD_SCRIPT})
-endif()
-
 
 execute_process(
     COMMAND ${CARGO_EXECUTABLE} --version --verbose
@@ -125,23 +106,7 @@ target-dir=\"cargo/build\"
             "rustflags = [\"${RUSTFLAGS}\"]\n")
     endif()
 
-    if (CARGO_TARGET)
-        set(CARGO_BUILD_FLAGS ${CARGO_BUILD_FLAGS} --target ${CARGO_TARGET})
-    endif()
-
-    string(REPLACE ";" " " _CARGO_BUILD_FLAGS
-        "${CARGO_BUILD_FLAGS} ${CARGO_BUILD_FLAGS_${UPPER_CONFIG_TYPE}}")
-
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
-
-    configure_file(
-        ${_moddir}/cmds/${CARGO_BUILD_SCRIPT}.in
-        ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${CARGO_BUILD_SCRIPT})
-
-    file(COPY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${CARGO_BUILD_SCRIPT}
-        DESTINATION ${_DESTINATION_DIR}
-        FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ
-        GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endfunction(_gen_config)
 
 if (CMAKE_CONFIGURATION_TYPES)
