@@ -1,0 +1,4 @@
+on: [push, pull_request]
+jobs:
+- name: get-cmake
+  uses: lukka/get-cmake@v3.17.3
