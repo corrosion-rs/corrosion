@@ -25,13 +25,13 @@ jobs:
         run: |
           curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg > cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
           sudo hdiutil attach cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
-          sudo installer -package /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg.pkg -target /
+          sudo installer -package /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg.pkg -target / 
           sudo hdiutil detach /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64
         if: ${{ runner.os == 'macOS' }}
       - name: Install CMake (Linux)
         run: |
           curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Linux-x86_64.sh > cmake-${{matrix.cmake}}-Linux-x86_64.sh
-          sudo sh cmake-${{matrix.cmake}}-Linux-x86_64.sh --prefix=/usr/local
+          sudo sh cmake-${{matrix.cmake}}-Linux-x86_64.sh --prefix=/usr/local --skip-license
         if: ${{ runner.os == 'Linux' }}
       - name: CMake Version
         run: cmake --version
