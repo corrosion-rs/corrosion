@@ -41,7 +41,7 @@ function(_add_cargo_build package_name target_name path_to_toml)
                 CMAKECARGO_LINK_LIBRARIES=${link_libs}
                 CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
             ${CARGO_EXECUTABLE} build
-                $<$<NOT:$<CONFIG:Debug>>:--release>
+                $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
                 --target ${CARGO_TARGET}
                 -p ${package_name}
                 --manifest-path ${path_to_toml}
