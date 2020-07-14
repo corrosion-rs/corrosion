@@ -16,22 +16,10 @@ jobs:
           - 3.12.4
           - 3.17.3
     steps:
-      - name: Install CMake (Windows)
-        run: |
-          curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-win64-x64.msi > cmake-${{matrix.cmake}}-win64-x64.msi
-          msiexec.exe /package cmake-${{matrix.cmake}}-win64-x64.msi /quiet
-        if: ${{ runner.os == 'Windows' }}
-      - name: Install CMake (macOS)
-        run: |
-          curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg > cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
-          sudo hdiutil attach cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
-          sudo installer -package /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg.pkg -target / 
-          sudo hdiutil detach /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64
-        if: ${{ runner.os == 'macOS' }}
-      - name: Install CMake (Linux)
-        run: |
-          curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Linux-x86_64.sh > cmake-${{matrix.cmake}}-Linux-x86_64.sh
-          sudo sh cmake-${{matrix.cmake}}-Linux-x86_64.sh --prefix=/usr/local --skip-license
-        if: ${{ runner.os == 'Linux' }}
+      - name: Install CMake
+        uses: symbitic/install-cmake@master
+        with:
+          cmake: ${{matrix.cmake}}
+          ninja: 1.10.0
       - name: CMake Version
         run: cmake --version
