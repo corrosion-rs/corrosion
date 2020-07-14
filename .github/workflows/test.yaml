@@ -6,6 +6,7 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: 
           - windows-latest
@@ -30,7 +31,7 @@ jobs:
       - name: Install CMake (Linux)
         run: |
           curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz > cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz
-          tar -xf cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz -C /
+          tar -xf cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz -C /usr
         if: ${{ runner.os == 'Linux' }}
       - name: CMake Version
         run: cmake --version
