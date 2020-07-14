@@ -24,14 +24,14 @@ jobs:
       - name: Install CMake (macOS)
         run: |
           curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg > cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
-          hdiutil attach cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
-          installer -package /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg.pkg -target /
-          hdiutil detach /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64
+          sudo hdiutil attach cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
+          sudo installer -package /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg.pkg -target /
+          sudo hdiutil detach /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64
         if: ${{ runner.os == 'macOS' }}
       - name: Install CMake (Linux)
         run: |
           curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz > cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz
-          tar -xf cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz -C /usr
+          sudo tar -xf cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz -C /usr
         if: ${{ runner.os == 'Linux' }}
       - name: CMake Version
         run: cmake --version
