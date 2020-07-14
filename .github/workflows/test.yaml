@@ -21,6 +21,7 @@ jobs:
           - stable
           - nightly
     steps:
+      - uses: actions/checkout@v2
       - name: Install CMake
         uses: symbitic/install-cmake@master
         with:
