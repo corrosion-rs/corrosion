@@ -19,18 +19,18 @@ jobs:
         run: |
           curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-win64-x64.msi > cmake-${{matrix.cmake}}-win64-x64.msi
           msiexec.exe /package cmake-${{matrix.cmake}}-win64-x64.msi /quiet
-        if: ${{ runner.os == "Windows" }}
+        if: ${{ runner.os == 'Windows' }}
       - name: Install CMake (macOS)
         run: |
           curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg > cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
           hdiutil attach cmake-${{matrix.cmake}}-Darwin-x86_64.dmg
           installer -package /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg/cmake-${{matrix.cmake}}-Darwin-x86_64.dmg.pkg -target /
           hdiutil detach /Volumes/cmake-${{matrix.cmake}}-Darwin-x86_64
-        if: ${{ runner.os == "macOS" }}
+        if: ${{ runner.os == 'macOS' }}
       - name: Install CMake (Linux)
         run: |
           curl -L https://github.com/Kitware/CMake/releases/download/v${{matrix.cmake}}/cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz > cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz
           tar -xf cmake-${{matrix.cmake}}-Linux-x86_64.tar.gz -C /
-        if: ${{ runner.os == "Linux" }}
+        if: ${{ runner.os == 'Linux' }}
       - name: CMake Version
         run: cmake --version
