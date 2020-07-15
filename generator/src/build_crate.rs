@@ -63,7 +63,8 @@ pub fn invoke(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Erro
     // Needed to ensure that standard libraries are linked
     cargo.env("RUSTFLAGS", "-C default-linker-libraries=yes");
 
-    let languages: Vec<_> = env::var("CMAKECARGO_LINKER_LANGUAGES")?
+    let languages: Vec<_> = env::var("CMAKECARGO_LINKER_LANGUAGES")
+        .unwrap_or("".to_string())
         .split(";")
         .map(Into::<String>::into)
         .collect();
