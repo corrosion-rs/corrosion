@@ -6,9 +6,11 @@ use std::io::{stdout, Write};
 use std::path::Path;
 use std::rc::Rc;
 
+mod build_crate;
 mod platform;
 mod target;
 
+// options
 const MANIFEST_PATH: &str = "manifest-path";
 const OUT_FILE: &str = "out-file";
 const CONFIGURATION_TYPE: &str = "configuration-type";
@@ -17,6 +19,7 @@ const CONFIGURATION_ROOT: &str = "configuration-root";
 const TARGET: &str = "target";
 const CARGO_VERSION: &str = "cargo-version";
 
+// Subcommands
 const PRINT_ROOT: &str = "print-root";
 const GEN_CMAKE: &str = "gen-cmake";
 
@@ -80,16 +83,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .arg(
                     Arg::with_name(TARGET)
                         .long("target")
-                        .value_name("triple")
-                        .takes_value(true)
+                        .value_name("TRIPLE")
                         .required(true)
                         .help("The build target being used."),
                 )
                 .arg(
                     Arg::with_name(CARGO_VERSION)
                         .long(CARGO_VERSION)
-                        .value_name("version")
-                        .takes_value(true)
+                        .value_name("VERSION")
                         .required(true)
                         .help("Version of target cargo"),
                 )
@@ -98,10 +99,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .short("o")
                         .long("out-file")
                         .value_name("FILE")
-                        .help("Output CMake file name. Defaults to stdout.")
-                        .takes_value(true),
+                        .help("Output CMake file name. Defaults to stdout."),
                 ),
         )
+        .subcommand(build_crate::subcommand())
         .get_matches();
 
     let mut cmd = cargo_metadata::MetadataCommand::new();
@@ -114,6 +115,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(_) = matches.subcommand_matches(PRINT_ROOT) {
         println!("{}", metadata.workspace_root.to_str().unwrap());
+        std::process::exit(0);
+    }
+
+    if let Some(_) = matches.subcommand_matches(build_crate::BUILD_CRATE) {
+        build_crate::invoke(&matches).unwrap();
         std::process::exit(0);
     }
 

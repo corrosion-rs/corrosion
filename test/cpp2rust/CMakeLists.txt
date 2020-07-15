@@ -1,5 +1,10 @@
 add_crate(rust/Cargo.toml)
+cargo_link_libraries(rust-exe cpp-lib)
 
 add_library(cpp-lib lib.cpp)
 target_compile_features(cpp-lib PRIVATE cxx_std_17)
-cargo_link_libraries(rust-exe cpp-lib)
+set_target_properties(
+    cpp-lib
+    PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+)
