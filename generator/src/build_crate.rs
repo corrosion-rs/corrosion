@@ -91,19 +91,17 @@ pub fn invoke(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Erro
         );
     }
 
-    let language = highest_preference
-        .expect("cmake-cargo internal error: No compiler provided for linking with!")
-        .1;
+    // If a preferred compiler is selected,
+    if let Some((_, language)) = highest_preference {
+        if let Ok(compiler) = env::var(&format!("CMAKECARGO_{}_COMPILER", language)) {
+            let linker_arg = format!(
+                "CARGO_TARGET_{}_LINKER",
+                target.replace("-", "_").to_uppercase()
+            );
 
-    let compiler = env::var(&format!("CMAKECARGO_{}_COMPILER", language))
-        .expect("cmake-cargo internal error: No compiler provided for preferred compiler");
-
-    let linker_arg = format!(
-        "CARGO_TARGET_{}_LINKER",
-        target.replace("-", "_").to_uppercase()
-    );
-
-    cargo.env(linker_arg, compiler);
+            cargo.env(linker_arg, compiler);
+        }
+    }
 
     process::exit(if cargo.status()?.success() { 0 } else { 1 });
 }
