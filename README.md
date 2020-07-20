@@ -1,4 +1,4 @@
 # cmake-cargo
-[![Build Status](https://andrewgaspar.visualstudio.com/cmake-cargo/_apis/build/status/Cargo%20CMake-CI?branchName=master)](https://andrewgaspar.visualstudio.com/cmake-cargo/_build/latest?definitionId=1&branchName=master)
+[![Build Status](https://github.com/AndrewGaspar/cmake-cargo/actions?query=branch%3Amaster)](https://github.com/AndrewGaspar/cmake-cargo/workflows/test/badge.svg)
 
 Integration for Cargo projects into an existing CMake project.
