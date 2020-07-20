@@ -1,0 +1,57 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - '*'
+defaults:
+  run:
+    shell: bash
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.rust == 'nightly' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: 
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+        cmake:
+          - 3.12.4
+          - 3.17.3
+        rust:
+          - 1.44.1
+          - stable
+          - nightly
+        exclude:
+          - os: windows-latest
+            cmake: 3.12.4
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install CMake
+        uses: symbitic/install-cmake@master
+        with:
+          cmake: ${{matrix.cmake}}
+          ninja: 1.10.0
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{matrix.rust}}
+      - name: CMake Version
+        run: cmake --version
+      - name: Rust Version
+        run: rustc --version
+      - name: Build cmake-cargo-gen
+        run: |
+          cargo build --manifest-path generator/Cargo.toml -p cmake-cargo-gen
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake ..
+      - name: Build C++ program linking Rust
+        run: cd build && cmake --build . --target cpp-exe
+      - name: Build Rust program linking C++
+        run: cd build && cmake --build . --target cargo-build_rust-exe 

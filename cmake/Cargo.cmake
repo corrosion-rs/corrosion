@@ -33,18 +33,54 @@ function(_add_cargo_build package_name target_name path_to_toml)
     set(link_libs "$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINK_LIBRARIES>>")
     set(search_dirs "$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINK_DIRECTORIES>>")
 
+    # For MSVC targets, don't mess with linker preferences.
+    # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
+    if (NOT CARGO_ABI STREQUAL "msvc")
+        foreach(language C CXX Fortran)
+            if(CMAKE_${language}_COMPILER AND CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES)
+                list(
+                    APPEND
+                    link_prefs
+                    CMAKECARGO_${language}_LINKER_PREFERENCE="${CMAKE_${language}_LINKER_PREFERENCE}")
+
+                list(
+                    APPEND
+                    compilers
+                    CMAKECARGO_${language}_COMPILER="${CMAKE_${language}_COMPILER}"
+                )
+            endif()
+        endforeach()
+
+        # The C compiler must be at least enabled in order to choose a linker
+        if (NOT compilers)
+            if (NOT CMAKE_C_COMPILER)
+                message(STATUS "Enabling the C compiler for linking Rust programs")
+                enable_language(C REQUIRED)
+            endif()
+
+            list(APPEND link_prefs CMAKECARGO_C_LINKER_PREFERENCE="${CMAKE_C_LINKER_PREFERENCE}")
+            list(APPEND compilers CMAKECARGO_C_COMPILER="${CMAKE_C_COMPILER}")
+        endif()
+    endif()
+
     add_custom_target(
         cargo-build_${target_name}
+        ALL
         COMMAND
             ${CMAKE_COMMAND} -E env
                 CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
                 CMAKECARGO_LINK_LIBRARIES=${link_libs}
                 CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
-            ${CARGO_EXECUTABLE} build
-                $<$<NOT:$<CONFIG:Debug>>:--release>
-                --target ${CARGO_TARGET}
-                -p ${package_name}
-                --manifest-path ${path_to_toml}
+                ${link_prefs}
+                ${compilers}
+                CMAKECARGO_LINKER_LANGUAGES=$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>
+            ${_CMAKE_CARGO_GEN} ${_CMAKE_CARGO_GEN_ARGS}
+                --manifest-path "${path_to_toml}"
+                build-crate
+                    $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
+                    --target ${CARGO_TARGET}
+                    --package ${package_name}
+                    --cargo ${CARGO_EXECUTABLE}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
@@ -57,6 +93,11 @@ function(_add_cargo_build package_name target_name path_to_toml)
             -p ${package_name} --manifest-path ${path_to_toml}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
     )
+    
+    if (NOT TARGET cargo-clean)
+        add_custom_target(cargo-clean)
+        add_dependencies(cargo-clean cargo-clean_${target_name})
+    endif()
 endfunction(_add_cargo_build)
 
 function(add_crate path_to_toml)
@@ -122,9 +163,26 @@ endfunction(add_crate)
 function(cargo_link_libraries target_name)
     add_dependencies(cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
-        set_property(TARGET cargo-build_${target_name} APPEND PROPERTY CARGO_LINK_DIRECTORIES $<TARGET_LINKER_FILE_DIR:${library}>)
+        set_property(
+            TARGET cargo-build_${target_name}
+            APPEND
+            PROPERTY CARGO_LINK_DIRECTORIES
+            $<TARGET_LINKER_FILE_DIR:${library}>
+        )
+
+        set_property(
+            TARGET cargo-build_${target_name}
+            APPEND
+            PROPERTY CARGO_DEPS_LINKER_LANGUAGES
+            $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
+        )
 
         # TODO: The output name of the library can be overridden - find a way to support that.
-        set_property(TARGET cargo-build_${target_name} APPEND PROPERTY CARGO_LINK_LIBRARIES ${library})
+        set_property(
+            TARGET cargo-build_${target_name}
+            APPEND
+            PROPERTY CARGO_LINK_LIBRARIES
+            ${library}
+        )
     endforeach()
 endfunction(cargo_link_libraries)
