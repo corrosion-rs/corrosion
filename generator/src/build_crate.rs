@@ -60,47 +60,50 @@ pub fn invoke(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Erro
         cargo.arg("--release");
     }
 
-    // Needed to ensure that standard libraries are linked
-    cargo.env("RUSTFLAGS", "-C default-linker-libraries=yes");
-
-    let languages: Vec<_> = env::var("CMAKECARGO_LINKER_LANGUAGES")
+    let languages: Vec<String> = env::var("CMAKECARGO_LINKER_LANGUAGES")
         .unwrap_or("".to_string())
         .split(";")
-        .map(Into::<String>::into)
+        .map(Into::into)
         .collect();
 
-    // This loop gets the highest preference link language to use for the linker
-    let mut highest_preference: Option<(Option<i32>, &str)> = None;
-    for language in &languages {
-        highest_preference = Some(
-            if let Ok(preference) = env::var(&format!("CMAKECARGO_{}_LINKER_PREFERENCE", language))
-            {
-                let preference = preference
-                    .parse()
-                    .expect("cmake-cargo internal error: PREFERENCE wrong format");
-                match highest_preference {
-                    Some((Some(current), language)) if current > preference => {
-                        (Some(current), language)
+    if !languages.is_empty() {
+        cargo.env("RUSTFLAGS", "-C default-linker-libraries=yes");
+
+        // This loop gets the highest preference link language to use for the linker
+        let mut highest_preference: Option<(Option<i32>, &str)> = None;
+        for language in &languages {
+            highest_preference = Some(
+                if let Ok(preference) =
+                    env::var(&format!("CMAKECARGO_{}_LINKER_PREFERENCE", language))
+                {
+                    let preference = preference
+                        .parse()
+                        .expect("cmake-cargo internal error: PREFERENCE wrong format");
+                    match highest_preference {
+                        Some((Some(current), language)) if current > preference => {
+                            (Some(current), language)
+                        }
+                        _ => (Some(preference), &language),
                     }
-                    _ => (Some(preference), &language),
-                }
-            } else if let Some(p) = highest_preference {
-                p
-            } else {
-                (None, &language)
-            },
-        );
-    }
-
-    // If a preferred compiler is selected,
-    if let Some((_, language)) = highest_preference {
-        if let Ok(compiler) = env::var(&format!("CMAKECARGO_{}_COMPILER", language)) {
-            let linker_arg = format!(
-                "CARGO_TARGET_{}_LINKER",
-                target.replace("-", "_").to_uppercase()
+                } else if let Some(p) = highest_preference {
+                    p
+                } else {
+                    (None, &language)
+                },
             );
+        }
 
-            cargo.env(linker_arg, compiler);
+        // If a preferred compiler is selected, use it as the linker so that the correct standard, implicit libraries
+        // are linked in.
+        if let Some((_, language)) = highest_preference {
+            if let Ok(compiler) = env::var(&format!("CMAKECARGO_{}_COMPILER", language)) {
+                let linker_arg = format!(
+                    "CARGO_TARGET_{}_LINKER",
+                    target.replace("-", "_").to_uppercase()
+                );
+
+                cargo.env(linker_arg, compiler);
+            }
         }
     }
 

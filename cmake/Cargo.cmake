@@ -33,30 +33,34 @@ function(_add_cargo_build package_name target_name path_to_toml)
     set(link_libs "$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINK_LIBRARIES>>")
     set(search_dirs "$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINK_DIRECTORIES>>")
 
-    foreach(language C CXX Fortran)
-        if(CMAKE_${language}_COMPILER AND CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES)
-            list(
-                APPEND
-                link_prefs
-                CMAKECARGO_${language}_LINKER_PREFERENCE="${CMAKE_${language}_LINKER_PREFERENCE}")
+    # For MSVC targets, don't mess with linker preferences.
+    # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
+    if (NOT CARGO_ABI STREQUAL "msvc")
+        foreach(language C CXX Fortran)
+            if(CMAKE_${language}_COMPILER AND CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES)
+                list(
+                    APPEND
+                    link_prefs
+                    CMAKECARGO_${language}_LINKER_PREFERENCE="${CMAKE_${language}_LINKER_PREFERENCE}")
 
-            list(
-                APPEND
-                compilers
-                CMAKECARGO_${language}_COMPILER="${CMAKE_${language}_COMPILER}"
-            )
+                list(
+                    APPEND
+                    compilers
+                    CMAKECARGO_${language}_COMPILER="${CMAKE_${language}_COMPILER}"
+                )
+            endif()
+        endforeach()
+
+        # The C compiler must be at least enabled in order to choose a linker
+        if (NOT compilers)
+            if (NOT CMAKE_C_COMPILER)
+                message(STATUS "Enabling the C compiler for linking Rust programs")
+                enable_language(C REQUIRED)
+            endif()
+
+            list(APPEND link_prefs CMAKECARGO_C_LINKER_PREFERENCE="${CMAKE_C_LINKER_PREFERENCE}")
+            list(APPEND compilers CMAKECARGO_C_COMPILER="${CMAKE_C_COMPILER}")
         endif()
-    endforeach()
-
-    # The C compiler must be at least enabled in order to choose a linker
-    if (NOT compilers)
-        if (NOT CMAKE_C_COMPILER)
-            message(STATUS "Enabling the C compiler for linking Rust programs")
-            enable_language(C REQUIRED)
-        endif()
-
-        list(APPEND link_prefs CMAKECARGO_C_LINKER_PREFERENCE="${CMAKE_C_LINKER_PREFERENCE}")
-        list(APPEND compilers CMAKECARGO_C_COMPILER="${CMAKE_C_COMPILER}")
     endif()
 
     add_custom_target(
