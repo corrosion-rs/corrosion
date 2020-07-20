@@ -20,6 +20,9 @@ jobs:
           - 1.44.1
           - stable
           - nightly
+        exclude:
+          - os: windows-latest
+            cmake: 3.12.4
     steps:
       - uses: actions/checkout@v2
       - name: Install CMake
