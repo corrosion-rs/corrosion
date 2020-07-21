@@ -8,7 +8,8 @@ use std::{
 use clap::{App, Arg, ArgMatches, SubCommand};
 use semver::Version;
 
-use crate::{config_type_target_folder, platform, target};
+mod platform;
+mod target;
 
 // Command name
 pub const GEN_CMAKE: &str = "gen-cmake";
@@ -78,6 +79,14 @@ pub fn subcommand() -> App<'static, 'static> {
                 .value_name("FILE")
                 .help("Output CMake file name. Defaults to stdout."),
         )
+}
+
+fn config_type_target_folder(config_type: Option<&str>) -> &'static str {
+    match config_type {
+        Some("Debug") | None => "debug",
+        Some("Release") | Some("RelWithDebInfo") | Some("MinSizeRel") => "release",
+        Some(config_type) => panic!("Unknown config_type {}!", config_type),
+    }
 }
 
 pub fn invoke(

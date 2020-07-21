@@ -7,21 +7,11 @@ mod subcommands {
     pub mod gen_cmake;
     pub mod print_root;
 }
-mod platform;
-mod target;
 
 use subcommands::*;
 
 // common options
 const MANIFEST_PATH: &str = "manifest-path";
-
-fn config_type_target_folder(config_type: Option<&str>) -> &'static str {
-    match config_type {
-        Some("Debug") | None => "debug",
-        Some("Release") | Some("RelWithDebInfo") | Some("MinSizeRel") => "release",
-        Some(config_type) => panic!("Unknown config_type {}!", config_type),
-    }
-}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = App::new("CMake Generator for Cargo")
