@@ -1,4 +1,3 @@
-use platforms::target::{Env, OS};
 use std::error::Error;
 use std::path::Path;
 use std::rc::Rc;
@@ -46,73 +45,74 @@ impl CargoTarget {
         })
     }
 
+    fn lib_name(&self) -> String {
+        self.cargo_target.name.replace("-", "_")
+    }
+
+    fn static_lib_name(&self, platform: &super::platform::Platform) -> String {
+        if platform.is_msvc() {
+            format!("{}.lib", self.lib_name())
+        } else {
+            format!("lib{}.a", self.lib_name())
+        }
+    }
+
+    fn dynamic_lib_name(&self, platform: &super::platform::Platform) -> String {
+        if platform.is_windows() {
+            format!("{}.dll", self.lib_name())
+        } else if platform.is_macos() {
+            format!("lib{}.dylib", self.lib_name())
+        } else {
+            format!("lib{}.so", self.lib_name())
+        }
+    }
+
+    fn implib_name(&self, platform: &super::platform::Platform) -> String {
+        let suffix = if platform.is_msvc() {
+            "lib"
+        } else if platform.is_windows_gnu() {
+            "a"
+        } else {
+            ""
+        };
+
+        format!("{}.dll.{}", self.lib_name(), suffix)
+    }
+
+    fn exe_name(&self, platform: &super::platform::Platform) -> String {
+        if platform.is_windows() {
+            format!("{}.exe", self.cargo_target.name)
+        } else {
+            self.cargo_target.name.clone()
+        }
+    }
+
     pub fn emit_cmake_target(
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
     ) -> Result<(), Box<dyn Error>> {
         // This bit aggregates the byproducts of "cargo build", which is needed for generators like Ninja.
-        // TODO: Clean this up a bit - it feels like there's some redundancy with emit_cmake_config_info
-        let is_windows = platform
-            .cargo_target
-            .as_ref()
-            .map_or(false, |t| t.target_os == OS::Windows);
-
-        let is_msvc = is_windows
-            && platform
-                .cargo_target
-                .as_ref()
-                .map_or(false, |t| t.target_env == Some(Env::MSVC));
-
-        let is_macos = platform
-            .cargo_target
-            .as_ref()
-            .map_or(false, |t| t.target_os == OS::MacOS);
-
         let mut byproducts = vec![];
         match self.target_type {
             CargoTargetType::Library {
                 has_staticlib,
                 has_cdylib,
             } => {
-                let lib_name = self.cargo_target.name.replace("-", "_");
-
                 if has_staticlib {
-                    let lib_file = if is_windows {
-                        format!("{}.lib", lib_name)
-                    } else {
-                        format!("lib{}.a", lib_name)
-                    };
-
-                    byproducts.push(lib_file);
+                    byproducts.push(self.static_lib_name(platform));
                 }
 
                 if has_cdylib {
-                    let lib_file = if is_windows {
-                        format!("{}.dll", lib_name)
-                    } else if is_macos {
-                        format!("lib{}.dylib", lib_name)
-                    } else {
-                        format!("lib{}.so", lib_name)
-                    };
+                    byproducts.push(self.dynamic_lib_name(platform));
 
-                    byproducts.push(lib_file);
-
-                    if is_windows {
-                        if is_msvc {
-                            byproducts.push(format!("{}.dll.lib", lib_name));
-                        }
+                    if platform.is_windows() {
+                        byproducts.push(self.implib_name(platform));
                     }
                 }
             }
             CargoTargetType::Executable => {
-                let exe_file = if is_windows {
-                    format!("{}.exe", self.cargo_target.name)
-                } else {
-                    self.cargo_target.name.clone()
-                };
-
-                byproducts.push(exe_file);
+                byproducts.push(self.exe_name(platform));
             }
         }
 
@@ -247,28 +247,6 @@ endif()",
         build_path: &Path,
         config_type: &Option<&str>,
     ) -> Result<(), Box<dyn Error>> {
-        let is_windows = platform
-            .cargo_target
-            .as_ref()
-            .map_or(false, |t| t.target_os == OS::Windows);
-
-        let is_msvc = is_windows
-            && platform
-                .cargo_target
-                .as_ref()
-                .map_or(false, |t| t.target_env == Some(Env::MSVC));
-
-        let is_windows_gnu = is_windows
-            && platform
-                .cargo_target
-                .as_ref()
-                .map_or(false, |t| t.target_env == Some(Env::GNU));
-
-        let is_macos = platform
-            .cargo_target
-            .as_ref()
-            .map_or(false, |t| t.target_os == OS::MacOS);
-
         let imported_location = config_type.map_or("IMPORTED_LOCATION".to_owned(), |config_type| {
             format!("IMPORTED_LOCATION_{}", config_type.to_uppercase())
         });
@@ -278,17 +256,9 @@ endif()",
                 has_staticlib,
                 has_cdylib,
             } => {
-                let lib_name = self.cargo_target.name.replace("-", "_");
-
                 if has_staticlib {
-                    let lib_file = if is_windows {
-                        format!("{}.lib", lib_name)
-                    } else {
-                        format!("lib{}.a", lib_name)
-                    };
-
                     let lib_path = build_path
-                        .join(lib_file)
+                        .join(self.static_lib_name(platform))
                         .to_str()
                         .unwrap()
                         .replace("\\", "\\\\");
@@ -301,16 +271,8 @@ endif()",
                 }
 
                 if has_cdylib {
-                    let lib_file = if is_windows {
-                        format!("{}.dll", lib_name)
-                    } else if is_macos {
-                        format!("lib{}.dylib", lib_name)
-                    } else {
-                        format!("lib{}.so", lib_name)
-                    };
-
                     let lib_path = build_path
-                        .join(lib_file)
+                        .join(self.dynamic_lib_name(platform))
                         .to_str()
                         .unwrap()
                         .replace("\\", "\\\\");
@@ -321,19 +283,19 @@ endif()",
                         self.cargo_target.name, imported_location, lib_path
                     )?;
 
-                    if is_windows {
-                        if is_windows_gnu {
+                    if platform.is_windows() {
+                        if platform.is_windows_gnu() {
                             println!(
-                                "WARNING: Shared librarys from *-pc-windows-gnu cannot be imported"
+                                "WARNING: Shared libraries from *-pc-windows-gnu cannot be imported"
                             )
-                        } else if is_msvc {
+                        } else if platform.is_msvc() {
                             let imported_implib =
                                 config_type.map_or("IMPORTED_IMPLIB".to_owned(), |config_type| {
                                     format!("IMPORTED_IMPLIB_{}", config_type.to_uppercase())
                                 });
 
                             let lib_path = build_path
-                                .join(format!("{}.dll.lib", lib_name))
+                                .join(self.implib_name(platform))
                                 .to_str()
                                 .unwrap()
                                 .replace("\\", "\\\\");
@@ -348,7 +310,7 @@ endif()",
                 }
             }
             CargoTargetType::Executable => {
-                let exe_file = if is_windows {
+                let exe_file = if platform.is_windows() {
                     format!("{}.exe", self.cargo_target.name)
                 } else {
                     self.cargo_target.name.clone()

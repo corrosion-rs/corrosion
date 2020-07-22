@@ -79,4 +79,32 @@ impl Platform {
             cargo_target: cargo_target.clone(),
         }
     }
+
+    pub fn is_windows(&self) -> bool {
+        self.cargo_target
+            .as_ref()
+            .map_or(false, |t| t.target_os == OS::Windows)
+    }
+
+    pub fn is_msvc(&self) -> bool {
+        self.is_windows()
+            && self
+                .cargo_target
+                .as_ref()
+                .map_or(false, |t| t.target_env == Some(Env::MSVC))
+    }
+
+    pub fn is_windows_gnu(&self) -> bool {
+        self.is_windows()
+            && self
+                .cargo_target
+                .as_ref()
+                .map_or(false, |t| t.target_env == Some(Env::GNU))
+    }
+
+    pub fn is_macos(&self) -> bool {
+        self.cargo_target
+            .as_ref()
+            .map_or(false, |t| t.target_os == OS::MacOS)
+    }
 }
