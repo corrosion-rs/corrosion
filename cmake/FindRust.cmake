@@ -3,8 +3,98 @@ cmake_minimum_required(VERSION 3.12)
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(FindPackageHandleStandardArgs)
 
-find_program(CARGO_EXECUTABLE cargo PATHS $ENV{HOME}/.cargo/bin)
+# Falls back to the rustup proxies if a toolchain cannot be found in the user's path
 find_program(RUSTC_EXECUTABLE rustc PATHS $ENV{HOME}/.cargo/bin)
+
+# Check if the discovered cargo is actually a "rustup" proxy.
+execute_process(
+    COMMAND
+        ${CMAKE_COMMAND} -E env
+            RUSTUP_FORCE_ARG0=rustup
+        ${RUSTC_EXECUTABLE} --version
+    OUTPUT_VARIABLE CARGO_VERSION_RAW
+)
+
+# Discover what toolchains are installed by rustup
+if (CARGO_VERSION_RAW MATCHES "rustup [0-9\\.]+")
+    set(FOUND_PROXIES ON)
+
+    execute_process(
+        COMMAND
+            ${CMAKE_COMMAND} -E env
+                RUSTUP_FORCE_ARG0=rustup
+            ${RUSTC_EXECUTABLE} toolchain list --verbose
+        OUTPUT_VARIABLE TOOLCHAINS_RAW
+    )
+
+    # We don't need RUSTC_EXECUTABLE anymore
+    unset(RUSTC_EXECUTABLE CACHE)
+
+    string(REPLACE "\n" ";" TOOLCHAINS_RAW "${TOOLCHAINS_RAW}")
+
+    foreach(TOOLCHAIN_RAW ${TOOLCHAINS_RAW})
+        if (TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9_\\-]+)([ \t\r\n]+\\(default\\))?[ \t\r\n]+(.*)")
+            set(TOOLCHAIN "${CMAKE_MATCH_1}")
+            list(APPEND DISCOVERED_TOOLCHAINS ${TOOLCHAIN})
+
+            set(${TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
+
+            if (CMAKE_MATCH_2)
+                set(TOOLCHAIN_DEFAULT ${TOOLCHAIN})
+            endif()
+        else()
+            message(WARNING "Didn't reconize toolchain. :(")
+        endif()
+    endforeach()
+
+    message(STATUS "Default toolchain: ${TOOLCHAIN_DEFAULT}")
+    foreach(TOOLCHAIN ${DISCOVERED_TOOLCHAINS})
+        message(STATUS "${TOOLCHAIN}: ${${TOOLCHAIN}_PATH}")
+    endforeach()
+
+    set(RUSTUP_TOOLCHAIN ${TOOLCHAIN_DEFAULT} CACHE STRING "The rustup toolchain to use")
+else()
+    set(FOUND_PROXIES OFF)
+endif()
+
+# Resolve to the concrete toolchain if a proxy is found, otherwise use the provided executable
+if (FOUND_PROXIES)
+    if (RUSTUP_TOOLCHAIN)
+        if (NOT RUSTUP_TOOLCHAIN IN_LIST DISCOVERED_TOOLCHAINS)
+            message(SEND_ERROR "Could not find toolchain '${RUSTUP_TOOLCHAIN}'")
+            message(SEND_ERROR "Available toolchains:")
+
+            list(APPEND CMAKE_MESSAGE_INDENT "  ")
+            foreach(TOOLCHAIN ${DISCOVERED_TOOLCHAINS})
+                message(SEND_ERROR "${TOOLCHAIN}")
+            endforeach()
+            list(POP_BACK CMAKE_MESSAGE_INDENT)
+
+            message(FATAL_ERROR "")
+        endif()
+    endif()
+
+    unset(RUSTC_EXECUTABLE CACHE)
+
+    set(RUST_TOOLCHAIN_PATH "${${RUSTUP_TOOLCHAIN}_PATH}")
+
+    find_program(
+        RUSTC_EXECUTABLE
+        rustc
+            HINTS "${RUST_TOOLCHAIN_PATH}/bin"
+            NO_DEFAULT_PATH)
+else()
+    get_filename_component(RUST_TOOLCHAIN_PATH ${RUSTC_EXECUTABLE}    DIRECTORY)
+    get_filename_component(RUST_TOOLCHAIN_PATH ${RUST_TOOLCHAIN_PATH} DIRECTORY)
+endif()
+
+# Look for Cargo next to rustc.
+# If you want to use a different cargo, explicitly set the CARGO_EXECUTABLE cache variable
+find_program(
+    CARGO_EXECUTABLE
+    cargo
+        HINTS "${RUST_TOOLCHAIN_PATH}/bin"
+        REQUIRED NO_DEFAULT_PATH)
 
 set(CARGO_RUST_FLAGS "" CACHE STRING "Flags to pass to rustc")
 set(CARGO_RUST_FLAGS_DEBUG "" CACHE STRING
@@ -34,6 +124,19 @@ endif()
 execute_process(
     COMMAND ${RUSTC_EXECUTABLE} --version --verbose
     OUTPUT_VARIABLE RUSTC_VERSION_RAW)
+
+if (RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+    set(RUSTC_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    set(RUSTC_VERSION_MINOR "${CMAKE_MATCH_2}")
+    set(RUSTC_VERSION_PATCH "${CMAKE_MATCH_3}")
+    set(RUSTC_VERSION "${RUSTC_VERSION_MAJOR}.${RUSTC_VERSION_MINOR}.${RUSTC_VERSION_PATCH}")
+else()
+    message(
+        FATAL_ERROR
+        "Failed to parse rustc version. `rustc --version --verbose` evaluated to:\n${RUSTC_VERSION_RAW}")
+endif()
+
+set(RUST_VERSION ${RUSTC_VERSION})
 
 if (NOT CARGO_TARGET)
     if (WIN32)
@@ -73,14 +176,14 @@ if (NOT CARGO_TARGET)
             "Failed to parse rustc host target. `rustc --version --verbose` evaluated to:\n${RUSTC_VERSION_RAW}"
         )
     endif()
+
+    message(STATUS "Rust Target: ${CARGO_TARGET}")
 endif()
 
-message(STATUS "Rust Target: ${CARGO_TARGET}")
-
 find_package_handle_standard_args(
-    Cargo
-    REQUIRED_VARS CARGO_EXECUTABLE
-    VERSION_VAR CARGO_VERSION)
+    Rust
+    REQUIRED_VARS RUSTC_EXECUTABLE CARGO_EXECUTABLE CARGO_TARGET
+    VERSION_VAR RUST_VERSION)
 
 function(_gen_config config_type use_config_dir)
     string(TOUPPER "${config_type}" UPPER_CONFIG_TYPE)

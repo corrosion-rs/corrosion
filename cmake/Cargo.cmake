@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 option(CARGO_DEV_MODE OFF "Only for use when making changes to cmake-cargo.")
 
-find_package(Cargo REQUIRED)
+find_package(Rust REQUIRED)
     
 if (CARGO_DEV_MODE)
     message(STATUS "Running in cmake-cargo dev mode")
