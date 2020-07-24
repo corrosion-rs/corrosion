@@ -17,7 +17,22 @@ else()
         HINTS $ENV{HOME}/.cargo/bin)
 endif()
 
-function(_add_cargo_build package_name target_name path_to_toml)
+function(_add_cargo_build)
+    set(options "")
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH)
+    set(multi_value_args BYPRODUCTS)
+    cmake_parse_arguments(
+        ACB
+        "${options}"
+        "${one_value_args}"
+        "${multi_value_args}"
+        ${ARGN}
+    )
+
+    set(package_name "${ACB_PACKAGE}")
+    set(target_name "${ACB_TARGET}")
+    set(path_to_toml "${ACB_MANIFEST_PATH}")
+
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
     endif()
@@ -63,6 +78,20 @@ function(_add_cargo_build package_name target_name path_to_toml)
         endif()
     endif()
 
+    # BYPRODUCTS doesn't support generator expressions, so only add BYPRODUCTS for single-config generators
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+        if (CMAKE_BUILD_TYPE STREQUAL "" OR CMAKE_BUILD_TYPE STREQUAL Debug)
+            set(build_type_dir debug)
+        else()
+            set(build_type_dir release)
+        endif()
+
+        set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${CARGO_TARGET}/${build_type_dir}")
+        foreach(byproduct_file ${ACB_BYPRODUCTS})
+            list(APPEND byproducts "${cargo_build_dir}/${byproduct_file}")
+        endforeach()
+    endif()
+
     add_custom_target(
         cargo-build_${target_name}
         ALL
@@ -81,6 +110,7 @@ function(_add_cargo_build package_name target_name path_to_toml)
                     --target ${CARGO_TARGET}
                     --package ${package_name}
                     --cargo ${CARGO_EXECUTABLE}
+            BYPRODUCTS ${byproducts}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}

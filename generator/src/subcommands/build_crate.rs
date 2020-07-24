@@ -1,4 +1,4 @@
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use std::{env, process};
 
 // build-crate Subcommand
@@ -36,11 +36,7 @@ pub fn subcommand() -> App<'static, 'static> {
         )
 }
 
-pub fn invoke(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
-    let manifest_path = matches.value_of(super::MANIFEST_PATH).unwrap();
-
-    let matches = matches.subcommand().1.unwrap();
-
+pub fn invoke(manifest_path: &str, matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
     let cargo_executable = matches.value_of(CARGO_EXECUTABLE).unwrap();
     let target = matches.value_of(TARGET).unwrap();
 

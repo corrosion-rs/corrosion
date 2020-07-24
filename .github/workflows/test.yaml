@@ -19,17 +19,104 @@ jobs:
           - windows-latest
           - ubuntu-latest
           - macos-latest
+        abi:
+          - gnu
+          - darwin
+          - msvc
         cmake:
           - 3.12.4
-          - 3.17.3
+          - 3.18.0
         rust:
           - 1.44.1
           - stable
           - nightly
+        generator:
+          - default # This is just whatever the platform default is
+          - ninja
         exclude:
+          # Something's busted when building with Visual Studio with CMake 3.12 - perhaps should
+          # look into this at some point
           - os: windows-latest
             cmake: 3.12.4
+            generator: default # Default generator is Visual Studio
+
+          # Prior to 1.45.0, -nostdlib is erroneously passed to g++ when for the *-pc-windows-gnu
+          # target. See: https://github.com/rust-lang/rust/pull/71769
+          - os: windows-latest
+            abi: gnu
+            rust: 1.44.1
+
+          # You cannot build with GNU using Visual Studio on Windows
+          - os: windows-latest
+            abi: gnu
+            generator: default # Default generator is Visual Studio
+
+          # ABI
+          - os: ubuntu-latest
+            abi: msvc
+          - os: ubuntu-latest
+            abi: darwin
+          - os: windows-latest
+            abi: darwin
+          - os: macos-latest
+            abi: msvc
+          - os: macos-latest
+            abi: gnu
+
+        include:
+          # Build x86_64-pc-windows-gnu with the earliest supported version
+          - os: windows-latest
+            abi: gnu
+            cmake: 3.12.4
+            rust: 1.45.0
+            generator: ninja
+          - os: windows-latest
+            abi: gnu
+            cmake: 3.18.0
+            rust: 1.45.0
+            generator: ninja
     steps:
+      - name: Determine Rust OS
+        id: determine_rust_os
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "::set-output name=os::pc-windows"
+          elif [ "${{ runner.os }}" == "Linux" ]; then
+            echo "::set-output name=os::unknown-linux"
+          elif [ "${{ runner.os }}" == "macOS" ]; then
+            echo "::set-output name=os::apple"
+          fi
+      - name: Pick Compiler
+        id: pick_compiler
+        run: |
+          if [ "${{ matrix.abi }}" == "gnu" ]; then
+            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=g++"
+          elif [ "${{ matrix.abi }}" == "darwin" ]; then
+            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=clang++"
+          elif [ "${{ matrix.abi }}" == "msvc" ]; then
+            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=cl"
+          fi
+      - name: Pick Generator
+        id: pick_generator
+        run: |
+          if [ "${{ matrix.generator }}" == "ninja" ]; then
+            echo "::set-output name=generator::-GNinja"
+          elif [ "${{ matrix.abi }}" == "default" ]; then
+            echo "::set-output name=generator::"
+          fi
+      - name: CMake Build Flags
+        id: cmake_build_flags
+        run: |
+          if [ "${{ matrix.cmake }}" != "3.12.4" ]; then
+            echo "::set-output name=cmake_build_flags::--verbose"
+          else
+            echo "::set-output name=cmake_build_flags::"
+          fi
+      - name: Setup MSVC Development Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+        if: ${{ 'msvc' == matrix.abi }}
       - uses: actions/checkout@v2
       - name: Install CMake
         uses: symbitic/install-cmake@master
@@ -39,7 +126,9 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
+          default: true
           toolchain: ${{matrix.rust}}
+          target: x86_64-${{ steps.determine_rust_os.outputs.os }}-${{ matrix.abi }}
       - name: CMake Version
         run: cmake --version
       - name: Rust Version
@@ -50,8 +139,8 @@ jobs:
       - name: Configure
         run: |
           mkdir build && cd build
-          cmake ..
+          cmake ${{ steps.pick_compiler.outputs.compiler }} ${{ steps.pick_generator.outputs.generator }} ..
       - name: Build C++ program linking Rust
-        run: cd build && cmake --build . --target cpp-exe
+        run: cd build && cmake --build . ${{ steps.cmake_build_flags.outputs.cmake_build_flags }} --target cpp-exe
       - name: Build Rust program linking C++
-        run: cd build && cmake --build . --target cargo-build_rust-exe 
+        run: cd build && cmake --build . ${{ steps.cmake_build_flags.outputs.cmake_build_flags }} --target cargo-build_rust-exe 
