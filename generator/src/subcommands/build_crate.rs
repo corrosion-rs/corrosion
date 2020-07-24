@@ -8,7 +8,6 @@ pub const BUILD_CRATE: &str = "build-crate";
 const RELEASE: &str = "release";
 const PACKAGE: &str = "package";
 const TARGET: &str = "target";
-const CARGO_EXECUTABLE: &str = "cargo-executable";
 
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(BUILD_CRATE)
@@ -27,17 +26,13 @@ pub fn subcommand() -> App<'static, 'static> {
                 .required(true)
                 .help("The name of the package being built with cargo"),
         )
-        .arg(
-            Arg::with_name(CARGO_EXECUTABLE)
-                .long("cargo")
-                .value_name("EXECUTABLE")
-                .required(true)
-                .help("Path to the cargo executable to use"),
-        )
 }
 
-pub fn invoke(manifest_path: &str, matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
-    let cargo_executable = matches.value_of(CARGO_EXECUTABLE).unwrap();
+pub fn invoke(
+    manifest_path: &str,
+    cargo_executable: &str,
+    matches: &ArgMatches,
+) -> Result<(), Box<dyn std::error::Error>> {
     let target = matches.value_of(TARGET).unwrap();
 
     let mut cargo = process::Command::new(cargo_executable);
