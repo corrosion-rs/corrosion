@@ -12,11 +12,11 @@ execute_process(
         ${CMAKE_COMMAND} -E env
             RUSTUP_FORCE_ARG0=rustup
         ${RUSTC_EXECUTABLE} --version
-    OUTPUT_VARIABLE CARGO_VERSION_RAW
+    OUTPUT_VARIABLE RUSTC_VERSION_RAW
 )
 
 # Discover what toolchains are installed by rustup
-if (CARGO_VERSION_RAW MATCHES "rustup [0-9\\.]+")
+if (RUSTC_VERSION_RAW MATCHES "rustup [0-9\\.]+")
     set(FOUND_PROXIES ON)
 
     execute_process(
@@ -33,7 +33,7 @@ if (CARGO_VERSION_RAW MATCHES "rustup [0-9\\.]+")
     string(REPLACE "\n" ";" TOOLCHAINS_RAW "${TOOLCHAINS_RAW}")
 
     foreach(TOOLCHAIN_RAW ${TOOLCHAINS_RAW})
-        if (TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9_\\-]+)([ \t\r\n]+\\(default\\))?[ \t\r\n]+(.*)")
+        if (TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)([ \t\r\n]+\\(default\\))?[ \t\r\n]+(.+)")
             set(TOOLCHAIN "${CMAKE_MATCH_1}")
             list(APPEND DISCOVERED_TOOLCHAINS ${TOOLCHAIN})
 
@@ -43,13 +43,8 @@ if (CARGO_VERSION_RAW MATCHES "rustup [0-9\\.]+")
                 set(TOOLCHAIN_DEFAULT ${TOOLCHAIN})
             endif()
         else()
-            message(WARNING "Didn't reconize toolchain. :(")
+            message(WARNING "Didn't reconize toolchain: ${TOOLCHAIN_RAW}")
         endif()
-    endforeach()
-
-    message(STATUS "Default toolchain: ${TOOLCHAIN_DEFAULT}")
-    foreach(TOOLCHAIN ${DISCOVERED_TOOLCHAINS})
-        message(STATUS "${TOOLCHAIN}: ${${TOOLCHAIN}_PATH}")
     endforeach()
 
     set(RUSTUP_TOOLCHAIN ${TOOLCHAIN_DEFAULT} CACHE STRING "The rustup toolchain to use")
@@ -61,12 +56,12 @@ endif()
 if (FOUND_PROXIES)
     if (RUSTUP_TOOLCHAIN)
         if (NOT RUSTUP_TOOLCHAIN IN_LIST DISCOVERED_TOOLCHAINS)
-            message(SEND_ERROR "Could not find toolchain '${RUSTUP_TOOLCHAIN}'")
-            message(SEND_ERROR "Available toolchains:")
+            message(NOTICE "Could not find toolchain '${RUSTUP_TOOLCHAIN}'")
+            message(NOTICE "Available toolchains:")
 
             list(APPEND CMAKE_MESSAGE_INDENT "  ")
             foreach(TOOLCHAIN ${DISCOVERED_TOOLCHAINS})
-                message(SEND_ERROR "${TOOLCHAIN}")
+                message(NOTICE "${TOOLCHAIN}")
             endforeach()
             list(POP_BACK CMAKE_MESSAGE_INDENT)
 

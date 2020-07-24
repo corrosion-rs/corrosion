@@ -127,11 +127,11 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{matrix.rust}}
-          target: x86_64-${{ steps.determine_rust_os.outputs.os }}-${{ matrix.abi }}
+          target: x86_64-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
       - name: CMake Version
         run: cmake --version
       - name: Rust Version
-        run: rustc --version
+        run: rustc +${{matrix.rust}} --version
       - name: Build cmake-cargo-gen
         run: |
           cargo build --manifest-path generator/Cargo.toml -p cmake-cargo-gen

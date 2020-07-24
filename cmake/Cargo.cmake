@@ -9,13 +9,22 @@ if (CARGO_DEV_MODE)
 
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
 
-    set(_CMAKE_CARGO_GEN ${CARGO_EXECUTABLE})
-    set(_CMAKE_CARGO_GEN_ARGS run --quiet --manifest-path "${_moddir}/../generator/Cargo.toml" --)
+    set(
+        _CMAKE_CARGO_GEN
+        ${CARGO_EXECUTABLE} run --quiet --manifest-path "${_moddir}/../generator/Cargo.toml" --)
 else()
     find_program(
         _CMAKE_CARGO_GEN cmake-cargo-gen
         HINTS $ENV{HOME}/.cargo/bin)
 endif()
+
+set(
+    _CMAKE_CARGO_GEN
+    ${CMAKE_COMMAND} -E env
+        CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
+        ${_CMAKE_CARGO_GEN}
+            --cargo ${CARGO_EXECUTABLE}
+)
 
 function(_add_cargo_build)
     set(options "")
@@ -103,13 +112,12 @@ function(_add_cargo_build)
                 ${link_prefs}
                 ${compilers}
                 CMAKECARGO_LINKER_LANGUAGES=$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>
-            ${_CMAKE_CARGO_GEN} ${_CMAKE_CARGO_GEN_ARGS}
+            ${_CMAKE_CARGO_GEN}
                 --manifest-path "${path_to_toml}"
                 build-crate
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
                     --target ${CARGO_TARGET}
                     --package ${package_name}
-                    --cargo ${CARGO_EXECUTABLE}
             BYPRODUCTS ${byproducts}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
@@ -137,8 +145,9 @@ function(add_crate path_to_toml)
 
     execute_process(
         COMMAND
-            ${_CMAKE_CARGO_GEN} ${_CMAKE_CARGO_GEN_ARGS}
-            --manifest-path "${path_to_toml}" print-root
+            ${_CMAKE_CARGO_GEN}
+                --manifest-path "${path_to_toml}"
+                print-root
         OUTPUT_VARIABLE toml_dir
         RESULT_VARIABLE ret)
 
@@ -176,11 +185,15 @@ function(add_crate path_to_toml)
     endif()
 
     execute_process(
-        COMMAND ${_CMAKE_CARGO_GEN} ${_CMAKE_CARGO_GEN_ARGS} --manifest-path
-            "${path_to_toml}" gen-cmake ${_CMAKE_CARGO_CONFIGURATION_ROOT}
-            ${_CMAKE_CARGO_TARGET} ${_CMAKE_CARGO_CONFIGURATION_TYPES}
-            --cargo-version ${CARGO_VERSION} -o
-            ${generated_cmake}
+        COMMAND
+            ${_CMAKE_CARGO_GEN}
+                --manifest-path "${path_to_toml}"
+                gen-cmake
+                    ${_CMAKE_CARGO_CONFIGURATION_ROOT}
+                    ${_CMAKE_CARGO_TARGET}
+                    ${_CMAKE_CARGO_CONFIGURATION_TYPES}
+                    --cargo-version ${CARGO_VERSION}
+                    -o ${generated_cmake}
         RESULT_VARIABLE ret)
 
     if (NOT ret EQUAL "0")
