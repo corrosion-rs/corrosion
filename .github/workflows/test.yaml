@@ -81,10 +81,13 @@ jobs:
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
             echo "::set-output name=os::pc-windows"
+            echo "::set-output name=host_abi::msvc"
           elif [ "${{ runner.os }}" == "Linux" ]; then
             echo "::set-output name=os::unknown-linux"
+            echo "::set-output name=host_abi::gnu"
           elif [ "${{ runner.os }}" == "macOS" ]; then
             echo "::set-output name=os::apple"
+            echo "::set-output name=host_abi::darwin"
           fi
       - name: Pick Compiler
         id: pick_compiler
@@ -132,16 +135,13 @@ jobs:
         run: cmake --version
       - name: Rust Version
         run: rustc +${{matrix.rust}} --version
-      - name: Build cmake-cargo-gen
-        run: |
-          cargo build --manifest-path generator/Cargo.toml -p cmake-cargo-gen
       - name: Configure
         run: |
           mkdir build && cd build
           cmake \
             ${{ steps.pick_compiler.outputs.compiler }} \
             ${{ steps.pick_generator.outputs.generator }} \
-            -DRUSTUP_TOOLCHAIN=${{matrix.rust}}-x86_64-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}} \
+            -DRUSTUP_TOOLCHAIN=${{matrix.rust}}-x86_64-${{steps.determine_rust_os.outputs.os}}-${{steps.determine_rust_os.outputs.host_abi}} \
             ..
       - name: Build C++ program linking Rust
         run: |
