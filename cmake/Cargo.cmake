@@ -161,11 +161,11 @@ function(add_crate path_to_toml)
 
     set(
         generated_cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/cmake-cargo/${toml_dir_name}.dir/cargo-build.cmake)
+        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/cmake-cargo/${toml_dir_name}.dir/cargo-build.cmake"
+    )
 
     if (CMAKE_VS_PLATFORM_NAME)
-        set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root
-            ${CMAKE_VS_PLATFORM_NAME})
+        set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
     endif()
 
     if (CARGO_TARGET)
@@ -194,6 +194,7 @@ function(add_crate path_to_toml)
                     ${_CMAKE_CARGO_CONFIGURATION_TYPES}
                     --cargo-version ${CARGO_VERSION}
                     -o ${generated_cmake}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         RESULT_VARIABLE ret)
 
     if (NOT ret EQUAL "0")

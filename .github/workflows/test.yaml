@@ -137,21 +137,19 @@ jobs:
         run: rustc +${{matrix.rust}} --version
       - name: Configure
         run: |
-          mkdir build && cd build
           cmake \
+            -H. \
+            -Bbuild \
             ${{ steps.pick_compiler.outputs.compiler }} \
             ${{ steps.pick_generator.outputs.generator }} \
-            -DRUSTUP_TOOLCHAIN=${{matrix.rust}}-x86_64-${{steps.determine_rust_os.outputs.os}}-${{steps.determine_rust_os.outputs.host_abi}} \
-            ..
+            -DRUSTUP_TOOLCHAIN=${{matrix.rust}}-x86_64-${{steps.determine_rust_os.outputs.os}}-${{steps.determine_rust_os.outputs.host_abi}}
       - name: Build C++ program linking Rust
         run: |
-          cd build
           cmake \
-            --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
+            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target cpp-exe
       - name: Build Rust program linking C++
         run: |
-          cd build
           cmake \
-            --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
+            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target cargo-build_rust-exe 
