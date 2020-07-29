@@ -1,7 +1,17 @@
-use std::os::raw::c_char;
+#[cxx::bridge(namespace = org::example)]
+mod ffi {
+    extern "C" {
+        include!("demo.h");
 
-#[no_mangle]
-pub extern "C" fn rust_function(name: *const c_char) {
-    let name = unsafe { std::ffi::CStr::from_ptr(name).to_str().unwrap() };
-    println!("Hello, {}! I'm Rust!", name);
+        type ThingC;
+    }
+
+    extern "Rust" {
+        fn print_str(s: &CxxString);
+    }
+}
+
+fn print_str(s: &cxx::CxxString) {
+    println!("called back with s={}", s);
+    println!("IT FUCKING WORKS!!!!");
 }

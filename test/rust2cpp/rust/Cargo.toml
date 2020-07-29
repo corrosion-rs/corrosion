@@ -1,11 +1,12 @@
 [package]
-name = "rust-lib"
+name = "rust-lib-bridged"
 version = "0.1.0"
 authors = ["Andrew Gaspar <andrew.gaspar@outlook.com>"]
 license = "MIT"
 edition = "2018"
 
 [dependencies]
+cxx = "0.3"
 
 [lib]
 crate-type=["staticlib"]
