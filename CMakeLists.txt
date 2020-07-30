@@ -9,3 +9,8 @@ include(Cargo)
 add_crate(generator/Cargo.toml)
 
 add_subdirectory(test)
+
+install(
+    PROGRAMS "$<IF:$<CONFIG:>,$<TARGET_PROPERTY:cmake-cargo-gen,IMPORTED_LOCATION>,$<TARGET_PROPERTY:cmake-cargo-gen,IMPORTED_LOCATION_$<UPPER_CASE:$<CONFIG>>>>"
+    TYPE BIN
+)

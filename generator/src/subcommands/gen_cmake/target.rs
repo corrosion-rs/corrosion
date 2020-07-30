@@ -132,7 +132,7 @@ _add_cargo_build(
                 .manifest_path
                 .to_str()
                 .unwrap()
-                .replace("\\", "\\\\"),
+                .replace("\\", "/"),
             byproducts.join(" ")
         )?;
 
@@ -261,7 +261,7 @@ endif()",
                         .join(self.static_lib_name(platform))
                         .to_str()
                         .unwrap()
-                        .replace("\\", "\\\\");
+                        .replace("\\", "/");
 
                     writeln!(
                         out_file,
@@ -275,7 +275,7 @@ endif()",
                         .join(self.dynamic_lib_name(platform))
                         .to_str()
                         .unwrap()
-                        .replace("\\", "\\\\");
+                        .replace("\\", "/");
 
                     writeln!(
                         out_file,
@@ -298,7 +298,7 @@ endif()",
                                 .join(self.implib_name(platform))
                                 .to_str()
                                 .unwrap()
-                                .replace("\\", "\\\\");
+                                .replace("\\", "/");
 
                             writeln!(
                                 out_file,
@@ -320,7 +320,7 @@ endif()",
                     .join(exe_file)
                     .to_str()
                     .unwrap()
-                    .replace("\\", "\\\\");
+                    .replace("\\", "/");
 
                 writeln!(
                     out_file,
