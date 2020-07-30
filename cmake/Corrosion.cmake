@@ -160,8 +160,7 @@ function(add_crate path_to_toml)
                 --manifest-path "${path_to_toml}"
                 print-root
         OUTPUT_VARIABLE toml_dir
-        RESULT_VARIABLE ret
-        ECHO_ERROR_VARIABLE)
+        RESULT_VARIABLE ret)
 
     if (NOT ret EQUAL "0")
         message(FATAL_ERROR "corrosion-generator failed: ${ret}")
