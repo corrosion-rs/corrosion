@@ -2,12 +2,9 @@ cmake_minimum_required (VERSION 3.12)
 project(Corrosion VERSION 0.0.1 LANGUAGES NONE)
 
 # This little bit self-hosts the Corrosion toolchain to build the generator tool.
-# Projects that want to use Corrosion as a submodule can do something similar.
-# It is NOT recommended to add this directory directly - you should instead add the cmake
-# directory to CMAKE_MODULE_PATH and include the Corrosion module.
 #
 # It is strongly encouraged to install Corrosion separately and use
-# `find_package(Corrosion REQUIRED)` instead.
+# `find_package(Corrosion REQUIRED)` instead if that works with your workflow.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(Corrosion)
 
@@ -27,11 +24,15 @@ if (BUILD_TESTING)
 endif()
 
 # Installation
+
+# It's not possible to install imported targets, so we need to install the files off of
+# corrosion-generator manually. `Corrosion::Generator` is defined in CorrosionConfig.cmake.in.
 install(
     PROGRAMS $<TARGET_FILE:corrosion-generator>
     DESTINATION Corrosion/libexec
 )
 
+# Generate the Config file
 include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
@@ -42,7 +43,7 @@ configure_package_config_file(
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake
     VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMinorVersion
+    COMPATIBILITY SameMinorVersion # Should be SameMajorVersion when 1.0 is released
 )
 
 install(
@@ -52,6 +53,7 @@ install(
     DESTINATION Corrosion/lib/cmake/Corrosion
 )
 
+# These CMake scripts are needed both for the install and as a subdirectory
 install(
     FILES
         cmake/Corrosion.cmake
