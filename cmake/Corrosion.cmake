@@ -1,30 +1,41 @@
 cmake_minimum_required(VERSION 3.12)
 
-option(CARGO_DEV_MODE OFF "Only for use when making changes to cmake-cargo.")
-
 find_package(Rust REQUIRED)
-    
-if (CARGO_DEV_MODE)
-    message(STATUS "Running in cmake-cargo dev mode")
 
-    get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
+if (NOT TARGET Corrosion::Generator)
+    message(STATUS "Using Corrosion as a subdirectory")
+endif()
 
-    set(
-        _CMAKE_CARGO_GEN
-        ${CARGO_EXECUTABLE} run --quiet --manifest-path "${_moddir}/../generator/Cargo.toml" --)
+get_property(
+    RUSTC_EXECUTABLE
+    TARGET Rust::Rustc PROPERTY IMPORTED_LOCATION
+)
+
+get_property(
+    CARGO_EXECUTABLE
+    TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
+)
+
+if (NOT TARGET Corrosion::Generator)
+    set(_CORROSION_GENERATOR_EXE
+        ${CARGO_EXECUTABLE} run --quiet --manifest-path "${CMAKE_CURRENT_LIST_DIR}/../generator/Cargo.toml" --)
 else()
-    find_program(
-        _CMAKE_CARGO_GEN cmake-cargo-gen
-        HINTS $ENV{HOME}/.cargo/bin)
+    get_property(
+        _CORROSION_GENERATOR_EXE
+        TARGET Corrosion::Generator PROPERTY IMPORTED_LOCATION
+    )
 endif()
 
 set(
-    _CMAKE_CARGO_GEN
+    _CORROSION_GENERATOR
     ${CMAKE_COMMAND} -E env
         CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
-        ${_CMAKE_CARGO_GEN}
+        ${_CORROSION_GENERATOR_EXE}
             --cargo ${CARGO_EXECUTABLE}
+    CACHE INTERNAL "corrosion-generator runner"
 )
+
+set(_CORROSION_CARGO_VERSION ${Rust_CARGO_VERSION} CACHE INTERNAL "cargo version used by corrosion")
 
 function(_add_cargo_build)
     set(options "")
@@ -95,7 +106,7 @@ function(_add_cargo_build)
             set(build_type_dir release)
         endif()
 
-        set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${CARGO_TARGET}/${build_type_dir}")
+        set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${Rust_CARGO_TARGET}/${build_type_dir}")
         foreach(byproduct_file ${ACB_BYPRODUCTS})
             list(APPEND byproducts "${cargo_build_dir}/${byproduct_file}")
         endforeach()
@@ -112,11 +123,11 @@ function(_add_cargo_build)
                 ${link_prefs}
                 ${compilers}
                 CMAKECARGO_LINKER_LANGUAGES=$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>
-            ${_CMAKE_CARGO_GEN}
+            ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
                 build-crate
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
-                    --target ${CARGO_TARGET}
+                    --target ${Rust_CARGO_TARGET}
                     --package ${package_name}
             BYPRODUCTS ${byproducts}
         # The build is conducted in root build directory so that cargo
@@ -127,7 +138,7 @@ function(_add_cargo_build)
     add_custom_target(
         cargo-clean_${target_name}
         COMMAND
-            ${CARGO_EXECUTABLE} clean --target ${CARGO_TARGET}
+            $<TARGET_FILE:Rust::Cargo> clean --target ${Rust_CARGO_TARGET}
             -p ${package_name} --manifest-path ${path_to_toml}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
     )
@@ -145,14 +156,15 @@ function(add_crate path_to_toml)
 
     execute_process(
         COMMAND
-            ${_CMAKE_CARGO_GEN}
+            ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
                 print-root
         OUTPUT_VARIABLE toml_dir
-        RESULT_VARIABLE ret)
+        RESULT_VARIABLE ret
+        ECHO_ERROR_VARIABLE)
 
     if (NOT ret EQUAL "0")
-        message(FATAL_ERROR "cmake-cargo-gen failed")
+        message(FATAL_ERROR "corrosion-generator failed: ${ret}")
     endif()
 
     string(STRIP "${toml_dir}" toml_dir)
@@ -168,8 +180,8 @@ function(add_crate path_to_toml)
         set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
     endif()
 
-    if (CARGO_TARGET)
-        set(_CMAKE_CARGO_TARGET --target ${CARGO_TARGET})
+    if (Rust_CARGO_TARGET)
+        set(_CMAKE_CARGO_TARGET --target ${Rust_CARGO_TARGET})
     endif()
     
     if(CMAKE_CONFIGURATION_TYPES)
@@ -186,19 +198,19 @@ function(add_crate path_to_toml)
 
     execute_process(
         COMMAND
-            ${_CMAKE_CARGO_GEN}
+            ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
                 gen-cmake
                     ${_CMAKE_CARGO_CONFIGURATION_ROOT}
                     ${_CMAKE_CARGO_TARGET}
                     ${_CMAKE_CARGO_CONFIGURATION_TYPES}
-                    --cargo-version ${CARGO_VERSION}
+                    --cargo-version ${_CORROSION_CARGO_VERSION}
                     -o ${generated_cmake}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         RESULT_VARIABLE ret)
 
     if (NOT ret EQUAL "0")
-        message(FATAL_ERROR "cmake-cargo-gen failed")
+        message(FATAL_ERROR "corrosion-generator failed")
     endif()
 
     include(${generated_cmake})

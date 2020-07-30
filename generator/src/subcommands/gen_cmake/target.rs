@@ -302,7 +302,7 @@ endif()",
 
                             writeln!(
                                 out_file,
-                                "set_property(TARGET {0}-shared PROPERTY {1} {2})",
+                                "set_property(TARGET {0}-shared PROPERTY {1} \"{2}\")",
                                 self.cargo_target.name, imported_implib, lib_path
                             )?;
                         }
