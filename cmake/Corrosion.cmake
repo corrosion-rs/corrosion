@@ -90,7 +90,7 @@ function(_add_cargo_build)
         if (NOT compilers)
             if (NOT CMAKE_C_COMPILER)
                 message(STATUS "Enabling the C compiler for linking Rust programs")
-                enable_language(C REQUIRED)
+                enable_language(C)
             endif()
 
             list(APPEND link_prefs CMAKECARGO_C_LINKER_PREFERENCE="${CMAKE_C_LINKER_PREFERENCE}")
