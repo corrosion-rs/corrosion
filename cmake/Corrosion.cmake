@@ -77,7 +77,7 @@ function(_add_cargo_build)
 
     # For MSVC targets, don't mess with linker preferences.
     # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
-    if (NOT CARGO_ABI STREQUAL "msvc")
+    if (NOT MSVC)
         foreach(language C CXX Fortran)
             if(CMAKE_${language}_COMPILER AND CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES)
                 list(
