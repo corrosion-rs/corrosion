@@ -186,6 +186,9 @@ jobs:
           ninja: 1.10.0
       - name: Install Rust
         uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.44.1
+          default: true
       - name: CMake Version
         run: cmake --version
       - name: Rust Version
