@@ -200,7 +200,8 @@ jobs:
             -Bbuild-corrosion \
             -DCORROSION_VERBOSE_OUTPUT=ON \
             -DCORROSION_BUILD_TESTS=OFF \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=install-corrosion
           cmake --build build-corrosion --config Release
           cmake --install build-corrosion --config Release
         if: ${{ matrix.method == 'install' }}
@@ -209,7 +210,8 @@ jobs:
           cmake \
             -Htest \
             -Bbuild-tests \
-            -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}}
+            -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}} \
+            -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
       - name: Build Tests
         run: cmake --build build-tests
       
