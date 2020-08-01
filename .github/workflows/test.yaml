@@ -1,3 +1,4 @@
+name: Tests
 on:
   push:
     branches:
@@ -10,6 +11,7 @@ defaults:
     shell: bash
 jobs:
   test:
+    name: Test Corrosion
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.rust == 'nightly' }}
     strategy:
@@ -154,3 +156,57 @@ jobs:
           cmake \
             --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target cargo-build_rust-exe 
+  install:
+    name: Test Corrosion as a Library
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: 
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+        method:
+          - subdirectory
+          - install
+    steps:
+      - name: Check tests external
+        id: check_external
+        run: |
+          if [ "${{ matrix.method }}" == "subdirectory" ]; then
+            echo "::set-output name=find::OFF"
+          elif [ "${{ matrix.abi }}" == "install" ]; then
+            echo "::set-output name=find::ON"
+          fi
+      - uses: actions/checkout@v2
+      - name: Install CMake
+        uses: symbitic/install-cmake@master
+        with:
+          cmake: 3.18.0
+          ninja: 1.10.0
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+      - name: CMake Version
+        run: cmake --version
+      - name: Rust Version
+        run: rustc --version
+      - name: Install Corrosion
+        run: |
+          cmake \
+            -H. \
+            -Bbuild-corrosion \
+            -DCORROSION_VERBOSE_OUTPUT=ON \
+            -DCORROSION_BUILD_TESTS=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-corrosion --config Release
+          cmake --install build-corrosion --config Release
+        if: ${{ matrix.method == 'install' }}
+      - name: Configure Tests
+        run: |
+          cmake \
+            -Htest \
+            -Bbuild-tests \
+            -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}}
+      - name: Build Tests
+        run: cmake --build build-tests
+      
