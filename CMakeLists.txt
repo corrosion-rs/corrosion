@@ -1,6 +1,18 @@
 cmake_minimum_required (VERSION 3.12)
 project(Corrosion VERSION 0.0.1 LANGUAGES NONE)
 
+if (NOT CMAKE_PROJECT_NAME STREQUAL "Corrosion")
+    set(IS_SUBDIRECTORY ON)
+else()
+    set(IS_SUBDIRECTORY OFF)
+endif()
+
+if (NOT IS_SUBDIRECTORY)
+    # TODO: If we don't have a language enabled, add_crate will attempt to enable a C compiler.
+    # Ideally, we could delay this somehow until after we've linked libraries
+    enable_language(CXX)
+endif()
+
 # This little bit self-hosts the Corrosion toolchain to build the generator tool.
 #
 # It is strongly encouraged to install Corrosion separately and use
@@ -10,13 +22,9 @@ include(Corrosion)
 
 # If Corrosion is being used as a submodule, then return early - we don't want to pollute the
 # install rules, add unnecessary builds, or enable tests.
-if (NOT CMAKE_PROJECT_NAME STREQUAL "Corrosion")
+if (IS_SUBDIRECTORY)
     return()
 endif()
-
-# TODO: If we don't have a language enabled, add_crate will attempt to enable a C compiler. Ideally,
-# we could delay this somehow until after we've linked libraries
-enable_language(CXX)
 
 # Builds the generator executables
 add_crate(generator/Cargo.toml)
