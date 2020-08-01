@@ -7,8 +7,8 @@ pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(PRINT_ROOT)
 }
 
-pub fn invoke(metadata: &cargo_metadata::Metadata) -> Result<(), Box<dyn std::error::Error>> {
-    println!("{}", metadata.workspace_root.to_str().unwrap());
+pub fn invoke(args: &crate::GeneratorSharedArgs) -> Result<(), Box<dyn std::error::Error>> {
+    println!("{}", args.metadata.workspace_root.to_str().unwrap());
 
     std::process::exit(0);
 }

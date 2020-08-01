@@ -29,13 +29,12 @@ pub fn subcommand() -> App<'static, 'static> {
 }
 
 pub fn invoke(
-    manifest_path: &str,
-    cargo_executable: &str,
+    args: &crate::GeneratorSharedArgs,
     matches: &ArgMatches,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let target = matches.value_of(TARGET).unwrap();
 
-    let mut cargo = process::Command::new(cargo_executable);
+    let mut cargo = process::Command::new(&args.cargo_executable);
 
     cargo.args(&[
         "build",
@@ -44,8 +43,12 @@ pub fn invoke(
         "--package",
         matches.value_of(PACKAGE).unwrap(),
         "--manifest-path",
-        manifest_path,
+        args.manifest_path.to_str().unwrap(),
     ]);
+
+    if args.verbose {
+        cargo.arg("--verbose");
+    }
 
     if matches.is_present(RELEASE) {
         cargo.arg("--release");
@@ -96,6 +99,10 @@ pub fn invoke(
                 cargo.env(linker_arg, compiler);
             }
         }
+    }
+
+    if args.verbose {
+        println!("Corrosion: {:?}", cargo);
     }
 
     process::exit(if cargo.status()?.success() { 0 } else { 1 });

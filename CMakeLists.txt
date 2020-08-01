@@ -14,14 +14,15 @@ if (NOT CMAKE_PROJECT_NAME STREQUAL "Corrosion")
     return()
 endif()
 
+# TODO: If we don't have a language enabled, add_crate will attempt to enable a C compiler. Ideally,
+# we could delay this somehow until after we've linked libraries
+enable_language(CXX)
+
 # Builds the generator executables
 add_crate(generator/Cargo.toml)
 
 # Testing
-enable_testing()
-if (BUILD_TESTING)
-    add_subdirectory(test)
-endif()
+add_subdirectory(test)
 
 # Installation
 

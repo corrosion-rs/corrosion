@@ -90,7 +90,7 @@ fn config_type_target_folder(config_type: Option<&str>) -> &'static str {
 }
 
 pub fn invoke(
-    metadata: &cargo_metadata::Metadata,
+    args: &crate::GeneratorSharedArgs,
     matches: &ArgMatches,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cargo_version = Version::parse(matches.value_of(CARGO_VERSION).unwrap())
@@ -146,10 +146,11 @@ cmake_minimum_required (VERSION 3.12)
         config_folders.push((config_type, config_folder.to_path_buf()));
     }
 
-    let targets: Vec<_> = metadata
+    let targets: Vec<_> = args
+        .metadata
         .packages
         .iter()
-        .filter(|p| metadata.workspace_members.contains(&p.id))
+        .filter(|p| args.metadata.workspace_members.contains(&p.id))
         .cloned()
         .map(Rc::new)
         .flat_map(|package| {
@@ -170,7 +171,7 @@ cmake_minimum_required (VERSION 3.12)
 
     writeln!(out_file)?;
 
-    let metadata_manifest_path = Path::new(&metadata.workspace_root).join("Cargo.toml");
+    let metadata_manifest_path = Path::new(&args.metadata.workspace_root).join("Cargo.toml");
 
     for (config_type, config_folder) in config_folders {
         let current_dir = std::env::current_dir().expect("Could not get current directory!");

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
+option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
+
 find_package(Rust REQUIRED)
 
 if (NOT TARGET Corrosion::Generator)
@@ -26,12 +28,17 @@ else()
     )
 endif()
 
+if (CORROSION_VERBOSE_OUTPUT)
+    set(_CORROSION_VERBOSE_OUTPUT_FLAG --verbose)
+endif()
+
 set(
     _CORROSION_GENERATOR
     ${CMAKE_COMMAND} -E env
         CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
         ${_CORROSION_GENERATOR_EXE}
             --cargo ${CARGO_EXECUTABLE}
+            ${_CORROSION_VERBOSE_OUTPUT_FLAG}
     CACHE INTERNAL "corrosion-generator runner"
 )
 
