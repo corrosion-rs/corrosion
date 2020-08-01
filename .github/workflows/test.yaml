@@ -175,7 +175,7 @@ jobs:
         run: |
           if [ "${{ matrix.method }}" == "subdirectory" ]; then
             echo "::set-output name=find::OFF"
-          elif [ "${{ matrix.abi }}" == "install" ]; then
+          elif [ "${{ matrix.method }}" == "install" ]; then
             echo "::set-output name=find::ON"
           fi
       - uses: actions/checkout@v2
