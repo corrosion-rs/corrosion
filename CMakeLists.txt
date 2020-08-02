@@ -6,16 +6,26 @@ project(Corrosion VERSION 0.0.1 LANGUAGES NONE)
 #   languages.
 # - If this is a top level project, then build tests and eanble teh C++ compiler
 if (NOT CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    set(IS_SUBDIRECTORY ON)
-    set(_CORROSION_BUILD_TESTS OFF)
+    set(CORROSION_IS_SUBDIRECTORY ON)
+    set(_CORROSION_TOP_LEVEL OFF)
 else()
-    set(IS_SUBDIRECTORY OFF)
-    set(_CORROSION_BUILD_TESTS ON)
+    set(CORROSION_IS_SUBDIRECTORY OFF)
+    set(_CORROSION_TOP_LEVEL ON)
 endif()
 
-option(CORROSION_BUILD_TESTS "Build Corrosion test project" ${_CORROSION_BUILD_TESTS})
+option(
+    CORROSION_DEV_MODE
+    "Enables some additional features if you're developing Corrosion"
+    ${_CORROSION_TOP_LEVEL}
+)
 
-if (NOT IS_SUBDIRECTORY)
+option(
+    CORROSION_BUILD_TESTS
+    "Build Corrosion test project"
+    ${_CORROSION_TOP_LEVEL}
+)
+
+if (NOT CORROSION_IS_SUBDIRECTORY)
     # TODO: If we don't have a language enabled, add_crate will attempt to enable a C compiler.
     # Ideally, we could delay this somehow until after we've linked libraries
     enable_language(CXX)
@@ -35,7 +45,7 @@ endif()
 
 # Installation
 # If Corrosion is a subdirectory, do not enable its install code
-if (NOT IS_SUBDIRECTORY)
+if (NOT CORROSION_IS_SUBDIRECTORY)
     # Builds the generator executables
     add_crate(generator/Cargo.toml)
 

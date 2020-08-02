@@ -21,6 +21,16 @@ get_property(
 if (NOT TARGET Corrosion::Generator)
     set(_CORROSION_GENERATOR_EXE
         ${CARGO_EXECUTABLE} run --quiet --manifest-path "${CMAKE_CURRENT_LIST_DIR}/../generator/Cargo.toml" --)
+    if (CORROSION_DEV_MODE)
+        # If you're developing Corrosion, you want to make sure to re-configure whenever the
+        # generator changes.
+        file(GLOB_RECURSE _RUST_FILES CONFIGURE_DEPENDS generator/src/*.rs)
+        file(GLOB _CARGO_FILES CONFIGURE_DEPENDS generator/Cargo.*)
+        set_property(
+            DIRECTORY APPEND
+            PROPERTY CMAKE_CONFIGURE_DEPENDS
+                ${_RUST_FILES} ${_CARGO_FILES})
+    endif()
 else()
     get_property(
         _CORROSION_GENERATOR_EXE
