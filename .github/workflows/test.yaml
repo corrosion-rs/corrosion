@@ -145,16 +145,21 @@ jobs:
       - name: Arch Flags
         id: arch_flags
         run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
-          if [ "${{ runner.os }}" == "Windows" && "${{matrix.generator}}" == "default" ]; then
-            if [ "${{ matrix.arch }}" == "x86_64" ]; then
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            if [ "${{matrix.generator}}" == "default" ]; then
+              if [ "${{ matrix.arch }}" == "x86_64" ]; then
+                echo "::set-output name=msvc::amd64"
+                echo "::set-output name=cmake::-Ax64"
+              elif [ "${{ matrix.arch }}" == "i686" ]; then
+                echo "::set-output name=msvc::amd64_x86"
+                echo "::set-output name=cmake::-AWin32"
+              elif [ "${{ matrix.arch }}" == "aarch64" ]; then
+                echo "::set-output name=msvc::amd64_arm64"
+                echo "::set-output name=cmake::-AARM64"
+              fi
+            elif [ "${{matrix.generator}}" == "ninja" ]; then
+              # We don't do cross-compiling builds with Ninja
               echo "::set-output name=msvc::amd64"
-              echo "::set-output name=cmake::-Ax64"
-            elif [ "${{ matrix.arch }}" == "i686" ]; then
-              echo "::set-output name=msvc::amd64_x86"
-              echo "::set-output name=cmake::-AWin32"
-            elif [ "${{ matrix.arch }}" == "aarch64" ]; then
-              echo "::set-output name=msvc::amd64_arm64"
-              echo "::set-output name=cmake::-AARM64"
             fi
           fi
       - name: Setup MSVC Development Environment
