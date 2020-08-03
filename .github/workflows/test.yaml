@@ -24,7 +24,7 @@ jobs:
         arch:
           - x86_64
           - i686
-          - aarch64
+#           - aarch64 # TODO: Waiting for https://github.com/RustSec/platforms-crate/pull/17
         abi:
           - gnu
           - darwin
@@ -144,8 +144,8 @@ jobs:
           fi
       - name: Arch Flags
         id: arch_flags
-        run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
+        run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
+          if [ "${{ runner.os }}" == "Windows" && "${{matrix.generator}}" == "default" ]; then
             if [ "${{ matrix.arch }}" == "x86_64" ]; then
               echo "::set-output name=msvc::amd64"
               echo "::set-output name=cmake::-Ax64"
