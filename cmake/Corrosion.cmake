@@ -258,3 +258,160 @@ function(cargo_link_libraries target_name)
         )
     endforeach()
 endfunction(cargo_link_libraries)
+
+function(corrosion_install)
+    # Default install dirs
+    include(GNUInstallDirs)
+
+    # Parse arguments to corrosion_install
+    list(POP_FRONT ARGN INSTALL_TYPE)
+
+    # The different install types that are supported. Some targets may have more than one of these
+    # types. For example, on Windows, a shared library will have both an ARCHIVE component and a
+    # RUNTIME component.
+    set(INSTALL_TARGET_TYPES ARCHIVE LIBRARY RUNTIME PRIVATE_HEADER PUBLIC_HEADER)
+    
+    # Arguments to each install target type
+    set(OPTIONS)
+    set(ONE_VALUE_ARGS DESTINATION)
+    set(MULTI_VALUE_ARGS PERMISSIONS CONFIGURATIONS)
+    set(TARGET_ARGS ${OPTIONS} ${ONE_VALUE_ARGS} ${MULTI_VALUE_ARGS})
+
+    if (INSTALL_TYPE STREQUAL "TARGETS")
+        # corrosion_install(TARGETS ... [EXPORT <export-name>]
+        #                   [[ARCHIVE|LIBRARY|RUNTIME|PRIVATE_HEADER|PUBLIC_HEADER]
+        #                    [DESTINATION <dir>]
+        #                    [PERMISSIONS permissions...]
+        #                    [CONFIGURATIONS [Debug|Release|...]]
+        #                   ] [...])
+
+        # Extract targets
+        set(INSTALL_TARGETS)
+        list(LENGTH ARGN ARGN_LENGTH)
+        set(DELIMITERS EXPORT ${INSTALL_TARGET_TYPES} ${TARGET_ARGS})
+        while(ARGN_LENGTH)
+            # If we hit another keyword, stop - we've found all the targets
+            list(GET ARGN 0 FRONT)
+            if (FRONT IN_LIST DELIMITERS)
+                break()
+            endif()
+
+            list(APPEND INSTALL_TARGETS ${FRONT})
+            list(POP_FRONT ARGN)
+            
+            # Update ARGN_LENGTH
+            list(LENGTH ARGN ARGN_LENGTH)
+        endwhile()
+
+        # Check if there are any args left before proceeding
+        list(LENGTH ARGN ARGN_LENGTH)
+        if (ARGN_LENGTH)
+            list(GET ARGN 0 FRONT)
+            if (FRONT STREQUAL "EXPORT")
+                list(POP_FRONT ARGN _ EXPORT_NAME)
+                message(FATAL_ERROR "EXPORT keyword not yet implemented!")
+            endif()
+        endif()
+
+        # Loop over all arguments and get options for each install target type
+        list(LENGTH ARGN ARGN_LENGTH)
+        while(ARGN_LENGTH)
+            # Check if we're dealing with arguments for a specific install target type, or with
+            # default options for all target types.
+            list(GET ARGN 0 FRONT)
+            if (FRONT IN_LIST INSTALL_TARGET_TYPES)
+                set(INSTALL_TARGET_TYPE ${FRONT})
+                list(POP_FRONT ARGN)
+            else()
+                set(INSTALL_TARGET_TYPE DEFAULT)
+            endif()
+
+            # Gather the arguments to this install type
+            set(ARGS)
+            while(ARGN_LENGTH)
+                # If the next keyword is an install target type, then break - arguments have been
+                # gathered.
+                list(GET ARGN 0 FRONT)
+                if (FRONT IN_LIST INSTALL_TARGET_TYPES)
+                    break()
+                endif()
+
+                list(APPEND ARGS ${FRONT})
+                list(POP_FRONT ARGN)
+
+                list(LENGTH ARGN ARGN_LENGTH)
+            endwhile()
+
+            # Parse the arguments and register the file install
+            cmake_parse_arguments(
+                COR "${OPTIONS}" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGS})
+
+            if (COR_DESTINATION)
+                set(COR_INSTALL_${INSTALL_TARGET_TYPE}_DESTINATION ${COR_DESTINATION})
+            endif()
+
+            if (COR_PERMISSIONS)
+                set(COR_INSTALL_${INSTALL_TARGET_TYPE}_PERMISSIONS ${COR_PERMISSIONS})
+            endif()
+
+            if (COR_CONFIGURATIONS)
+                set(COR_INSTALL_${INSTALL_TARGET_TYPE}_CONFIGURATIONS ${COR_CONFIGURATIONS})
+            endif()
+            
+            # Update ARG_LENGTH
+            list(LENGTH ARGN ARGN_LENGTH)
+        endwhile()
+
+        # Default permissions for all files
+        set(DEFAULT_PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ)
+
+        # Loop through each install target and register file installations
+        foreach(INSTALL_TARGET ${INSTALL_TARGETS})
+            # Don't both implementing target type differentiation using generator expressions since
+            # TYPE cannot change after target creation
+            get_property(
+                TARGET_TYPE
+                TARGET ${INSTALL_TARGET} PROPERTY TYPE
+            )
+
+            # Install executable files first
+            if (TARGET_TYPE STREQUAL "EXECUTABLE")
+                if (DEFINED COR_INSTALL_RUNTIME_DESTINATION)
+                    set(DESTINATION ${COR_INSTALL_RUNTIME_DESTINATION})
+                elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+                    set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+                else()
+                    set(DESTINATION ${CMAKE_INSTALL_BINDIR})
+                endif()
+
+                if (DEFINED COR_INSTALL_RUNTIME_PERMISSIONS)
+                    set(PERMISSIONS ${COR_INSTALL_RUNTIME_PERMISSIONS})
+                elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+                    set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+                else()
+                    set(
+                        PERMISSIONS
+                        ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
+                endif()
+
+                if (DEFINED COR_INSTALL_RUNTIME_CONFIGURATIONS)
+                    set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_RUNTIME_CONFIGURATIONS})
+                elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+                    set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+                else()
+                    set(CONFIGURATIONS)
+                endif()
+
+                install(
+                    FILES $<TARGET_FILE:${INSTALL_TARGET}>
+                    DESTINATION ${DESTINATION}
+                    PERMISSIONS ${PERMISSIONS}
+                    ${CONFIGURATIONS}
+                )
+            endif()
+        endforeach()
+
+    elseif(INSTALL_TYPE STREQUAL "EXPORT")
+        message(FATAL_ERROR "install(EXPORT ...) not yet implemented")
+    endif()
+endfunction()

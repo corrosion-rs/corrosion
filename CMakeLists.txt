@@ -46,13 +46,11 @@ endif()
 # Installation
 # If Corrosion is a subdirectory, do not enable its install code
 if (NOT CORROSION_IS_SUBDIRECTORY)
-    # Builds the generator executables
+    # Builds the generator executable
     add_crate(generator/Cargo.toml)
 
-    # It's not possible to install imported targets, so we need to install the files off of
-    # corrosion-generator manually. `Corrosion::Generator` is defined in CorrosionConfig.cmake.in.
-    install(
-        PROGRAMS $<TARGET_FILE:corrosion-generator>
+    corrosion_install(
+        TARGETS corrosion-generator
         DESTINATION Corrosion/libexec
     )
 
