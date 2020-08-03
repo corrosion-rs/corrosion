@@ -21,6 +21,10 @@ jobs:
           - windows-latest
           - ubuntu-latest
           - macos-latest
+        arch:
+          - x86_64
+          - i686
+          - aarch64
         abi:
           - gnu
           - darwin
@@ -29,7 +33,8 @@ jobs:
           - 3.12.4
           - 3.18.0
         rust:
-          - 1.44.1
+          - 1.44.1 # Earliest targeted version
+          - 1.45.0 # Earliest version compatible with Windows GNU
           - stable
           - nightly
         generator:
@@ -42,16 +47,33 @@ jobs:
             cmake: 3.12.4
             generator: default # Default generator is Visual Studio
 
-          # Prior to 1.45.0, -nostdlib is erroneously passed to g++ when for the *-pc-windows-gnu
-          # target. See: https://github.com/rust-lang/rust/pull/71769
-          - os: windows-latest
-            abi: gnu
-            rust: 1.44.1
-
           # You cannot build with GNU using Visual Studio on Windows
           - os: windows-latest
             abi: gnu
             generator: default # Default generator is Visual Studio
+            
+          # ARCH
+          # TODO: cross-compile on Linux
+          - os: windows-latest
+            arch: i686
+            abi: gnu
+          - os: windows-latest
+            arch: aarch64
+            abi: gnu
+          - os: windows-latest
+            arch: i686
+            generator: ninja
+          - os: windows-latest
+            arch: aarch64
+            generator: ninja
+          - os: ubuntu-latest
+            arch: i686
+          - os: ubuntu-latest
+            arch: aarch64
+          - os: macos-latest
+            arch: i686
+          - os: macos-latest
+            arch: aarch64
 
           # ABI
           - os: ubuntu-latest
@@ -64,19 +86,22 @@ jobs:
             abi: msvc
           - os: macos-latest
             abi: gnu
+            
+          # Rust
+          # Build each set only with the earliest compatible versioned Rust
+          - os: macos-latest
+            rust: 1.45.0
+          - os: ubuntu-latest
+            rust: 1.45.0
+          - os: windows-latest
+            abi: msvc
+            rust: 1.45.0
+          # Prior to 1.45.0, -nostdlib is erroneously passed to g++ when for the *-pc-windows-gnu
+          # target. See: https://github.com/rust-lang/rust/pull/71769
+          - os: windows-latest
+            abi: gnu
+            rust: 1.44.1
 
-        include:
-          # Build x86_64-pc-windows-gnu with the earliest supported version
-          - os: windows-latest
-            abi: gnu
-            cmake: 3.12.4
-            rust: 1.45.0
-            generator: ninja
-          - os: windows-latest
-            abi: gnu
-            cmake: 3.18.0
-            rust: 1.45.0
-            generator: ninja
     steps:
       - name: Determine Rust OS
         id: determine_rust_os
@@ -117,10 +142,25 @@ jobs:
           else
             echo "::set-output name=cmake_build_flags::"
           fi
+      - name: Arch Flags
+        id: arch_flags
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            if [ "${{ matrix.arch }}" == "x86_64" ]; then
+              echo "::set-output name=msvc::amd64"
+              echo "::set-output name=cmake::-Ax64"
+            elif [ "${{ matrix.arch }}" == "i686" ]; then
+              echo "::set-output name=msvc::amd64_x86"
+              echo "::set-output name=cmake::-AWin32"
+            elif [ "${{ matrix.arch }}" == "aarch64" ]; then
+              echo "::set-output name=msvc::amd64_arm64"
+              echo "::set-output name=cmake::-AARM64"
+            fi
+          fi
       - name: Setup MSVC Development Environment
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: x64
+          arch: ${{ steps.arch_flags.outputs.msvc }}
         if: ${{ 'msvc' == matrix.abi }}
       - uses: actions/checkout@v2
       - name: Install CMake
@@ -132,7 +172,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{matrix.rust}}
-          target: x86_64-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
+          target: ${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
       - name: CMake Version
         run: cmake --version
       - name: Rust Version
@@ -143,6 +183,7 @@ jobs:
             -H. \
             -Bbuild \
             -DCORROSION_VERBOSE_OUTPUT=ON \
+            ${{ steps.arch_flags.outputs.cmake }} \
             ${{ steps.pick_compiler.outputs.compiler }} \
             ${{ steps.pick_generator.outputs.generator }} \
             -DRUSTUP_TOOLCHAIN=${{matrix.rust}}-x86_64-${{steps.determine_rust_os.outputs.os}}-${{steps.determine_rust_os.outputs.host_abi}}
