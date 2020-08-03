@@ -264,7 +264,8 @@ function(corrosion_install)
     include(GNUInstallDirs)
 
     # Parse arguments to corrosion_install
-    list(POP_FRONT ARGN INSTALL_TYPE)
+    list(GET ARGN 0 INSTALL_TYPE)
+    list(REMOVE_AT ARGN 0)
 
     # The different install types that are supported. Some targets may have more than one of these
     # types. For example, on Windows, a shared library will have both an ARCHIVE component and a
@@ -297,7 +298,7 @@ function(corrosion_install)
             endif()
 
             list(APPEND INSTALL_TARGETS ${FRONT})
-            list(POP_FRONT ARGN)
+            list(REMOVE_AT ARGN 0)
             
             # Update ARGN_LENGTH
             list(LENGTH ARGN ARGN_LENGTH)
@@ -308,7 +309,10 @@ function(corrosion_install)
         if (ARGN_LENGTH)
             list(GET ARGN 0 FRONT)
             if (FRONT STREQUAL "EXPORT")
-                list(POP_FRONT ARGN _ EXPORT_NAME)
+                list(REMOVE_AT ARGN 0) # Pop "EXPORT"
+
+                list(GET ARGN 0 EXPORT_NAME)
+                list(REMOVE_AT ARGN 0) # Pop <export-name>
                 message(FATAL_ERROR "EXPORT keyword not yet implemented!")
             endif()
         endif()
@@ -321,7 +325,7 @@ function(corrosion_install)
             list(GET ARGN 0 FRONT)
             if (FRONT IN_LIST INSTALL_TARGET_TYPES)
                 set(INSTALL_TARGET_TYPE ${FRONT})
-                list(POP_FRONT ARGN)
+                list(REMOVE_AT ARGN 0)
             else()
                 set(INSTALL_TARGET_TYPE DEFAULT)
             endif()
@@ -337,7 +341,7 @@ function(corrosion_install)
                 endif()
 
                 list(APPEND ARGS ${FRONT})
-                list(POP_FRONT ARGN)
+                list(REMOVE_AT ARGN 0)
 
                 list(LENGTH ARGN ARGN_LENGTH)
             endwhile()
