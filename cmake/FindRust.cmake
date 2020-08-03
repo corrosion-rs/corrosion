@@ -4,64 +4,64 @@ cmake_minimum_required(VERSION 3.12)
 include(FindPackageHandleStandardArgs)
 
 # Falls back to the rustup proxies if a toolchain cannot be found in the user's path
-find_program(RUSTC_EXECUTABLE rustc PATHS $ENV{HOME}/.cargo/bin)
+find_program(Rust_COMPILER rustc PATHS $ENV{HOME}/.cargo/bin)
 
 # Check if the discovered cargo is actually a "rustup" proxy.
 execute_process(
     COMMAND
         ${CMAKE_COMMAND} -E env
             RUSTUP_FORCE_ARG0=rustup
-        ${RUSTC_EXECUTABLE} --version
-    OUTPUT_VARIABLE RUSTC_VERSION_RAW
+        ${Rust_COMPILER} --version
+    OUTPUT_VARIABLE _RUSTC_VERSION_RAW
 )
 
 # Discover what toolchains are installed by rustup
-if (RUSTC_VERSION_RAW MATCHES "rustup [0-9\\.]+")
-    set(FOUND_PROXIES ON)
+if (_RUSTC_VERSION_RAW MATCHES "rustup [0-9\\.]+")
+    set(_FOUND_PROXIES ON)
 
     execute_process(
         COMMAND
             ${CMAKE_COMMAND} -E env
                 RUSTUP_FORCE_ARG0=rustup
-            ${RUSTC_EXECUTABLE} toolchain list --verbose
-        OUTPUT_VARIABLE TOOLCHAINS_RAW
+            ${Rust_COMPILER} toolchain list --verbose
+        OUTPUT_VARIABLE _TOOLCHAINS_RAW
     )
 
-    # We don't need RUSTC_EXECUTABLE anymore
-    unset(RUSTC_EXECUTABLE CACHE)
+    # We don't need Rust_COMPILER anymore
+    unset(Rust_COMPILER CACHE)
 
-    string(REPLACE "\n" ";" TOOLCHAINS_RAW "${TOOLCHAINS_RAW}")
+    string(REPLACE "\n" ";" _TOOLCHAINS_RAW "${_TOOLCHAINS_RAW}")
 
-    foreach(TOOLCHAIN_RAW ${TOOLCHAINS_RAW})
-        if (TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)([ \t\r\n]+\\(default\\))?[ \t\r\n]+(.+)")
-            set(TOOLCHAIN "${CMAKE_MATCH_1}")
-            list(APPEND DISCOVERED_TOOLCHAINS ${TOOLCHAIN})
+    foreach(_TOOLCHAIN_RAW ${_TOOLCHAINS_RAW})
+        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)([ \t\r\n]+\\(default\\))?[ \t\r\n]+(.+)")
+            set(_TOOLCHAIN "${CMAKE_MATCH_1}")
+            list(APPEND _DISCOVERED_TOOLCHAINS ${_TOOLCHAIN})
 
-            set(${TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
+            set(${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
 
             if (CMAKE_MATCH_2)
-                set(TOOLCHAIN_DEFAULT ${TOOLCHAIN})
+                set(_TOOLCHAIN_DEFAULT ${_TOOLCHAIN})
             endif()
         else()
-            message(WARNING "Didn't reconize toolchain: ${TOOLCHAIN_RAW}")
+            message(WARNING "Didn't reconize toolchain: ${_TOOLCHAIN_RAW}")
         endif()
     endforeach()
 
-    set(RUSTUP_TOOLCHAIN ${TOOLCHAIN_DEFAULT} CACHE STRING "The rustup toolchain to use")
+    set(RUSTUP_TOOLCHAIN ${_TOOLCHAIN_DEFAULT} CACHE STRING "The rustup toolchain to use")
 else()
-    set(FOUND_PROXIES OFF)
+    set(_FOUND_PROXIES OFF)
 endif()
 
 # Resolve to the concrete toolchain if a proxy is found, otherwise use the provided executable
-if (FOUND_PROXIES)
+if (_FOUND_PROXIES)
     if (RUSTUP_TOOLCHAIN)
-        if (NOT RUSTUP_TOOLCHAIN IN_LIST DISCOVERED_TOOLCHAINS)
+        if (NOT RUSTUP_TOOLCHAIN IN_LIST _DISCOVERED_TOOLCHAINS)
             message(NOTICE "Could not find toolchain '${RUSTUP_TOOLCHAIN}'")
             message(NOTICE "Available toolchains:")
 
             list(APPEND CMAKE_MESSAGE_INDENT "  ")
-            foreach(TOOLCHAIN ${DISCOVERED_TOOLCHAINS})
-                message(NOTICE "${TOOLCHAIN}")
+            foreach(_TOOLCHAIN ${_DISCOVERED_TOOLCHAINS})
+                message(NOTICE "${_TOOLCHAIN}")
             endforeach()
             list(POP_BACK CMAKE_MESSAGE_INDENT)
 
@@ -69,26 +69,26 @@ if (FOUND_PROXIES)
         endif()
     endif()
 
-    unset(RUSTC_EXECUTABLE CACHE)
+    unset(Rust_COMPILER CACHE)
 
-    set(RUST_TOOLCHAIN_PATH "${${RUSTUP_TOOLCHAIN}_PATH}")
+    set(_RUST_TOOLCHAIN_PATH "${${RUSTUP_TOOLCHAIN}_PATH}")
 
     find_program(
-        RUSTC_EXECUTABLE
+        Rust_COMPILER
         rustc
-            HINTS "${RUST_TOOLCHAIN_PATH}/bin"
+            HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
             NO_DEFAULT_PATH)
 else()
-    get_filename_component(RUST_TOOLCHAIN_PATH ${RUSTC_EXECUTABLE}    DIRECTORY)
-    get_filename_component(RUST_TOOLCHAIN_PATH ${RUST_TOOLCHAIN_PATH} DIRECTORY)
+    get_filename_component(_RUST_TOOLCHAIN_PATH ${Rust_COMPILER}    DIRECTORY)
+    get_filename_component(_RUST_TOOLCHAIN_PATH ${_RUST_TOOLCHAIN_PATH} DIRECTORY)
 endif()
 
 # Look for Cargo next to rustc.
-# If you want to use a different cargo, explicitly set the CARGO_EXECUTABLE cache variable
+# If you want to use a different cargo, explicitly set the Rust_CARGO cache variable
 find_program(
-    CARGO_EXECUTABLE
+    Rust_CARGO
     cargo
-        HINTS "${RUST_TOOLCHAIN_PATH}/bin"
+        HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
         REQUIRED NO_DEFAULT_PATH)
 
 set(CARGO_RUST_FLAGS "" CACHE STRING "Flags to pass to rustc")
@@ -102,86 +102,93 @@ set(CARGO_RUST_FLAGS_RELWITHDEBINFO -g CACHE STRING
     "Flags to pass to rustc in RelWithDebInfo Configuration")
 
 execute_process(
-    COMMAND ${CARGO_EXECUTABLE} --version --verbose
-    OUTPUT_VARIABLE CARGO_VERSION_RAW)
+    COMMAND ${Rust_CARGO} --version --verbose
+    OUTPUT_VARIABLE _CARGO_VERSION_RAW)
 
-if (CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
-    set(CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}")
-    set(CARGO_VERSION_MINOR "${CMAKE_MATCH_2}")
-    set(CARGO_VERSION_PATCH "${CMAKE_MATCH_3}")
-    set(CARGO_VERSION "${CARGO_VERSION_MAJOR}.${CARGO_VERSION_MINOR}.${CARGO_VERSION_PATCH}")
+if (_CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+    set(Rust_CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    set(Rust_CARGO_VERSION_MINOR "${CMAKE_MATCH_2}")
+    set(Rust_CARGO_VERSION_PATCH "${CMAKE_MATCH_3}")
+    set(Rust_CARGO_VERSION "${Rust_CARGO_VERSION_MAJOR}.${Rust_CARGO_VERSION_MINOR}.${Rust_CARGO_VERSION_PATCH}")
 else()
     message(
         FATAL_ERROR
-        "Failed to parse cargo version. `cargo --version` evaluated to (${CARGO_VERSION_RAW})")
+        "Failed to parse cargo version. `cargo --version` evaluated to (${_CARGO_VERSION_RAW})")
 endif()
 
 execute_process(
-    COMMAND ${RUSTC_EXECUTABLE} --version --verbose
-    OUTPUT_VARIABLE RUSTC_VERSION_RAW)
+    COMMAND ${Rust_COMPILER} --version --verbose
+    OUTPUT_VARIABLE _RUSTC_VERSION_RAW)
 
-if (RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
-    set(RUSTC_VERSION_MAJOR "${CMAKE_MATCH_1}")
-    set(RUSTC_VERSION_MINOR "${CMAKE_MATCH_2}")
-    set(RUSTC_VERSION_PATCH "${CMAKE_MATCH_3}")
-    set(RUSTC_VERSION "${RUSTC_VERSION_MAJOR}.${RUSTC_VERSION_MINOR}.${RUSTC_VERSION_PATCH}")
+if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+    set(Rust_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    set(Rust_VERSION_MINOR "${CMAKE_MATCH_2}")
+    set(Rust_VERSION_PATCH "${CMAKE_MATCH_3}")
+    set(Rust_VERSION "${Rust_VERSION_MAJOR}.${Rust_VERSION_MINOR}.${Rust_VERSION_PATCH}")
 else()
     message(
         FATAL_ERROR
-        "Failed to parse rustc version. `rustc --version --verbose` evaluated to:\n${RUSTC_VERSION_RAW}")
+        "Failed to parse rustc version. `rustc --version --verbose` evaluated to:\n${_RUSTC_VERSION_RAW}")
 endif()
 
-set(RUST_VERSION ${RUSTC_VERSION})
+if (_RUSTC_VERSION_RAW MATCHES "host: ([a-zA-Z0-9_\\-]*)\n")
+    set(Rust_DEFAULT_HOST_TARGET "${CMAKE_MATCH_1}")
+else()
+    message(
+        FATAL_ERROR
+        "Failed to parse rustc host target. `rustc --version --verbose` evaluated to:\n${_RUSTC_VERSION_RAW}"
+    )
+endif()
 
-if (NOT CARGO_TARGET)
+if (NOT Rust_CARGO_TARGET)
     if (WIN32)
         if (CMAKE_VS_PLATFORM_NAME)
             if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-                set(CARGO_ARCH i686 CACHE STRING "Build for 32-bit x86")
+                set(_CARGO_ARCH i686)
             elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-                set(CARGO_ARCH x86_64 CACHE STRING "Build for 64-bit x86")
+                set(_CARGO_ARCH x86_64)
             elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM64")
-                set(CARGO_ARCH aarch64 CACHE STRING "Build for 64-bit ARM")
+                set(_CARGO_ARCH aarch64)
             else()
                 message(WARNING "VS Platform '${CMAKE_VS_PLATFORM_NAME}' not recognized")
             endif()
         else ()
+            if (NOT DEFINED CMAKE_SIZEOF_VOID_P)
+                message(
+                    FATAL_ERROR "Compiler hasn't been enabled yet - can't determine the target architecture")
+            endif()
+
             if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-                set(CARGO_ARCH x86_64 CACHE STRING "Build for 64-bit x86")
+                set(_CARGO_ARCH x86_64)
             else()
-                set(CARGO_ARCH i686 CACHE STRING "Build for 32-bit x86")
+                set(_CARGO_ARCH i686)
             endif()
         endif()
 
-        set(CARGO_VENDOR "pc-windows" CACHE STRING "Build for Microsoft Windows")
+        set(_CARGO_VENDOR "pc-windows")
 
-        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-            set(CARGO_ABI gnu CACHE STRING "Build for linking with GNU")
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            set(_CARGO_ABI gnu)
         else()
-            set(CARGO_ABI msvc CACHE STRING "Build for linking with MSVC")
+            set(_CARGO_ABI msvc)
         endif()
 
-        set(CARGO_TARGET "${CARGO_ARCH}-${CARGO_VENDOR}-${CARGO_ABI}"
-            CACHE STRING "Windows Target")
-    elseif (RUSTC_VERSION_RAW MATCHES "host: ([a-zA-Z0-9_\\-]*)\n")
-        set(CARGO_TARGET "${CMAKE_MATCH_1}" CACHE STRING "Default Host Target")
+        set(Rust_CARGO_TARGET "${_CARGO_ARCH}-${_CARGO_VENDOR}-${_CARGO_ABI}"
+            CACHE STRING "Target triple")
     else()
-        message(
-            FATAL_ERROR
-            "Failed to parse rustc host target. `rustc --version --verbose` evaluated to:\n${RUSTC_VERSION_RAW}"
-        )
+        set(Rust_CARGO_TARGET "${Rust_DEFAULT_HOST_TARGET}" CACHE STRING "Target triple")
     endif()
 
-    message(STATUS "Rust Target: ${CARGO_TARGET}")
+    message(STATUS "Rust Target: ${Rust_CARGO_TARGET}")
 endif()
 
 find_package_handle_standard_args(
     Rust
-    REQUIRED_VARS RUSTC_EXECUTABLE CARGO_EXECUTABLE CARGO_TARGET
-    VERSION_VAR RUST_VERSION)
+    REQUIRED_VARS Rust_COMPILER Rust_VERSION Rust_CARGO Rust_CARGO_VERSION Rust_CARGO_TARGET
+    VERSION_VAR Rust_VERSION)
 
 function(_gen_config config_type use_config_dir)
-    string(TOUPPER "${config_type}" UPPER_CONFIG_TYPE)
+    string(TOUPPER "${config_type}" _UPPER_CONFIG_TYPE)
 
     if(use_config_dir)
         set(_DESTINATION_DIR ${CMAKE_BINARY_DIR}/${CMAKE_VS_PLATFORM_NAME}/${config_type})
@@ -189,19 +196,19 @@ function(_gen_config config_type use_config_dir)
         set(_DESTINATION_DIR ${CMAKE_BINARY_DIR})
     endif()
 
-    set(CARGO_CONFIG ${_DESTINATION_DIR}/.cargo/config)
+    set(_CARGO_CONFIG ${_DESTINATION_DIR}/.cargo/config)
 
-    file(WRITE ${CARGO_CONFIG}
+    file(WRITE ${_CARGO_CONFIG}
 "\
 [build]
 target-dir=\"cargo/build\"
 ")
 
-    string(REPLACE ";" "\", \"" RUSTFLAGS "${CARGO_RUST_FLAGS}" "${CARGO_RUST_FLAGS_${UPPER_CONFIG_TYPE}}")
+    string(REPLACE ";" "\", \"" _RUSTFLAGS "${CARGO_RUST_FLAGS}" "${CARGO_RUST_FLAGS_${_UPPER_CONFIG_TYPE}}")
 
-    if (RUSTFLAGS)
-        file(APPEND ${CARGO_CONFIG}
-            "rustflags = [\"${RUSTFLAGS}\"]\n")
+    if (_RUSTFLAGS)
+        file(APPEND ${_CARGO_CONFIG}
+            "rustflags = [\"${_RUSTFLAGS}\"]\n")
     endif()
 
     get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
@@ -217,3 +224,15 @@ else()
     message(STATUS "Defaulting Cargo to build debug")
     _gen_config(Debug OFF)
 endif()
+
+add_executable(Rust::Rustc IMPORTED GLOBAL)
+set_property(
+    TARGET Rust::Rustc
+    PROPERTY IMPORTED_LOCATION ${Rust_COMPILER}
+)
+
+add_executable(Rust::Cargo IMPORTED GLOBAL)
+set_property(
+    TARGET Rust::Cargo
+    PROPERTY IMPORTED_LOCATION ${Rust_CARGO}
+)
