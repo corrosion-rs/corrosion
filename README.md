@@ -5,6 +5,19 @@ Corrosion, formerly known as cmake-cargo, is a tool for integrating Rust into an
 project. Corrosion is capable of importing executables, static libraries, and dynamic libraries
 from a crate.
 
+## Sample Usage
+```cmake
+cmake_minimum_required(VERSION 3.12)
+project(MyCoolProject LANGUAGES CXX)
+
+find_package(Corrosion REQUIRED)
+
+add_crate(rust-lib/Cargo.toml)
+
+add_executable(cpp-exe main.cpp)
+target_link_libraries(cpp-exe PUBLIC rust-lib)
+```
+
 ## Installation
 There are two fundamental installation methods that are supported by Corrosion - installation as a
 CMake package or using it as a subdirectory in an existing CMake project. Corrosion strongly
@@ -122,7 +135,7 @@ This crate defines a simple crate called `rust-lib`. Importing this crate into y
 # Note: you must have already included Corrosion for `add_crate` to be available. See the
 # `Installation` section above.
 
-add_crate(rust2cpp)
+add_crate(rust/Cargo.toml)
 ```
 
 Now that you've imported the crate into CMake, all of the executables, static libraries, and dynamic
