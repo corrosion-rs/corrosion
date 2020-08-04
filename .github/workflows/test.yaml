@@ -24,7 +24,7 @@ jobs:
         arch:
           - x86_64
           - i686
-#           - aarch64 # TODO: Waiting for https://github.com/RustSec/platforms-crate/pull/17
+          - aarch64
         abi:
           - gnu
           - darwin
