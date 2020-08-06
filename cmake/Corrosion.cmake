@@ -139,7 +139,7 @@ function(_add_cargo_build)
                 CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
                 ${link_prefs}
                 ${compilers}
-                CMAKECARGO_LINKER_LANGUAGES=$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>
+                CMAKECARGO_LINKER_LANGUAGES="$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>"
             ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
                 build-crate
@@ -231,6 +231,13 @@ function(add_crate path_to_toml)
 
     include(${generated_cmake})
 endfunction(add_crate)
+
+function(corrosion_set_linker_language target_name language)
+    set_property(
+        TARGET cargo-build_${target_name}
+        PROPERTY LINKER_LANGUAGE ${language}
+    )
+endfunction()
 
 function(cargo_link_libraries target_name)
     add_dependencies(cargo-build_${target_name} ${ARGN})
