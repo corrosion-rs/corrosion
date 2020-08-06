@@ -5,6 +5,17 @@ Corrosion, formerly known as cmake-cargo, is a tool for integrating Rust into an
 project. Corrosion is capable of importing executables, static libraries, and dynamic libraries
 from a crate.
 
+## Feature
+- Automatic Import of Executable, Static, and Shared Libraries from Rust Crate
+- Easy Installation of Rust Executables
+- Trivially Link Rust Executables to C++ Libraries in Tree
+- Multi-Config Generator Support
+- Simple Cross-Compilation
+
+## Coming Soon
+- Automatic Generation of Rust Bindings (via bindgen) and C/C++ Bindings (via cbindgen)
+- Easy Install of Libraries
+
 ## Sample Usage
 ```cmake
 cmake_minimum_required(VERSION 3.12)
