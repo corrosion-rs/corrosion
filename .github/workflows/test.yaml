@@ -25,6 +25,7 @@ jobs:
           - x86_64
           - i686
           - aarch64
+          - powerpc64le
         abi:
           - gnu
           - darwin
@@ -53,7 +54,6 @@ jobs:
             generator: default # Default generator is Visual Studio
             
           # ARCH
-          # TODO: cross-compile on Linux
           - os: windows-latest
             arch: i686
             abi: gnu
@@ -66,14 +66,14 @@ jobs:
           - os: windows-latest
             arch: aarch64
             generator: ninja
-          - os: ubuntu-latest
-            arch: i686
-          - os: ubuntu-latest
-            arch: aarch64
+          - os: windows-latest
+            arch: powerpc64le
           - os: macos-latest
             arch: i686
           - os: macos-latest
             arch: aarch64
+          - os: macos-latest
+            arch: powerpc64le
 
           # ABI
           - os: ubuntu-latest
@@ -120,7 +120,7 @@ jobs:
         id: pick_compiler
         run: |
           if [ "${{ matrix.abi }}" == "gnu" ]; then
-            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=g++"
+            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=${{matrix.abi}}-linux-gnu-g++"
           elif [ "${{ matrix.abi }}" == "darwin" ]; then
             echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=clang++"
           elif [ "${{ matrix.abi }}" == "msvc" ]; then
@@ -178,6 +178,10 @@ jobs:
         with:
           toolchain: ${{matrix.rust}}
           target: ${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
+      - name: Install Cross Compiler
+        run: |
+          apt install m -y g++-$(echo "${{matrix.arch}}" | tr _ -)-linux-gnu
+        if: ${{ 'ubuntu-latest' == matrix.os }}
       - name: CMake Version
         run: cmake --version
       - name: Rust Version
