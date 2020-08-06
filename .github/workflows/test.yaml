@@ -180,7 +180,7 @@ jobs:
           target: ${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
       - name: Install Cross Compiler
         run: |
-          sudo apt install m -y g++-$(echo "${{matrix.arch}}" | tr _ -)-linux-gnu
+          sudo apt-get install -y g++-$(echo "${{matrix.arch}}" | tr _ -)-linux-gnu
         if: ${{ 'ubuntu-latest' == matrix.os }}
       - name: CMake Version
         run: cmake --version
