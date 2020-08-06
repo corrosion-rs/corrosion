@@ -120,7 +120,7 @@ jobs:
         id: pick_compiler
         run: |
           if [ "${{ matrix.abi }}" == "gnu" ]; then
-            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=${{matrix.abi}}-linux-gnu-g++"
+            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++"
           elif [ "${{ matrix.abi }}" == "darwin" ]; then
             echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=clang++"
           elif [ "${{ matrix.abi }}" == "msvc" ]; then
