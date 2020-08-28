@@ -3,32 +3,72 @@ cmake_minimum_required(VERSION 3.12)
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(FindPackageHandleStandardArgs)
 
-# Falls back to the rustup proxies if a toolchain cannot be found in the user's path
-find_program(Rust_COMPILER rustc PATHS $ENV{HOME}/.cargo/bin)
+if (NOT "${Rust_TOOLCHAIN}" STREQUAL "$CACHE{Rust_TOOLCHAIN}")
+    # Promote Rust_TOOLCHAIN to a cache variable if it is not already a cache variable
+    set(Rust_TOOLCHAIN ${Rust_TOOLCHAIN} CACHE STRING "Requested rustup toolchain" FORCE)
+endif()
 
-# Check if the discovered cargo is actually a "rustup" proxy.
-execute_process(
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-            RUSTUP_FORCE_ARG0=rustup
-        ${Rust_COMPILER} --version
-    OUTPUT_VARIABLE _RUSTC_VERSION_RAW
-)
+# This block checks to see if we're prioritizing a rustup-managed toolchain.
+if (DEFINED Rust_TOOLCHAIN)
+    # If the user changes the Rust_TOOLCHAIN, then we should re-evaluate all cache variables
+    if (NOT Rust_TOOLCHAIN STREQUAL _Rust_TOOLCHAIN_CACHED)
+        unset(Rust_CARGO CACHE)
+        unset(Rust_COMPILER CACHE)
+        unset(Rust_CARGO_TARGET CACHE)
+        unset(_Rust_TOOLCHAIN_CACHED CACHE)
+    endif()
 
-# Discover what toolchains are installed by rustup
-if (_RUSTC_VERSION_RAW MATCHES "rustup [0-9\\.]+")
-    set(_FOUND_PROXIES ON)
+    # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
+    find_program(Rust_RUSTUP rustup PATHS $ENV{HOME}/.cargo/bin)
+    if (NOT Rust_RUSTUP)
+        message(
+            WARNING "CMake variable `Rust_TOOLCHAIN` specified, but `rustup` was not found. "
+            "Ignoring toolchain and looking for a Rust toolchain not managed by rustup.")
+    else()
+        set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
+    endif()
+else()
+    # Even if we failed to find rustup in the previous branch - it's safe to skip this step
 
+    # If we aren't definitely using a rustup toolchain, look for rustc first - the user may have
+    # a toolchain installed via a method other than rustup higher in the PATH, which should be
+    # preferred. However, if the first-found rustc is a rustup proxy, then we'll revert to
+    # finding the preferred toolchain via rustup.
+
+    # Falls back to the rustup proxies in $HOME/.cargo/bin if a toolchain cannot be found in the
+    # user's PATH.
+    find_program(Rust_COMPILER rustc PATHS $ENV{HOME}/.cargo/bin)
+
+    # Check if the discovered cargo is actually a "rustup" proxy.
     execute_process(
         COMMAND
             ${CMAKE_COMMAND} -E env
                 RUSTUP_FORCE_ARG0=rustup
-            ${Rust_COMPILER} toolchain list --verbose
-        OUTPUT_VARIABLE _TOOLCHAINS_RAW
+            ${Rust_COMPILER} --version
+        OUTPUT_VARIABLE _RUSTC_VERSION_RAW
     )
 
-    # We don't need Rust_COMPILER anymore
-    unset(Rust_COMPILER CACHE)
+    if (_RUSTC_VERSION_RAW MATCHES "rustup [0-9\\.]+")
+        set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
+        
+        # Get `rustup` next to the `rustc` proxy
+        get_filename_component(_RUST_PROXIES_PATH ${Rust_COMPILER} DIRECTORY)
+        find_program(Rust_RUSTUP rustup HINTS ${_RUST_PROXIES_PATH}/bin)
+
+        # Throw out Rust_COMPILER if it was a proxy
+        unset(Rust_COMPILER CACHE)
+    endif()
+endif()
+
+
+# Discover what toolchains are installed by rustup, if the discovered `rustc` is a proxy from
+# `rustup`, and select either the default toolchain, or the requested toolchain Rust_TOOLCHAIN
+if (_RESOLVE_RUSTUP_TOOLCHAINS)
+    execute_process(
+        COMMAND
+            ${Rust_RUSTUP} toolchain list --verbose
+        OUTPUT_VARIABLE _TOOLCHAINS_RAW
+    )
 
     string(REPLACE "\n" ";" _TOOLCHAINS_RAW "${_TOOLCHAINS_RAW}")
 
@@ -47,16 +87,27 @@ if (_RUSTC_VERSION_RAW MATCHES "rustup [0-9\\.]+")
         endif()
     endforeach()
 
-    set(RUSTUP_TOOLCHAIN ${_TOOLCHAIN_DEFAULT} CACHE STRING "The rustup toolchain to use")
-else()
-    set(_FOUND_PROXIES OFF)
-endif()
+    if (NOT DEFINED Rust_TOOLCHAIN)
+        message(STATUS "Rust Toolchain: ${_TOOLCHAIN_DEFAULT}")
+    endif()
+    set(Rust_TOOLCHAIN ${_TOOLCHAIN_DEFAULT} CACHE STRING "The rustup toolchain to use")
 
-# Resolve to the concrete toolchain if a proxy is found, otherwise use the provided executable
-if (_FOUND_PROXIES)
-    if (RUSTUP_TOOLCHAIN)
-        if (NOT RUSTUP_TOOLCHAIN IN_LIST _DISCOVERED_TOOLCHAINS)
-            message(NOTICE "Could not find toolchain '${RUSTUP_TOOLCHAIN}'")
+    if (NOT Rust_TOOLCHAIN IN_LIST _DISCOVERED_TOOLCHAINS)
+        # If the precise toolchain wasn't found, try appending the default host 
+        execute_process(
+            COMMAND
+                ${Rust_RUSTUP} show
+            OUTPUT_VARIABLE _SHOW_RAW
+        )
+
+        if (_SHOW_RAW MATCHES "Default host: ([a-zA-Z0-9_\\-]*)\n")
+            set(_DEFAULT_HOST "${CMAKE_MATCH_1}")
+        else()
+            message(FATAL_ERROR "Failed to parse \"Default host\" from `${Rust_RUSTUP} show`. Got: ${_SHOW_RAW}")
+        endif()
+
+        if (NOT "${Rust_TOOLCHAIN}-${_DEFAULT_HOST}" IN_LIST _DISCOVERED_TOOLCHAINS)
+            message(NOTICE "Could not find toolchain '${Rust_TOOLCHAIN}'")
             message(NOTICE "Available toolchains:")
 
             list(APPEND CMAKE_MESSAGE_INDENT "  ")
@@ -67,11 +118,17 @@ if (_FOUND_PROXIES)
 
             message(FATAL_ERROR "")
         endif()
+        
+        set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}-${_DEFAULT_HOST}")
+    else()
+        set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}")
     endif()
 
     unset(Rust_COMPILER CACHE)
 
-    set(_RUST_TOOLCHAIN_PATH "${${RUSTUP_TOOLCHAIN}_PATH}")
+    set(_Rust_TOOLCHAIN_CACHED ${Rust_TOOLCHAIN} CACHE INTERNAL "The active Rust toolchain")
+
+    set(_RUST_TOOLCHAIN_PATH "${${_RUSTUP_TOOLCHAIN_FULL}_PATH}")
 
     find_program(
         Rust_COMPILER
@@ -79,7 +136,7 @@ if (_FOUND_PROXIES)
             HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
             NO_DEFAULT_PATH)
 else()
-    get_filename_component(_RUST_TOOLCHAIN_PATH ${Rust_COMPILER}    DIRECTORY)
+    get_filename_component(_RUST_TOOLCHAIN_PATH ${Rust_COMPILER}        DIRECTORY)
     get_filename_component(_RUST_TOOLCHAIN_PATH ${_RUST_TOOLCHAIN_PATH} DIRECTORY)
 endif()
 
