@@ -10,14 +10,6 @@ endif()
 
 # This block checks to see if we're prioritizing a rustup-managed toolchain.
 if (DEFINED Rust_TOOLCHAIN)
-    # If the user changes the Rust_TOOLCHAIN, then we should re-evaluate all cache variables
-    if (NOT Rust_TOOLCHAIN STREQUAL _Rust_TOOLCHAIN_CACHED)
-        unset(Rust_CARGO CACHE)
-        unset(Rust_COMPILER CACHE)
-        unset(Rust_CARGO_TARGET CACHE)
-        unset(_Rust_TOOLCHAIN_CACHED CACHE)
-    endif()
-
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
     find_program(Rust_RUSTUP rustup PATHS $ENV{HOME}/.cargo/bin)
     if (NOT Rust_RUSTUP)
@@ -28,41 +20,69 @@ if (DEFINED Rust_TOOLCHAIN)
         set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
     endif()
 else()
-    # Even if we failed to find rustup in the previous branch - it's safe to skip this step
-
     # If we aren't definitely using a rustup toolchain, look for rustc first - the user may have
     # a toolchain installed via a method other than rustup higher in the PATH, which should be
     # preferred. However, if the first-found rustc is a rustup proxy, then we'll revert to
     # finding the preferred toolchain via rustup.
 
-    # Falls back to the rustup proxies in $HOME/.cargo/bin if a toolchain cannot be found in the
-    # user's PATH.
-    find_program(Rust_COMPILER rustc PATHS $ENV{HOME}/.cargo/bin)
+    # Uses `Rust_COMPILER` to let user-specified `rustc` win. But we will still "override" the
+    # user's setting if it is pointing to `rustup`. Default rustup install path is provided as a
+    # backup if a toolchain cannot be found in the user's PATH.
 
-    # Check if the discovered cargo is actually a "rustup" proxy.
+    if (DEFINED Rust_COMPILER)
+        set(_Rust_COMPILER_TEST ${Rust_COMPILER})
+        set(_USER_SPECIFIED_RUSTC ON)
+    else()
+        find_program(_Rust_COMPILER_TEST rustc PATHS $ENV{HOME}/.cargo/bin)
+    endif()
+
+    # Check if the discovered rustc is actually a "rustup" proxy.
     execute_process(
         COMMAND
             ${CMAKE_COMMAND} -E env
                 RUSTUP_FORCE_ARG0=rustup
-            ${Rust_COMPILER} --version
+            ${_Rust_COMPILER_TEST} --version
         OUTPUT_VARIABLE _RUSTC_VERSION_RAW
     )
 
     if (_RUSTC_VERSION_RAW MATCHES "rustup [0-9\\.]+")
+        if (_USER_SPECIFIED_RUSTC)
+            message(
+                WARNING "User-specified Rust_COMPILER pointed to rustup's rustc proxy. Corrosion's "
+                "FindRust will always try to evaluate to an actual Rust toolchain, and so the "
+                "user-specified Rust_COMPILER will be discarded in favor of the default "
+                "rustup-managed toolchain."
+            )
+
+            unset(Rust_COMPILER)
+            unset(Rust_COMPILER CACHE)
+        endif()
+
         set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
         
         # Get `rustup` next to the `rustc` proxy
-        get_filename_component(_RUST_PROXIES_PATH ${Rust_COMPILER} DIRECTORY)
-        find_program(Rust_RUSTUP rustup HINTS ${_RUST_PROXIES_PATH}/bin)
-
-        # Throw out Rust_COMPILER if it was a proxy
-        unset(Rust_COMPILER CACHE)
+        get_filename_component(_RUST_PROXIES_PATH ${_Rust_COMPILER_TEST} DIRECTORY)
+        find_program(Rust_RUSTUP rustup HINTS ${_RUST_PROXIES_PATH} NO_DEFAULT_PATH)
     endif()
+
+    unset(_Rust_COMPILER_TEST CACHE)
 endif()
 
+# At this point, the only thing we should have evaluated is a path to `rustup` _if that's what the
+# best source for a Rust toolchain was determined to be_.
+
+# List of user variables that will override any toolchain-provided setting
+set(_Rust_USER_VARS Rust_COMPILER Rust_CARGO Rust_CARGO_TARGET)
+foreach(_VAR ${_Rust_USER_VARS})
+    if (DEFINED ${_VAR})
+        set(${_VAR}_CACHED ${${_VAR}} CACHE INTERNAL "Internal cache of ${_VAR}")
+    else()
+        unset(${_VAR}_CACHED CACHE)
+    endif()
+endforeach()
 
 # Discover what toolchains are installed by rustup, if the discovered `rustc` is a proxy from
-# `rustup`, and select either the default toolchain, or the requested toolchain Rust_TOOLCHAIN
+# `rustup`, then select either the default toolchain, or the requested toolchain Rust_TOOLCHAIN
 if (_RESOLVE_RUSTUP_TOOLCHAINS)
     execute_process(
         COMMAND
@@ -124,26 +144,25 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
         set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}")
     endif()
 
-    unset(Rust_COMPILER CACHE)
-
-    set(_Rust_TOOLCHAIN_CACHED ${Rust_TOOLCHAIN} CACHE INTERNAL "The active Rust toolchain")
-
     set(_RUST_TOOLCHAIN_PATH "${${_RUSTUP_TOOLCHAIN_FULL}_PATH}")
 
+    # Is overrided if the user specifies `Rust_COMPILER` explicitly.
     find_program(
-        Rust_COMPILER
+        Rust_COMPILER_CACHED
         rustc
             HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
             NO_DEFAULT_PATH)
 else()
-    get_filename_component(_RUST_TOOLCHAIN_PATH ${Rust_COMPILER}        DIRECTORY)
+    find_program(Rust_COMPILER_CACHED rustc)
+
+    get_filename_component(_RUST_TOOLCHAIN_PATH ${Rust_COMPILER_CACHED} DIRECTORY)
     get_filename_component(_RUST_TOOLCHAIN_PATH ${_RUST_TOOLCHAIN_PATH} DIRECTORY)
 endif()
 
 # Look for Cargo next to rustc.
-# If you want to use a different cargo, explicitly set the Rust_CARGO cache variable
+# If you want to use a different cargo, explicitly set `Rust_CARGO` variable
 find_program(
-    Rust_CARGO
+    Rust_CARGO_CACHED
     cargo
         HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
         REQUIRED NO_DEFAULT_PATH)
@@ -159,7 +178,7 @@ set(CARGO_RUST_FLAGS_RELWITHDEBINFO -g CACHE STRING
     "Flags to pass to rustc in RelWithDebInfo Configuration")
 
 execute_process(
-    COMMAND ${Rust_CARGO} --version --verbose
+    COMMAND ${Rust_CARGO_CACHED} --version --verbose
     OUTPUT_VARIABLE _CARGO_VERSION_RAW)
 
 if (_CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
@@ -174,7 +193,7 @@ else()
 endif()
 
 execute_process(
-    COMMAND ${Rust_COMPILER} --version --verbose
+    COMMAND ${Rust_COMPILER_CACHED} --version --verbose
     OUTPUT_VARIABLE _RUSTC_VERSION_RAW)
 
 if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
@@ -197,7 +216,7 @@ else()
     )
 endif()
 
-if (NOT Rust_CARGO_TARGET)
+if (NOT Rust_CARGO_TARGET_CACHED)
     if (WIN32)
         if (CMAKE_VS_PLATFORM_NAME)
             if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
@@ -230,14 +249,22 @@ if (NOT Rust_CARGO_TARGET)
             set(_CARGO_ABI msvc)
         endif()
 
-        set(Rust_CARGO_TARGET "${_CARGO_ARCH}-${_CARGO_VENDOR}-${_CARGO_ABI}"
+        set(Rust_CARGO_TARGET_CACHED "${_CARGO_ARCH}-${_CARGO_VENDOR}-${_CARGO_ABI}"
             CACHE STRING "Target triple")
     else()
-        set(Rust_CARGO_TARGET "${Rust_DEFAULT_HOST_TARGET}" CACHE STRING "Target triple")
+        set(Rust_CARGO_TARGET_CACHED "${Rust_DEFAULT_HOST_TARGET}" CACHE STRING "Target triple")
     endif()
 
-    message(STATUS "Rust Target: ${Rust_CARGO_TARGET}")
+    message(STATUS "Rust Target: ${Rust_CARGO_TARGET_CACHED}")
 endif()
+
+# Set the input variables as non-cache variables so that the variables are available after
+# `find_package`, even if the values were evaluated to defaults.
+foreach(_VAR ${_Rust_USER_VARS})
+    set(${_VAR} ${${_VAR}_CACHED})
+    # Ensure cached variables have type INTERNAL
+    set(${_VAR}_CACHED ${${_VAR}_CACHED} CACHE INTERNAL "Internal cache of ${_VAR}")
+endforeach()
 
 find_package_handle_standard_args(
     Rust
@@ -285,11 +312,11 @@ endif()
 add_executable(Rust::Rustc IMPORTED GLOBAL)
 set_property(
     TARGET Rust::Rustc
-    PROPERTY IMPORTED_LOCATION ${Rust_COMPILER}
+    PROPERTY IMPORTED_LOCATION ${Rust_COMPILER_CACHED}
 )
 
 add_executable(Rust::Cargo IMPORTED GLOBAL)
 set_property(
     TARGET Rust::Cargo
-    PROPERTY IMPORTED_LOCATION ${Rust_CARGO}
+    PROPERTY IMPORTED_LOCATION ${Rust_CARGO_CACHED}
 )

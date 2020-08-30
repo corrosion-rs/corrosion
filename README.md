@@ -114,13 +114,18 @@ shouldn't need to alter any of these.
 - `Rust_TOOLCHAIN:STRING` - Specify a named rustup toolchain to use. Changes to this variable
 resets all other options. Default: If the first-found `rustc` is a `rustup` proxy, then the default
 rustup toolchain (see `rustup show`) is used. Otherwise, the variable is unset by default.
+- `Rust_ROOT:STRING` - CMake provided. Path to a Rust toolchain to use. This is an alternative if
+you want to select a specific Rust toolchain, but it's not managed by rustup. Default: Nothing
+
+#### Advanced
 - `Rust_COMPILER:STRING` - Path to an actual `rustc`. If set to a `rustup` proxy, it will be
 replaced by a path to an actual `rustc`. Default: The `rustc` in the first-found toolchain, either
 from `rustup`, or from a toolchain available in the user's `PATH`.
 - `Rust_CARGO:STRING` - Path to an actual `cargo`. Default: the `cargo` installed next to
 `${Rust_COMPILER}`.
 - `Rust_CARGO_TARGET:STRING` - The default target triple to build for. Alter for cross-compiling.
-Default: The default target triple reported by `${Rust_COMPILER} --version --verbose`.
+Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
+the default target triple reported by `${Rust_COMPILER} --version --verbose`.
 
 ### Importing C-Style Libraries Written in Rust
 Corrosion makes it completely trivial to import a crate into an existing CMake project. Consider
