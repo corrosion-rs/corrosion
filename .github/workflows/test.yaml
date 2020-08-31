@@ -202,7 +202,7 @@ jobs:
             ${{ steps.arch_flags.outputs.cmake }} \
             ${{ steps.pick_compiler.outputs.compiler }} \
             ${{ steps.pick_generator.outputs.generator }} \
-            -DRUSTUP_TOOLCHAIN=${{matrix.rust}}-x86_64-${{steps.determine_rust_os.outputs.os}}-${{steps.determine_rust_os.outputs.host_abi}}
+            -DRust_TOOLCHAIN=${{matrix.rust}}
       - name: Build C++ program linking Rust
         run: |
           cmake \

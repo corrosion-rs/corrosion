@@ -53,6 +53,7 @@ set(
 )
 
 set(_CORROSION_CARGO_VERSION ${Rust_CARGO_VERSION} CACHE INTERNAL "cargo version used by corrosion")
+set(_CORROSION_RUST_CARGO_TARGET ${Rust_CARGO_TARGET} CACHE INTERNAL "target triple used by corrosion")
 
 function(_add_cargo_build)
     set(options "")
@@ -123,7 +124,7 @@ function(_add_cargo_build)
             set(build_type_dir release)
         endif()
 
-        set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${Rust_CARGO_TARGET}/${build_type_dir}")
+        set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${_CORROSION_RUST_CARGO_TARGET}/${build_type_dir}")
         foreach(byproduct_file ${ACB_BYPRODUCTS})
             list(APPEND byproducts "${cargo_build_dir}/${byproduct_file}")
         endforeach()
@@ -144,7 +145,7 @@ function(_add_cargo_build)
                 --manifest-path "${path_to_toml}"
                 build-crate
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
-                    --target ${Rust_CARGO_TARGET}
+                    --target ${_CORROSION_RUST_CARGO_TARGET}
                     --package ${package_name}
             BYPRODUCTS ${byproducts}
         # The build is conducted in root build directory so that cargo
@@ -155,7 +156,7 @@ function(_add_cargo_build)
     add_custom_target(
         cargo-clean_${target_name}
         COMMAND
-            $<TARGET_FILE:Rust::Cargo> clean --target ${Rust_CARGO_TARGET}
+            $<TARGET_FILE:Rust::Cargo> clean --target ${_CORROSION_RUST_CARGO_TARGET}
             -p ${package_name} --manifest-path ${path_to_toml}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
     )
@@ -196,8 +197,8 @@ function(add_crate path_to_toml)
         set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
     endif()
 
-    if (Rust_CARGO_TARGET)
-        set(_CMAKE_CARGO_TARGET --target ${Rust_CARGO_TARGET})
+    if (_CORROSION_RUST_CARGO_TARGET)
+        set(_CMAKE_CARGO_TARGET --target ${_CORROSION_RUST_CARGO_TARGET})
     endif()
     
     if(CMAKE_CONFIGURATION_TYPES)
