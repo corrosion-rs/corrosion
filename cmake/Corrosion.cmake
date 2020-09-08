@@ -89,7 +89,21 @@ function(_add_cargo_build)
     # For MSVC targets, don't mess with linker preferences.
     # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
     if (NOT MSVC)
-        foreach(language C CXX Fortran)
+        set(languages C CXX Fortran)
+
+        set(has_compiler OFF)
+        foreach(language ${languages})
+            if (CMAKE_${language}_COMPILER)
+                set(has_compiler ON)
+            endif()
+        endforeach()
+
+        if (NOT has_compiler)
+            message(STATUS "Enabling the C compiler for linking Rust programs")
+            enable_language(C)
+        endif()
+
+        foreach(language ${languages})
             if(CMAKE_${language}_COMPILER AND CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES)
                 list(
                     APPEND
@@ -99,21 +113,16 @@ function(_add_cargo_build)
                 list(
                     APPEND
                     compilers
-                    CMAKECARGO_${language}_COMPILER="${CMAKE_${language}_COMPILER}"
-                )
+                    CMAKECARGO_${language}_COMPILER="${CMAKE_${language}_COMPILER}")
+
+                if (CMAKE_${language}_COMPILER_TARGET)
+                    list(
+                        APPEND
+                        lang_targets
+                        CMAKECARGO_${language}_COMPILER_TARGET="${CMAKE_${language}_COMPILER_TARGET}")
+                endif()
             endif()
         endforeach()
-
-        # The C compiler must be at least enabled in order to choose a linker
-        if (NOT compilers)
-            if (NOT CMAKE_C_COMPILER)
-                message(STATUS "Enabling the C compiler for linking Rust programs")
-                enable_language(C)
-            endif()
-
-            list(APPEND link_prefs CMAKECARGO_C_LINKER_PREFERENCE="${CMAKE_C_LINKER_PREFERENCE}")
-            list(APPEND compilers CMAKECARGO_C_COMPILER="${CMAKE_C_COMPILER}")
-        endif()
     endif()
 
     # BYPRODUCTS doesn't support generator expressions, so only add BYPRODUCTS for single-config generators
@@ -140,6 +149,7 @@ function(_add_cargo_build)
                 CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
                 ${link_prefs}
                 ${compilers}
+                ${lang_targets}
                 CMAKECARGO_LINKER_LANGUAGES="$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>"
             ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
