@@ -1,6 +1,10 @@
 cmake_minimum_required (VERSION 3.12)
 project(Corrosion VERSION 0.0.1 LANGUAGES NONE)
 
+message("ANDROID_LINKER_FLAGS: ${ANDROID_LINKER_FLAGS}")
+message("CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
+message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+
 # Default behavior:
 # - If the project is being used as a subdirectory, then don't build tests and don't enable any
 #   languages.
@@ -69,6 +73,7 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
         ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake
         VERSION ${PROJECT_VERSION}
         COMPATIBILITY SameMinorVersion # Should be SameMajorVersion when 1.0 is released
+        ARCH_INDEPENDENT
     )
 
     install(
