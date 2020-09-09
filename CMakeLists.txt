@@ -65,10 +65,15 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
         INSTALL_DESTINATION Corrosion/lib/cmake/Corrosion
     )
 
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.13")
+        set(arch_independent ARCH_INDEPENDENT)
+    endif()
+
     write_basic_package_version_file(
         ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake
         VERSION ${PROJECT_VERSION}
         COMPATIBILITY SameMinorVersion # Should be SameMajorVersion when 1.0 is released
+        ${arch_independent}
     )
 
     install(

@@ -61,7 +61,7 @@ pub fn invoke(
         .collect();
 
     if !languages.is_empty() {
-        cargo.env("RUSTFLAGS", "-C default-linker-libraries=yes");
+        let mut rustflags = "-C default-linker-libraries=yes".to_owned();
 
         // This loop gets the highest preference link language to use for the linker
         let mut highest_preference: Option<(Option<i32>, &str)> = None;
@@ -98,7 +98,14 @@ pub fn invoke(
 
                 cargo.env(linker_arg, compiler);
             }
+
+            if let Ok(target) = env::var(format!("CMAKECARGO_{}_COMPILER_TARGET", language)) {
+                rustflags += " -C link-args=--target=";
+                rustflags += &target;
+            }
         }
+
+        cargo.env("RUSTFLAGS", rustflags);
     }
 
     if args.verbose {

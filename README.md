@@ -5,7 +5,7 @@ Corrosion, formerly known as cmake-cargo, is a tool for integrating Rust into an
 project. Corrosion is capable of importing executables, static libraries, and dynamic libraries
 from a crate.
 
-## Feature
+## Features
 - Automatic Import of Executable, Static, and Shared Libraries from Rust Crate
 - Easy Installation of Rust Executables
 - Trivially Link Rust Executables to C++ Libraries in Tree
@@ -28,6 +28,25 @@ add_crate(rust-lib/Cargo.toml)
 add_executable(cpp-exe main.cpp)
 target_link_libraries(cpp-exe PUBLIC rust-lib)
 ```
+
+# Documentation
+
+## Table of Contents
+- [Installation](#installation)
+  - [Package Manager](#package-manager)
+  - [CMake Install](#cmake-install)
+  - [Fetch Content](#fetch-content)
+  - [Subdirectory](#subdirectory)
+- [Usage](#usage)
+  - [Options](#options)
+    - [Advanced](#advanced)
+  - [Importing C-Style Libraries Written in Rust](#importing-c-style-libraries-written-in-rust)
+    - [Generate Bindings to Rust Library Automatically](#generate-bindings-to-rust-library-automatically)
+  - [Importing Libraries Written in C and C++ Into Rust](#importing-libraries-written-in-c-and-c++-into-rust)
+  - [Cross Compiling](#cross-compiling)
+    - [Windows-to-Windows](#windows-to-windows)
+    - [Linux-to-Linux](#linux-to-linux)
+    - [Android](#android)
 
 ## Installation
 There are two fundamental installation methods that are supported by Corrosion - installation as a
@@ -190,3 +209,65 @@ planned for the future.
 
 ### Importing Libraries Written in C and C++ Into Rust
 TODO
+
+### Cross Compiling
+Corrosion attempts to support cross-compiling as generally as possible, though not all
+configurations are tested. Cross-compiling is explicitly supported in the following scenarios.
+
+In all cases, you will need to install the standard library for the Rust target triple. When using
+Rustup, you can use it to install the target standard library:
+
+```bash
+rustc target add <target-rust-triple>
+```
+
+If the target triple is automatically derived, Corrosion will print the target during configuration.
+For example:
+
+```
+-- Rust Target: aarch64-linux-android
+```
+
+#### Windows-to-Windows
+Corrosion supports cross-compiling between arbitrary Windows architectures using the Visual Studio
+Generator. For example, to cross-compile for ARM64 from any platform, simply set the `-A`
+architecture flag:
+
+```bash
+cmake -S. -Bbuild-arm64 -A ARM64
+cmake --build build-arm64
+```
+
+#### Linux-to-Linux
+In order to cross-compile on Linux, you will need to install a cross-compiler. For example, on
+Ubuntu, to cross compile for 64-bit Little-Endian PowerPC Little-Endian, install
+`g++-powerpc64le-linux-gnu` from apt-get:
+
+```bash
+sudo apt install g++-powerpc64le-linux-gnu
+```
+
+Currently, Corrosion does not automatically determine the target triple while cross-compiling on
+Linux, so you'll need to specify a matching `Rust_CARGO_TARGET`.
+
+```bash
+cmake -S. -Bbuild-ppc64le -DRust_CARGO_TARGET=powerpc64le-unknown-linux-gnu -DCMAKE_CXX_COMPILER=powerpc64le-linux-gnu-g++
+cmake --build build-ppc64le
+```
+
+#### Android
+
+Cross-compiling for Android is supported on all platforms with the Makefile and Ninja generators,
+and the Rust target triple will automatically be selected. The CMake
+[cross-compiling instructions for Android](https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android)
+apply here. For example, to build for ARM64:
+
+```cmake
+cmake -S. -Bbuild-android-arm64 -GNinja -DCMAKE_SYSTEM_NAME=Android -DCMAKE_ANDROID_NDK=/path/to/android-ndk-rxxd -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a
+```
+
+**Important note:** The Android SDK ships with CMake 3.10 at newest, which Android Studio will
+prefer over any CMake you've installed locally. CMake 3.10 is insufficient for using Corrosion,
+which requires a minimum of CMake 3.12. If you're using Android Studio to build your project,
+follow the instructions in the Android Studio documentation for
+[using a specific version of CMake](https://developer.android.com/studio/projects/install-ndk#vanilla_cmake).
