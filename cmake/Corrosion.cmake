@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
 
+if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
+    message(FATAL_ERROR "Corrosion currently cannot be used with the \"Ninja Multi-Config\" "
+        "generator. Please use a different generator. Follow discussion on this issue at "
+        "https://github.com/AndrewGaspar/corrosion/issues/50")
+endif()
+
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
 
 find_package(Rust REQUIRED)
