@@ -183,13 +183,13 @@ function(_add_cargo_build)
     endif()
 endfunction(_add_cargo_build)
 
-function(corrosion_add_crate)
+function(corrosion_import_crate)
     set(OPTIONS)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH)
     set(MULTI_VALUE_KEYWORDS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
-    if (NOT EXISTS COR_MANIFEST_PATH)
+    if (NOT DEFINED COR_MANIFEST_PATH)
         message(FATAL_ERROR "MANIFEST_PATH is a required keyword to corrosion_add_crate")
     endif()
 
@@ -256,7 +256,7 @@ function(corrosion_add_crate)
     endif()
 
     include(${generated_cmake})
-endfunction()
+endfunction(corrosion_import_crate)
 
 function(add_crate path_to_toml)
     message(DEPRECATION "add_crate is deprecated. Switch to corrosion_import_crate.")
