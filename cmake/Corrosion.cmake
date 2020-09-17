@@ -183,15 +183,24 @@ function(_add_cargo_build)
     endif()
 endfunction(_add_cargo_build)
 
-function(add_crate path_to_toml)
-    if (NOT IS_ABSOLUTE "${path_to_toml}")
-        set(path_to_toml "${CMAKE_CURRENT_SOURCE_DIR}/${path_to_toml}")
+function(corrosion_add_crate)
+    set(OPTIONS)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH)
+    set(MULTI_VALUE_KEYWORDS)
+    cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
+
+    if (NOT EXISTS COR_MANIFEST_PATH)
+        message(FATAL_ERROR "MANIFEST_PATH is a required keyword to corrosion_add_crate")
+    endif()
+
+    if (NOT IS_ABSOLUTE "${COR_MANIFEST_PATH}")
+        set(COR_MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${COR_MANIFEST_PATH})
     endif()
 
     execute_process(
         COMMAND
             ${_CORROSION_GENERATOR}
-                --manifest-path "${path_to_toml}"
+                --manifest-path ${COR_MANIFEST_PATH}
                 print-root
         OUTPUT_VARIABLE toml_dir
         RESULT_VARIABLE ret)
@@ -232,7 +241,7 @@ function(add_crate path_to_toml)
     execute_process(
         COMMAND
             ${_CORROSION_GENERATOR}
-                --manifest-path "${path_to_toml}"
+                --manifest-path ${COR_MANIFEST_PATH}
                 gen-cmake
                     ${_CMAKE_CARGO_CONFIGURATION_ROOT}
                     ${_CMAKE_CARGO_TARGET}
@@ -247,6 +256,12 @@ function(add_crate path_to_toml)
     endif()
 
     include(${generated_cmake})
+endfunction()
+
+function(add_crate path_to_toml)
+    message(DEPRECATION "add_crate is deprecated. Switch to corrosion_import_crate.")
+
+    corrosion_import_crate(MANIFEST_PATH ${path_to_toml})
 endfunction(add_crate)
 
 function(corrosion_set_linker_language target_name language)
@@ -256,7 +271,13 @@ function(corrosion_set_linker_language target_name language)
     )
 endfunction()
 
-function(cargo_link_libraries target_name)
+function(cargo_link_libraries)
+    message(DEPRECATION "cargo_link_libraries is deprecated. Switch to corrosion_link_libraries.")
+
+    corrosion_link_libraries(${ARGN})
+endfunction(cargo_link_libraries)
+
+function(corrosion_link_libraries target_name)
     add_dependencies(cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
         set_property(
@@ -281,7 +302,7 @@ function(cargo_link_libraries target_name)
             ${library}
         )
     endforeach()
-endfunction(cargo_link_libraries)
+endfunction(corrosion_link_libraries)
 
 function(corrosion_install)
     # Default install dirs
