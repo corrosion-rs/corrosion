@@ -23,7 +23,7 @@ project(MyCoolProject LANGUAGES CXX)
 
 find_package(Corrosion REQUIRED)
 
-add_crate(rust-lib/Cargo.toml)
+corrosion_import_crate(MANIFEST_PATH rust-lib/Cargo.toml)
 
 add_executable(cpp-exe main.cpp)
 target_link_libraries(cpp-exe PUBLIC rust-lib)
@@ -182,10 +182,9 @@ single crate and switch between which is used using the standard
 This crate defines a simple crate called `rust-lib`. Importing this crate into your
 [CMakeLists.txt](test/rust2cpp/CMakeLists.txt) is trivial:
 ```cmake
-# Note: you must have already included Corrosion for `add_crate` to be available. See the
-# `Installation` section above.
+# Note: you must have already included Corrosion for `corrosion_import_crate` to be available. See # the `Installation` section above.
 
-add_crate(rust/Cargo.toml)
+corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
 ```
 
 Now that you've imported the crate into CMake, all of the executables, static libraries, and dynamic

@@ -26,8 +26,8 @@ option(
 )
 
 if (NOT CORROSION_IS_SUBDIRECTORY)
-    # TODO: If we don't have a language enabled, add_crate will attempt to enable a C compiler.
-    # Ideally, we could delay this somehow until after we've set link libraries
+    # TODO: If we don't have a language enabled, corrosion_import_crate will attempt to enable a C
+    # compiler. Ideally, we could delay this somehow until after we've set link libraries.
     enable_language(CXX)
 endif()
 
@@ -47,7 +47,7 @@ endif()
 # If Corrosion is a subdirectory, do not enable its install code
 if (NOT CORROSION_IS_SUBDIRECTORY)
     # Builds the generator executable
-    add_crate(generator/Cargo.toml)
+    corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
 
     # Set the link language to CXX since it's already enabled
     corrosion_set_linker_language(corrosion-generator CXX)
