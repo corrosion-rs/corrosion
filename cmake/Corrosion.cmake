@@ -147,6 +147,12 @@ function(_add_cargo_build)
         endforeach()
     endif()
 
+    if(${CMAKE_VERSION} VERSION_LESS "3.15.0")
+        set(set_corrosion_cargo_pool)
+    else()
+        set(set_corrosion_cargo_pool JOB_POOL corrosion_cargo_pool)
+    endif()
+
     add_custom_target(
         cargo-build_${target_name}
         ALL
@@ -169,7 +175,7 @@ function(_add_cargo_build)
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
-        JOB_POOL corrosion_cargo_pool
+        ${set_corrosion_cargo_pool}
     )
 
     add_custom_target(
@@ -178,7 +184,7 @@ function(_add_cargo_build)
             $<TARGET_FILE:Rust::Cargo> clean --target ${_CORROSION_RUST_CARGO_TARGET}
             -p ${package_name} --manifest-path ${path_to_toml}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
-        JOB_POOL corrosion_cargo_pool
+        ${set_corrosion_cargo_pool}
     )
     
     if (NOT TARGET cargo-clean)
