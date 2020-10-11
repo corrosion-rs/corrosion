@@ -174,7 +174,7 @@ function(_add_cargo_build)
                     --package ${package_name}
         COMMAND
             ${CMAKE_COMMAND} -E copy ${build_byproducts} ${CMAKE_CURRENT_BINARY_DIR}
-        BYPRODUCTS ${byproducts}
+        BYPRODUCTS ${build_byproducts} ${byproducts}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
