@@ -143,7 +143,8 @@ function(_add_cargo_build)
 
         set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${_CORROSION_RUST_CARGO_TARGET}/${build_type_dir}")
         foreach(byproduct_file ${ACB_BYPRODUCTS})
-            list(APPEND byproducts "${cargo_build_dir}/${byproduct_file}")
+            list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
+            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
         endforeach()
     endif()
 
@@ -171,7 +172,9 @@ function(_add_cargo_build)
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
                     --target ${_CORROSION_RUST_CARGO_TARGET}
                     --package ${package_name}
-            BYPRODUCTS ${byproducts}
+        COMMAND
+            ${CMAKE_COMMAND} -E copy ${build_byproducts} ${CMAKE_CURRENT_BINARY_DIR}
+        BYPRODUCTS ${byproducts}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
