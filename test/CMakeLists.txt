@@ -14,3 +14,4 @@ endif()
 
 add_subdirectory(cpp2rust)
 add_subdirectory(rust2cpp)
+add_subdirectory(workspace)

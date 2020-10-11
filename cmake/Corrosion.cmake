@@ -196,7 +196,7 @@ endfunction(_add_cargo_build)
 function(corrosion_import_crate)
     set(OPTIONS)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH)
-    set(MULTI_VALUE_KEYWORDS)
+    set(MULTI_VALUE_KEYWORDS CRATES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)
@@ -248,6 +248,11 @@ function(corrosion_import_crate)
         # uses default build type
     endif()
 
+    set(crates_args)
+    foreach(crate ${COR_CRATES})
+        list(APPEND crates_args --crates ${crate})
+    endforeach()
+
     execute_process(
         COMMAND
             ${_CORROSION_GENERATOR}
@@ -256,6 +261,7 @@ function(corrosion_import_crate)
                     ${_CMAKE_CARGO_CONFIGURATION_ROOT}
                     ${_CMAKE_CARGO_TARGET}
                     ${_CMAKE_CARGO_CONFIGURATION_TYPES}
+                    ${crates_args}
                     --cargo-version ${_CORROSION_CARGO_VERSION}
                     -o ${generated_cmake}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
