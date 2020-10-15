@@ -135,12 +135,14 @@ function(_add_cargo_build)
 
     # BYPRODUCTS doesn't support generator expressions, so only add BYPRODUCTS for single-config generators
     if (NOT CMAKE_CONFIGURATION_TYPES)
+        set(target_dir ${CMAKE_CURRENT_BINARY_DIR})
         if (CMAKE_BUILD_TYPE STREQUAL "" OR CMAKE_BUILD_TYPE STREQUAL Debug)
             set(build_type_dir debug)
         else()
             set(build_type_dir release)
         endif()
     else()
+        set(target_dir ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>)
         set(build_type_dir $<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>)
     endif()
 
@@ -165,7 +167,7 @@ function(_add_cargo_build)
         ALL
         # Ensure the target directory exists
         COMMAND
-            ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
+            ${CMAKE_COMMAND} -E make_directory ${target_dir}
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
@@ -184,7 +186,7 @@ function(_add_cargo_build)
                     --package ${package_name}
         # Copy crate artifacts to the binary dir
         COMMAND
-            ${CMAKE_COMMAND} -E copy ${build_byproducts} ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
+            ${CMAKE_COMMAND} -E copy ${build_byproducts} ${target_dir}
         BYPRODUCTS ${byproducts}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared

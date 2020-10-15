@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::path::Path;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -244,17 +243,17 @@ endif()",
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
-        _build_path: &Path,
+        is_multi_config: bool,
         config_type: &Option<&str>,
     ) -> Result<(), Box<dyn Error>> {
         let imported_location = config_type.map_or("IMPORTED_LOCATION".to_owned(), |config_type| {
             format!("IMPORTED_LOCATION_{}", config_type.to_uppercase())
         });
 
-        let binary_root = if let Some(c) = config_type {
-            format!("${{CMAKE_CURRENT_BINARY_DIR}}/{}", c)
+        let binary_root = if is_multi_config {
+            format!("${{CMAKE_CURRENT_BINARY_DIR}}/{}", config_type.unwrap())
         } else {
-            "${{CMAKE_CURRENT_BINARY_DIR}}".to_string()
+            "${CMAKE_CURRENT_BINARY_DIR}".to_string()
         };
 
         match self.target_type {
