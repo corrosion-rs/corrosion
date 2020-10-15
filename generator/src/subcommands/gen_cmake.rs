@@ -21,6 +21,7 @@ const CONFIGURATION_TYPES: &str = "configuration-types";
 const CONFIGURATION_ROOT: &str = "configuration-root";
 const TARGET: &str = "target";
 const CARGO_VERSION: &str = "cargo-version";
+const CRATES: &str = "crates";
 
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(GEN_CMAKE)
@@ -57,6 +58,15 @@ pub fn subcommand() -> App<'static, 'static> {
                     "Specifies the configuration types to use in a multi-configuration \
                  environment.",
                 ),
+        )
+        .arg(
+            Arg::with_name(CRATES)
+                .long("crates")
+                .value_name("crates")
+                .takes_value(true)
+                .multiple(true)
+                .require_delimiter(true)
+                .help("Specifies which crates of the workspace to import"),
         )
         .arg(
             Arg::with_name(TARGET)
@@ -138,11 +148,17 @@ cmake_minimum_required (VERSION 3.12)
         config_folders.push((config_type, config_folder.to_path_buf()));
     }
 
+    let crates = matches
+        .values_of(CRATES)
+        .map_or(Vec::new(), |c| c.collect());
     let targets: Vec<_> = args
         .metadata
         .packages
         .iter()
-        .filter(|p| args.metadata.workspace_members.contains(&p.id))
+        .filter(|p| {
+            args.metadata.workspace_members.contains(&p.id)
+                && (crates.is_empty() || crates.contains(&p.name.as_str()))
+        })
         .cloned()
         .map(Rc::new)
         .flat_map(|package| {
