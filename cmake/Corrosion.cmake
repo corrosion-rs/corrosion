@@ -186,7 +186,7 @@ function(_add_cargo_build)
                     --package ${package_name}
         # Copy crate artifacts to the binary dir
         COMMAND
-            ${CMAKE_COMMAND} -E copy ${build_byproducts} ${target_dir}
+            ${CMAKE_COMMAND} -E copy_if_different ${build_byproducts} ${target_dir}
         BYPRODUCTS ${byproducts}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
