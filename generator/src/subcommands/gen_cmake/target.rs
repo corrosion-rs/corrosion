@@ -244,12 +244,18 @@ endif()",
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
-        build_path: &Path,
+        _build_path: &Path,
         config_type: &Option<&str>,
     ) -> Result<(), Box<dyn Error>> {
         let imported_location = config_type.map_or("IMPORTED_LOCATION".to_owned(), |config_type| {
             format!("IMPORTED_LOCATION_{}", config_type.to_uppercase())
         });
+
+        let binary_root = if let Some(c) = config_type {
+            format!("${{CMAKE_CURRENT_BINARY_DIR}}/{}", c)
+        } else {
+            "${{CMAKE_CURRENT_BINARY_DIR}}".to_string()
+        };
 
         match self.target_type {
             CargoTargetType::Library {
@@ -257,30 +263,24 @@ endif()",
                 has_cdylib,
             } => {
                 if has_staticlib {
-                    let lib_path = build_path
-                        .join(self.static_lib_name(platform))
-                        .to_str()
-                        .unwrap()
-                        .replace("\\", "/");
-
                     writeln!(
                         out_file,
-                        "set_property(TARGET {0}-static PROPERTY {1} \"{2}\")",
-                        self.cargo_target.name, imported_location, lib_path
+                        "set_property(TARGET {0}-static PROPERTY {1} \"{2}/{3}\")",
+                        self.cargo_target.name,
+                        imported_location,
+                        binary_root,
+                        self.static_lib_name(platform)
                     )?;
                 }
 
                 if has_cdylib {
-                    let lib_path = build_path
-                        .join(self.dynamic_lib_name(platform))
-                        .to_str()
-                        .unwrap()
-                        .replace("\\", "/");
-
                     writeln!(
                         out_file,
-                        "set_property(TARGET {0}-shared PROPERTY {1} \"{2}\")",
-                        self.cargo_target.name, imported_location, lib_path
+                        "set_property(TARGET {0}-shared PROPERTY {1} \"{2}/{3}\")",
+                        self.cargo_target.name,
+                        imported_location,
+                        binary_root,
+                        self.dynamic_lib_name(platform)
                     )?;
 
                     if platform.is_windows() {
@@ -294,16 +294,13 @@ endif()",
                                     format!("IMPORTED_IMPLIB_{}", config_type.to_uppercase())
                                 });
 
-                            let lib_path = build_path
-                                .join(self.implib_name(platform))
-                                .to_str()
-                                .unwrap()
-                                .replace("\\", "/");
-
                             writeln!(
                                 out_file,
-                                "set_property(TARGET {0}-shared PROPERTY {1} \"{2}\")",
-                                self.cargo_target.name, imported_implib, lib_path
+                                "set_property(TARGET {0}-shared PROPERTY {1} \"{2}/{3}\")",
+                                self.cargo_target.name,
+                                imported_implib,
+                                binary_root,
+                                self.implib_name(platform)
                             )?;
                         }
                     }
@@ -316,16 +313,10 @@ endif()",
                     self.cargo_target.name.clone()
                 };
 
-                let exe_path = build_path
-                    .join(exe_file)
-                    .to_str()
-                    .unwrap()
-                    .replace("\\", "/");
-
                 writeln!(
                     out_file,
-                    "set_property(TARGET {0} PROPERTY {1} \"{2}\")",
-                    self.cargo_target.name, imported_location, exe_path
+                    "set_property(TARGET {0} PROPERTY {1} \"{2}/{3}\")",
+                    self.cargo_target.name, imported_location, binary_root, exe_file
                 )?;
             }
         }
