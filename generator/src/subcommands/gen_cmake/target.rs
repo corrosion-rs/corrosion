@@ -131,6 +131,7 @@ impl CargoTarget {
         // Only shared libraries and executables have PDBs on Windows
         // I don't know why PDBs aren't generated for staticlibs...
         let has_pdb = platform.is_windows()
+            && platform.is_msvc()
             && match self.target_type {
                 CargoTargetType::Library {
                     has_cdylib: true, ..
