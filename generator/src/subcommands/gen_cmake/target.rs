@@ -78,6 +78,10 @@ impl CargoTarget {
         format!("{}.dll.{}", self.lib_name(), suffix)
     }
 
+    fn pdb_name(&self) -> String {
+        format!("{}.pdb", self.lib_name())
+    }
+
     fn exe_name(&self, platform: &super::platform::Platform) -> String {
         if platform.is_windows() {
             format!("{}.exe", self.cargo_target.name)
@@ -113,6 +117,21 @@ impl CargoTarget {
             CargoTargetType::Executable => {
                 byproducts.push(self.exe_name(platform));
             }
+        }
+
+        // Only shared libraries and executables have PDBs on Windows
+        // I don't know why PDBs aren't generated for staticlibs...
+        let has_pdb = platform.is_windows()
+            && match self.target_type {
+                CargoTargetType::Library {
+                    has_cdylib: true, ..
+                }
+                | CargoTargetType::Executable => true,
+                _ => false,
+            };
+
+        if has_pdb {
+            byproducts.push(self.pdb_name());
         }
 
         writeln!(
