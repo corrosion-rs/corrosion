@@ -104,7 +104,7 @@ pub fn invoke(
         println!("WARNING: The target was not recognized.");
     }
 
-    let cargo_platform = platform::Platform::from_rust_version_target(cargo_version, cargo_target);
+    let cargo_platform = platform::Platform::from_rust_version_target(&cargo_version, cargo_target);
 
     let mut out_file: Box<dyn Write> = if let Some(path) = matches.value_of(OUT_FILE) {
         let path = Path::new(path);
@@ -173,7 +173,7 @@ cmake_minimum_required (VERSION 3.12)
 
     for target in &targets {
         target
-            .emit_cmake_target(&mut out_file, &cargo_platform)
+            .emit_cmake_target(&mut out_file, &cargo_platform, &cargo_version)
             .unwrap();
     }
 

@@ -94,6 +94,7 @@ impl CargoTarget {
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
+        cargo_version: &semver::Version,
     ) -> Result<(), Box<dyn Error>> {
         // This bit aggregates the byproducts of "cargo build", which is needed for generators like Ninja.
         let mut byproducts = vec![];
@@ -119,6 +120,14 @@ impl CargoTarget {
             }
         }
 
+        // Cargo didn't place PDBs in the target output directory before 1.45, so copy them out
+        // of the deps/ folder instead
+        let prefix = if cargo_version < &semver::Version::new(1, 45, 0) {
+            "deps/"
+        } else {
+            ""
+        };
+
         // Only shared libraries and executables have PDBs on Windows
         // I don't know why PDBs aren't generated for staticlibs...
         let has_pdb = platform.is_windows()
@@ -131,7 +140,7 @@ impl CargoTarget {
             };
 
         if has_pdb {
-            byproducts.push(self.pdb_name());
+            byproducts.push(prefix.to_string() + &self.pdb_name());
         }
 
         writeln!(
