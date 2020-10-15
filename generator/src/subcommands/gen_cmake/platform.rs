@@ -10,7 +10,7 @@ pub struct Platform {
 
 impl Platform {
     pub fn from_rust_version_target(
-        version: Version,
+        version: &Version,
         cargo_target: Option<platforms::Platform>,
     ) -> Self {
         let (libs, libs_debug, libs_release) = if let Some(ref cargo_target) = cargo_target {
@@ -37,7 +37,7 @@ impl Platform {
                         _ => {}
                     }
 
-                    if version < Version::parse("1.33.0").unwrap() {
+                    if version < &Version::parse("1.33.0").unwrap() {
                         libs.extend_from_slice(&["shell32".to_string(), "kernel32".to_string()]);
                     }
 

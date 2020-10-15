@@ -91,14 +91,6 @@ pub fn subcommand() -> App<'static, 'static> {
         )
 }
 
-fn config_type_target_folder(config_type: Option<&str>) -> &'static str {
-    match config_type {
-        Some("Debug") | None => "debug",
-        Some("Release") | Some("RelWithDebInfo") | Some("MinSizeRel") => "release",
-        Some(config_type) => panic!("Unknown config_type {}!", config_type),
-    }
-}
-
 pub fn invoke(
     args: &crate::GeneratorSharedArgs,
     matches: &ArgMatches,
@@ -112,7 +104,7 @@ pub fn invoke(
         println!("WARNING: The target was not recognized.");
     }
 
-    let cargo_platform = platform::Platform::from_rust_version_target(cargo_version, cargo_target);
+    let cargo_platform = platform::Platform::from_rust_version_target(&cargo_version, cargo_target);
 
     let mut out_file: Box<dyn Write> = if let Some(path) = matches.value_of(OUT_FILE) {
         let path = Path::new(path);
@@ -181,7 +173,7 @@ cmake_minimum_required (VERSION 3.12)
 
     for target in &targets {
         target
-            .emit_cmake_target(&mut out_file, &cargo_platform)
+            .emit_cmake_target(&mut out_file, &cargo_platform, &cargo_version)
             .unwrap();
     }
 
@@ -197,21 +189,11 @@ cmake_minimum_required (VERSION 3.12)
         let mut local_metadata_cmd = cargo_metadata::MetadataCommand::new();
         local_metadata_cmd.manifest_path(Path::new(&metadata_manifest_path));
 
-        // Re-gathering the cargo metadata from here gets us a target_directory scoped to the
-        // configuration type.
-        let local_metadata = local_metadata_cmd
-            .exec()
-            .expect("Could not open Crate specific metadata!");
-
-        let build_path = Path::new(&local_metadata.target_directory)
-            .join(matches.value_of(TARGET).unwrap_or(""))
-            .join(config_type_target_folder(config_type));
-
         for target in &targets {
             target.emit_cmake_config_info(
                 &mut out_file,
                 &cargo_platform,
-                &build_path,
+                matches.is_present(CONFIGURATION_TYPES),
                 &config_type,
             )?;
         }

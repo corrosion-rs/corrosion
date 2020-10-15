@@ -135,17 +135,26 @@ function(_add_cargo_build)
 
     # BYPRODUCTS doesn't support generator expressions, so only add BYPRODUCTS for single-config generators
     if (NOT CMAKE_CONFIGURATION_TYPES)
+        set(target_dir ${CMAKE_CURRENT_BINARY_DIR})
         if (CMAKE_BUILD_TYPE STREQUAL "" OR CMAKE_BUILD_TYPE STREQUAL Debug)
             set(build_type_dir debug)
         else()
             set(build_type_dir release)
         endif()
-
-        set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${_CORROSION_RUST_CARGO_TARGET}/${build_type_dir}")
-        foreach(byproduct_file ${ACB_BYPRODUCTS})
-            list(APPEND byproducts "${cargo_build_dir}/${byproduct_file}")
-        endforeach()
+    else()
+        set(target_dir ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>)
+        set(build_type_dir $<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>)
     endif()
+
+    set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${_CORROSION_RUST_CARGO_TARGET}/${build_type_dir}")
+    foreach(byproduct_file ${ACB_BYPRODUCTS})
+        list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
+        if (NOT CMAKE_CONFIGURATION_TYPES)
+            # BYPRODUCTS can't use generator expressions, so it's broken on multi-config generators
+            # This is only an issue for Ninja Multi-Config
+            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
+        endif()
+    endforeach()
 
     if(${CMAKE_VERSION} VERSION_LESS "3.15.0")
         set(set_corrosion_cargo_pool)
@@ -156,6 +165,10 @@ function(_add_cargo_build)
     add_custom_target(
         cargo-build_${target_name}
         ALL
+        # Ensure the target directory exists
+        COMMAND
+            ${CMAKE_COMMAND} -E make_directory ${target_dir}
+        # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
                 CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
@@ -171,7 +184,10 @@ function(_add_cargo_build)
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
                     --target ${_CORROSION_RUST_CARGO_TARGET}
                     --package ${package_name}
-            BYPRODUCTS ${byproducts}
+        # Copy crate artifacts to the binary dir
+        COMMAND
+            ${CMAKE_COMMAND} -E copy_if_different ${build_byproducts} ${target_dir}
+        BYPRODUCTS ${byproducts}
         # The build is conducted in root build directory so that cargo
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}

@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::path::Path;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -68,6 +67,14 @@ impl CargoTarget {
     }
 
     fn implib_name(&self, platform: &super::platform::Platform) -> String {
+        let prefix = if platform.is_msvc() {
+            ""
+        } else if platform.is_windows_gnu() {
+            "lib"
+        } else {
+            ""
+        };
+
         let suffix = if platform.is_msvc() {
             "lib"
         } else if platform.is_windows_gnu() {
@@ -76,7 +83,11 @@ impl CargoTarget {
             ""
         };
 
-        format!("{}.dll.{}", self.lib_name(), suffix)
+        format!("{}{}.dll.{}", prefix, self.lib_name(), suffix)
+    }
+
+    fn pdb_name(&self) -> String {
+        format!("{}.pdb", self.lib_name())
     }
 
     fn exe_name(&self, platform: &super::platform::Platform) -> String {
@@ -91,6 +102,7 @@ impl CargoTarget {
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
+        cargo_version: &semver::Version,
     ) -> Result<(), Box<dyn Error>> {
         // This bit aggregates the byproducts of "cargo build", which is needed for generators like Ninja.
         let mut byproducts = vec![];
@@ -114,6 +126,30 @@ impl CargoTarget {
             CargoTargetType::Executable => {
                 byproducts.push(self.exe_name(platform));
             }
+        }
+
+        // Cargo didn't place PDBs in the target output directory before 1.45, so copy them out
+        // of the deps/ folder instead
+        let prefix = if cargo_version < &semver::Version::new(1, 45, 0) {
+            "deps/"
+        } else {
+            ""
+        };
+
+        // Only shared libraries and executables have PDBs on Windows
+        // I don't know why PDBs aren't generated for staticlibs...
+        let has_pdb = platform.is_windows()
+            && platform.is_msvc()
+            && match self.target_type {
+                CargoTargetType::Library {
+                    has_cdylib: true, ..
+                }
+                | CargoTargetType::Executable => true,
+                _ => false,
+            };
+
+        if has_pdb {
+            byproducts.push(prefix.to_string() + &self.pdb_name());
         }
 
         writeln!(
@@ -244,12 +280,18 @@ endif()",
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
-        build_path: &Path,
+        is_multi_config: bool,
         config_type: &Option<&str>,
     ) -> Result<(), Box<dyn Error>> {
         let imported_location = config_type.map_or("IMPORTED_LOCATION".to_owned(), |config_type| {
             format!("IMPORTED_LOCATION_{}", config_type.to_uppercase())
         });
+
+        let binary_root = if is_multi_config {
+            format!("${{CMAKE_CURRENT_BINARY_DIR}}/{}", config_type.unwrap())
+        } else {
+            "${CMAKE_CURRENT_BINARY_DIR}".to_string()
+        };
 
         match self.target_type {
             CargoTargetType::Library {
@@ -257,55 +299,40 @@ endif()",
                 has_cdylib,
             } => {
                 if has_staticlib {
-                    let lib_path = build_path
-                        .join(self.static_lib_name(platform))
-                        .to_str()
-                        .unwrap()
-                        .replace("\\", "/");
-
                     writeln!(
                         out_file,
-                        "set_property(TARGET {0}-static PROPERTY {1} \"{2}\")",
-                        self.cargo_target.name, imported_location, lib_path
+                        "set_property(TARGET {0}-static PROPERTY {1} \"{2}/{3}\")",
+                        self.cargo_target.name,
+                        imported_location,
+                        binary_root,
+                        self.static_lib_name(platform)
                     )?;
                 }
 
                 if has_cdylib {
-                    let lib_path = build_path
-                        .join(self.dynamic_lib_name(platform))
-                        .to_str()
-                        .unwrap()
-                        .replace("\\", "/");
-
                     writeln!(
                         out_file,
-                        "set_property(TARGET {0}-shared PROPERTY {1} \"{2}\")",
-                        self.cargo_target.name, imported_location, lib_path
+                        "set_property(TARGET {0}-shared PROPERTY {1} \"{2}/{3}\")",
+                        self.cargo_target.name,
+                        imported_location,
+                        binary_root,
+                        self.dynamic_lib_name(platform)
                     )?;
 
                     if platform.is_windows() {
-                        if platform.is_windows_gnu() {
-                            println!(
-                                "WARNING: Shared libraries from *-pc-windows-gnu cannot be imported"
-                            )
-                        } else if platform.is_msvc() {
-                            let imported_implib =
-                                config_type.map_or("IMPORTED_IMPLIB".to_owned(), |config_type| {
-                                    format!("IMPORTED_IMPLIB_{}", config_type.to_uppercase())
-                                });
+                        let imported_implib = config_type
+                            .map_or("IMPORTED_IMPLIB".to_owned(), |config_type| {
+                                format!("IMPORTED_IMPLIB_{}", config_type.to_uppercase())
+                            });
 
-                            let lib_path = build_path
-                                .join(self.implib_name(platform))
-                                .to_str()
-                                .unwrap()
-                                .replace("\\", "/");
-
-                            writeln!(
-                                out_file,
-                                "set_property(TARGET {0}-shared PROPERTY {1} \"{2}\")",
-                                self.cargo_target.name, imported_implib, lib_path
-                            )?;
-                        }
+                        writeln!(
+                            out_file,
+                            "set_property(TARGET {0}-shared PROPERTY {1} \"{2}/{3}\")",
+                            self.cargo_target.name,
+                            imported_implib,
+                            binary_root,
+                            self.implib_name(platform)
+                        )?;
                     }
                 }
             }
@@ -316,16 +343,10 @@ endif()",
                     self.cargo_target.name.clone()
                 };
 
-                let exe_path = build_path
-                    .join(exe_file)
-                    .to_str()
-                    .unwrap()
-                    .replace("\\", "/");
-
                 writeln!(
                     out_file,
-                    "set_property(TARGET {0} PROPERTY {1} \"{2}\")",
-                    self.cargo_target.name, imported_location, exe_path
+                    "set_property(TARGET {0} PROPERTY {1} \"{2}/{3}\")",
+                    self.cargo_target.name, imported_location, binary_root, exe_file
                 )?;
             }
         }
