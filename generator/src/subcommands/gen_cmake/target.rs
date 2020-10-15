@@ -67,6 +67,14 @@ impl CargoTarget {
     }
 
     fn implib_name(&self, platform: &super::platform::Platform) -> String {
+        let prefix = if platform.is_msvc() {
+            ""
+        } else if platform.is_windows_gnu() {
+            "lib"
+        } else {
+            ""
+        };
+
         let suffix = if platform.is_msvc() {
             "lib"
         } else if platform.is_windows_gnu() {
@@ -75,7 +83,7 @@ impl CargoTarget {
             ""
         };
 
-        format!("{}.dll.{}", self.lib_name(), suffix)
+        format!("{}{}.dll.{}", prefix, self.lib_name(), suffix)
     }
 
     fn pdb_name(&self) -> String {
@@ -312,25 +320,19 @@ endif()",
                     )?;
 
                     if platform.is_windows() {
-                        if platform.is_windows_gnu() {
-                            println!(
-                                "WARNING: Shared libraries from *-pc-windows-gnu cannot be imported"
-                            )
-                        } else if platform.is_msvc() {
-                            let imported_implib =
-                                config_type.map_or("IMPORTED_IMPLIB".to_owned(), |config_type| {
-                                    format!("IMPORTED_IMPLIB_{}", config_type.to_uppercase())
-                                });
+                        let imported_implib = config_type
+                            .map_or("IMPORTED_IMPLIB".to_owned(), |config_type| {
+                                format!("IMPORTED_IMPLIB_{}", config_type.to_uppercase())
+                            });
 
-                            writeln!(
-                                out_file,
-                                "set_property(TARGET {0}-shared PROPERTY {1} \"{2}/{3}\")",
-                                self.cargo_target.name,
-                                imported_implib,
-                                binary_root,
-                                self.implib_name(platform)
-                            )?;
-                        }
+                        writeln!(
+                            out_file,
+                            "set_property(TARGET {0}-shared PROPERTY {1} \"{2}/{3}\")",
+                            self.cargo_target.name,
+                            imported_implib,
+                            binary_root,
+                            self.implib_name(platform)
+                        )?;
                     }
                 }
             }
