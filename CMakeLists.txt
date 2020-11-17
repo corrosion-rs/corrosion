@@ -25,18 +25,26 @@ option(
     ${_CORROSION_TOP_LEVEL}
 )
 
+option(
+    CORROSION_BUILD_GENERATOR
+    "Build Corrosion generator"
+    ON
+)
+
 if (NOT CORROSION_IS_SUBDIRECTORY)
     # TODO: If we don't have a language enabled, corrosion_import_crate will attempt to enable a C
     # compiler. Ideally, we could delay this somehow until after we've set link libraries.
     enable_language(CXX)
 endif()
 
-# This little bit self-hosts the Corrosion toolchain to build the generator tool.
-#
-# It is strongly encouraged to install Corrosion separately and use
-# `find_package(Corrosion REQUIRED)` instead if that works with your workflow.
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-include(Corrosion)
+if (CORROSION_BUILD_GENERATOR)
+    # This little bit self-hosts the Corrosion toolchain to build the generator tool.
+    #
+    # It is strongly encouraged to install Corrosion separately and use
+    # `find_package(Corrosion REQUIRED)` instead if that works with your workflow.
+    list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+    include(Corrosion)
+endif()
 
 # Testing
 if (CORROSION_BUILD_TESTS)
@@ -46,16 +54,18 @@ endif()
 # Installation
 # If Corrosion is a subdirectory, do not enable its install code
 if (NOT CORROSION_IS_SUBDIRECTORY)
-    # Builds the generator executable
-    corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
+    if (CORROSION_BUILD_GENERATOR)
+        # Builds the generator executable
+        corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
 
-    # Set the link language to CXX since it's already enabled
-    corrosion_set_linker_language(corrosion-generator CXX)
+        # Set the link language to CXX since it's already enabled
+        corrosion_set_linker_language(corrosion-generator CXX)
 
-    corrosion_install(
-        TARGETS corrosion-generator
-        DESTINATION Corrosion/libexec
-    )
+        corrosion_install(
+            TARGETS corrosion-generator
+            DESTINATION Corrosion/libexec
+        )
+    endif()
 
     # Generate the Config file
     include(CMakePackageConfigHelpers)
