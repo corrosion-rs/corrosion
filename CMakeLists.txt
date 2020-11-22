@@ -54,7 +54,7 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
 
     corrosion_install(
         TARGETS corrosion-generator
-        DESTINATION Corrosion/libexec
+        DESTINATION libexec
     )
 
     # Generate the Config file
@@ -62,7 +62,7 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
 
     configure_package_config_file(
         cmake/CorrosionConfig.cmake.in CorrosionConfig.cmake
-        INSTALL_DESTINATION Corrosion/lib/cmake/Corrosion
+        INSTALL_DESTINATION lib/cmake/Corrosion
     )
 
     if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.13")
@@ -80,7 +80,7 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
         FILES
             ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfig.cmake
             ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake
-        DESTINATION Corrosion/lib/cmake/Corrosion
+        DESTINATION lib/cmake/Corrosion
     )
 
     # These CMake scripts are needed both for the install and as a subdirectory
@@ -89,6 +89,6 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
             cmake/Corrosion.cmake
             cmake/FindRust.cmake
         DESTINATION
-            Corrosion/share/cmake
+            share/cmake
     )
 endif()
