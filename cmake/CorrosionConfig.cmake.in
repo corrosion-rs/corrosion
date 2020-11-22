@@ -4,11 +4,11 @@ if (Corrosion_FOUND)
     return()
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${PACKAGE_PREFIX_DIR}/share/cmake")
+list(APPEND CMAKE_MODULE_PATH "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_DATADIR@/cmake")
 
 add_executable(Corrosion::Generator IMPORTED GLOBAL)
 set_property(
     TARGET Corrosion::Generator
-    PROPERTY IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/libexec/corrosion-generator")
+    PROPERTY IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBEXECDIR@/corrosion-generator")
 
 include(Corrosion)
