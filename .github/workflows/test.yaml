@@ -175,7 +175,7 @@ jobs:
         if: ${{ 'msvc' == matrix.abi }}
       - uses: actions/checkout@v2
       - name: Install CMake
-        uses: symbitic/install-cmake@master
+        uses: AndrewGaspar/install-cmake@master
         with:
           cmake: ${{matrix.cmake}}
           ninja: 1.10.0
@@ -237,7 +237,7 @@ jobs:
           fi
       - uses: actions/checkout@v2
       - name: Install CMake
-        uses: symbitic/install-cmake@master
+        uses: AndrewGaspar/install-cmake@master
         with:
           cmake: 3.18.0
           ninja: 1.10.0
