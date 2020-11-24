@@ -45,10 +45,18 @@ endif()
 
 # Installation
 # If Corrosion is a subdirectory, do not enable its install code
-
-include(GNUInstallDirs)
-
 if (NOT CORROSION_IS_SUBDIRECTORY)
+    include(GNUInstallDirs)
+
+    # On Windows, convention is to install packages into a prefix.
+    # On Unix, convention is to install packages directly into standard GNU
+    # locations.
+    if (WIN32)
+        set(CORROSION_INSTALL_PREFIX Corrosion/)
+    else()
+        set(CORROSION_INSTALL_PREFIX)
+    endif()
+
     # Builds the generator executable
     corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
 
@@ -57,7 +65,7 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
 
     corrosion_install(
         TARGETS corrosion-generator
-        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}
+        DESTINATION ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBEXECDIR}
     )
 
     # Generate the Config file
@@ -65,7 +73,7 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
 
     configure_package_config_file(
         cmake/CorrosionConfig.cmake.in CorrosionConfig.cmake
-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion
+        INSTALL_DESTINATION ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion
     )
 
     if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.13")
@@ -83,7 +91,7 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
         FILES
             ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfig.cmake
             ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion
+        DESTINATION ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion
     )
 
     # These CMake scripts are needed both for the install and as a subdirectory
@@ -92,6 +100,6 @@ if (NOT CORROSION_IS_SUBDIRECTORY)
             cmake/Corrosion.cmake
             cmake/FindRust.cmake
         DESTINATION
-            ${CMAKE_INSTALL_DATADIR}/cmake
+            ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_DATADIR}/cmake
     )
 endif()
