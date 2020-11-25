@@ -7,6 +7,7 @@ use std::{
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use semver::Version;
+use platforms::Platform;
 
 mod platform;
 mod target;
@@ -98,7 +99,7 @@ pub fn invoke(
     let cargo_version = Version::parse(matches.value_of(CARGO_VERSION).unwrap())
         .expect("cargo-version must be a semver-compatible version!");
 
-    let cargo_target = matches.value_of(TARGET).and_then(platforms::find).cloned();
+    let cargo_target = matches.value_of(TARGET).and_then(Platform::find).cloned();
 
     if cargo_target.is_none() {
         println!("WARNING: The target was not recognized.");
