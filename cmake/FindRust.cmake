@@ -93,13 +93,14 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     string(REPLACE "\n" ";" _TOOLCHAINS_RAW "${_TOOLCHAINS_RAW}")
 
     foreach(_TOOLCHAIN_RAW ${_TOOLCHAINS_RAW})
-        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t]?(\\(default\\)|\\(override\\))?[ \t]+(.+)")
+        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t\r\n]?(\\(default\\) \\(override\\)|\\(default\\)|\\(override\\))?[ \t\r\n]+(.+)")
+            message(DEBUG "Toolchain matches: ${CMAKE_MATCH_1} ... ${CMAKE_MATCH_2} ... ${CMAKE_MATCH_3}")
             set(_TOOLCHAIN "${CMAKE_MATCH_1}")
             list(APPEND _DISCOVERED_TOOLCHAINS ${_TOOLCHAIN})
 
             set(${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
 
-            if (CMAKE_MATCH_2 STREQUAL "(default)")
+            if (CMAKE_MATCH_2 MATCHES ".*\\(default\\).*")
                 message(DEBUG "Setting default toolchain: ${_TOOLCHAIN}")
                 set(_TOOLCHAIN_DEFAULT ${_TOOLCHAIN})
             endif()
