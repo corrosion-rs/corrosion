@@ -59,7 +59,7 @@ else()
         endif()
 
         set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
-        
+
         # Get `rustup` next to the `rustc` proxy
         get_filename_component(_RUST_PROXIES_PATH ${_Rust_COMPILER_TEST} DIRECTORY)
         find_program(Rust_RUSTUP rustup HINTS ${_RUST_PROXIES_PATH} NO_DEFAULT_PATH)
@@ -93,13 +93,14 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     string(REPLACE "\n" ";" _TOOLCHAINS_RAW "${_TOOLCHAINS_RAW}")
 
     foreach(_TOOLCHAIN_RAW ${_TOOLCHAINS_RAW})
-        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)([ \t\r\n]+\\(default\\))?[ \t\r\n]+(.+)")
+        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t]?(\\(default\\)|\\(override\\))?[ \t]+(.+)")
             set(_TOOLCHAIN "${CMAKE_MATCH_1}")
             list(APPEND _DISCOVERED_TOOLCHAINS ${_TOOLCHAIN})
 
             set(${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
 
-            if (CMAKE_MATCH_2)
+            if (CMAKE_MATCH_2 STREQUAL "(default)")
+                message(DEBUG "Setting default toolchain: ${_TOOLCHAIN}")
                 set(_TOOLCHAIN_DEFAULT ${_TOOLCHAIN})
             endif()
         else()
@@ -138,13 +139,15 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
 
             message(FATAL_ERROR "")
         endif()
-        
+
         set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}-${_DEFAULT_HOST}")
     else()
         set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}")
     endif()
 
     set(_RUST_TOOLCHAIN_PATH "${${_RUSTUP_TOOLCHAIN_FULL}_PATH}")
+    message(VERBOSE "Rust toolchain ${_RUSTUP_TOOLCHAIN_FULL}")
+    message(VERBOSE "Rust toolchain path ${_RUST_TOOLCHAIN_PATH}")
 
     # Is overrided if the user specifies `Rust_COMPILER` explicitly.
     find_program(
