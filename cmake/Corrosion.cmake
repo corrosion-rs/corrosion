@@ -65,7 +65,7 @@ set(_CORROSION_RUST_CARGO_TARGET ${Rust_CARGO_TARGET} CACHE INTERNAL "target tri
 
 function(_add_cargo_build)
     set(options "")
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH RUSTFLAGS)
     set(multi_value_args BYPRODUCTS)
     cmake_parse_arguments(
         ACB
@@ -174,6 +174,7 @@ function(_add_cargo_build)
                 CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
                 CMAKECARGO_LINK_LIBRARIES=${link_libs}
                 CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
+                RUSTFLAGS=${ACB_RUSTFLAGS}
                 ${link_prefs}
                 ${compilers}
                 ${lang_targets}
@@ -211,7 +212,7 @@ endfunction(_add_cargo_build)
 
 function(corrosion_import_crate)
     set(OPTIONS)
-    set(ONE_VALUE_KEYWORDS MANIFEST_PATH)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH RUSTFLAGS)
     set(MULTI_VALUE_KEYWORDS CRATES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
@@ -279,6 +280,7 @@ function(corrosion_import_crate)
                     ${_CMAKE_CARGO_CONFIGURATION_TYPES}
                     ${crates_args}
                     --cargo-version ${_CORROSION_CARGO_VERSION}
+                    --rustflags "${COR_RUSTFLAGS}"
                     -o ${generated_cmake}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         RESULT_VARIABLE ret)

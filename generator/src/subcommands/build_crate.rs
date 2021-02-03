@@ -61,7 +61,8 @@ pub fn invoke(
         .collect();
 
     if !languages.is_empty() {
-        let mut rustflags = "-C default-linker-libraries=yes".to_owned();
+        let mut rustflags = env::var("RUSTFLAGS").unwrap_or_default();
+        rustflags += " -C default-linker-libraries=yes";
 
         // This loop gets the highest preference link language to use for the linker
         let mut highest_preference: Option<(Option<i32>, &str)> = None;

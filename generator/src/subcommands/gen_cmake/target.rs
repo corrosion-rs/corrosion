@@ -103,6 +103,7 @@ impl CargoTarget {
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
         cargo_version: &semver::Version,
+        rustflags: &str,
     ) -> Result<(), Box<dyn Error>> {
         // This bit aggregates the byproducts of "cargo build", which is needed for generators like Ninja.
         let mut byproducts = vec![];
@@ -160,6 +161,7 @@ _add_cargo_build(
     TARGET {1}
     MANIFEST_PATH \"{2}\"
     BYPRODUCTS {3}
+    RUSTFLAGS \"{4}\"
 )
 ",
             self.cargo_package.name,
@@ -169,7 +171,8 @@ _add_cargo_build(
                 .to_str()
                 .unwrap()
                 .replace("\\", "/"),
-            byproducts.join(" ")
+            byproducts.join(" "),
+            rustflags,
         )?;
 
         match self.target_type {
