@@ -106,7 +106,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Determine Rust OS
       id: determine_rust_os
       run: |
@@ -123,7 +123,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Pick Compiler
       id: pick_compiler
       run: |
@@ -141,7 +141,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Pick Generator
       id: pick_generator
       run: |
@@ -153,7 +153,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: CMake Build Flags
       id: cmake_build_flags
       run: |
@@ -165,7 +165,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Arch Flags
       id: arch_flags
       run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
@@ -191,7 +191,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Setup MSVC Development Environment
       uses: ilammy/msvc-dev-cmd@v1
       with:
@@ -200,12 +200,12 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - uses: actions/checkout@v2
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Install CMake
       uses: AndrewGaspar/install-cmake@master
       with:
@@ -214,7 +214,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Install Rust
       uses: actions-rs/toolchain@v1
       with:
@@ -223,7 +223,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Install Cross Compiler
       run: |
         sudo apt-get update
@@ -232,19 +232,19 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: CMake Version
       run: cmake --version
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Rust Version
       run: rustc +${{matrix.rust}} --version
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Configure
       run: |
         cmake \
@@ -282,7 +282,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Check tests external
       id: check_external
       run: |
@@ -294,12 +294,12 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - uses: actions/checkout@v2
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Install CMake
       uses: AndrewGaspar/install-cmake@master
       with:
@@ -308,7 +308,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Install Rust
       uses: actions-rs/toolchain@v1
       with:
@@ -317,19 +317,19 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: CMake Version
       run: cmake --version
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Rust Version
       run: rustc --version
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Install Corrosion
       run: |
         cmake \
@@ -345,7 +345,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Configure Tests
       run: |
         cmake \
@@ -356,7 +356,7 @@ jobs:
     - name: DEBUG
       run: | # Debugging
         echo $PATH
-        which link
+        which link.exe
     - name: Build Tests
       run: cmake --build build-tests
       
