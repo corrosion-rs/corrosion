@@ -193,6 +193,8 @@ jobs:
         run: cmake --version
       - name: Rust Version
         run: rustc +${{matrix.rust}} --version
+      - name: Remove Git Internal Tools From PATH
+        run: echo $PATH # Debugging
       - name: Configure
         run: |
           cmake \
