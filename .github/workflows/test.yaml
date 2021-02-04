@@ -103,6 +103,10 @@ jobs:
           rust: 1.44.1
 
     steps:
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Determine Rust OS
       id: determine_rust_os
       run: |
@@ -116,6 +120,10 @@ jobs:
           echo "::set-output name=os::apple"
           echo "::set-output name=host_abi::darwin"
         fi
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Pick Compiler
       id: pick_compiler
       run: |
@@ -130,6 +138,10 @@ jobs:
         elif [ "${{ matrix.abi }}" == "msvc" ]; then
           echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=cl"
         fi
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Pick Generator
       id: pick_generator
       run: |
@@ -138,6 +150,10 @@ jobs:
         elif [ "${{ matrix.abi }}" == "default" ]; then
           echo "::set-output name=generator::"
         fi
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: CMake Build Flags
       id: cmake_build_flags
       run: |
@@ -146,6 +162,10 @@ jobs:
         else
           echo "::set-output name=cmake_build_flags::"
         fi
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Arch Flags
       id: arch_flags
       run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
@@ -168,32 +188,60 @@ jobs:
         elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
           echo "::set-output name=cmake::-DRust_CARGO_TARGET=${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}"
         fi
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Setup MSVC Development Environment
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: ${{ steps.arch_flags.outputs.msvc }}
       if: ${{ 'msvc' == matrix.abi }}
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - uses: actions/checkout@v2
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Install CMake
       uses: AndrewGaspar/install-cmake@master
       with:
         cmake: ${{matrix.cmake}}
         ninja: 1.10.0
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Install Rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: ${{matrix.rust}}
         target: ${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Install Cross Compiler
       run: |
         sudo apt-get update
         sudo apt-get install -y g++-$(echo "${{matrix.arch}}" | tr _ -)-linux-gnu
       if: ${{ 'ubuntu-latest' == matrix.os }}
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: CMake Version
       run: cmake --version
+    - name: DEBUG
+      run: | # Debugging
+        echo $PATH
+        which link
     - name: Rust Version
       run: rustc +${{matrix.rust}} --version
-    - name: Remove Git Internal Tools From PATH
+    - name: DEBUG
       run: | # Debugging
         echo $PATH
         which link
@@ -217,62 +265,62 @@ jobs:
         cmake \
           --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
           --target cargo-build_rust-exe 
-  install:
-    name: Test Corrosion as a Library
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: 
-          - windows-latest
-          - ubuntu-latest
-          - macos-latest
-        method:
-          - subdirectory
-          - install
-    steps:
-    - name: Check tests external
-      id: check_external
-      run: |
-        if [ "${{ matrix.method }}" == "subdirectory" ]; then
-          echo "::set-output name=find::OFF"
-        elif [ "${{ matrix.method }}" == "install" ]; then
-          echo "::set-output name=find::ON"
-        fi
-    - uses: actions/checkout@v2
-    - name: Install CMake
-      uses: AndrewGaspar/install-cmake@master
-      with:
-        cmake: 3.18.0
-        ninja: 1.10.0
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: 1.44.1
-        default: true
-    - name: CMake Version
-      run: cmake --version
-    - name: Rust Version
-      run: rustc --version
-    - name: Install Corrosion
-      run: |
-        cmake \
-          -H. \
-          -Bbuild-corrosion \
-          -DCORROSION_VERBOSE_OUTPUT=ON \
-          -DCORROSION_BUILD_TESTS=OFF \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_INSTALL_PREFIX=install-corrosion
-        cmake --build build-corrosion --config Release
-        cmake --install build-corrosion --config Release
-      if: ${{ matrix.method == 'install' }}
-    - name: Configure Tests
-      run: |
-        cmake \
-          -Htest \
-          -Bbuild-tests \
-          -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}} \
-          -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
-    - name: Build Tests
-      run: cmake --build build-tests
+  # install:
+  #   name: Test Corrosion as a Library
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: 
+  #         - windows-latest
+  #         - ubuntu-latest
+  #         - macos-latest
+  #       method:
+  #         - subdirectory
+  #         - install
+  #   steps:
+  #   - name: Check tests external
+  #     id: check_external
+  #     run: |
+  #       if [ "${{ matrix.method }}" == "subdirectory" ]; then
+  #         echo "::set-output name=find::OFF"
+  #       elif [ "${{ matrix.method }}" == "install" ]; then
+  #         echo "::set-output name=find::ON"
+  #       fi
+  #   - uses: actions/checkout@v2
+  #   - name: Install CMake
+  #     uses: AndrewGaspar/install-cmake@master
+  #     with:
+  #       cmake: 3.18.0
+  #       ninja: 1.10.0
+  #   - name: Install Rust
+  #     uses: actions-rs/toolchain@v1
+  #     with:
+  #       toolchain: 1.44.1
+  #       default: true
+  #   - name: CMake Version
+  #     run: cmake --version
+  #   - name: Rust Version
+  #     run: rustc --version
+  #   - name: Install Corrosion
+  #     run: |
+  #       cmake \
+  #         -H. \
+  #         -Bbuild-corrosion \
+  #         -DCORROSION_VERBOSE_OUTPUT=ON \
+  #         -DCORROSION_BUILD_TESTS=OFF \
+  #         -DCMAKE_BUILD_TYPE=Release \
+  #         -DCMAKE_INSTALL_PREFIX=install-corrosion
+  #       cmake --build build-corrosion --config Release
+  #       cmake --install build-corrosion --config Release
+  #     if: ${{ matrix.method == 'install' }}
+  #   - name: Configure Tests
+  #     run: |
+  #       cmake \
+  #         -Htest \
+  #         -Bbuild-tests \
+  #         -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}} \
+  #         -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
+  #   - name: Build Tests
+  #     run: cmake --build build-tests
       
