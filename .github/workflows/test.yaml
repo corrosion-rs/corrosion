@@ -18,253 +18,199 @@ jobs:
       fail-fast: false
       matrix:
         os: 
-        - windows-latest
-        # - ubuntu-latest
-        # - macos-latest
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
         arch:
-        - x86_64
-        # - i686
-        # - aarch64
-        # - powerpc64le
+          - x86_64
+          - i686
+          - aarch64
+          - powerpc64le
         abi:
-        # - gnu
-        # - darwin
-        - msvc
+          - gnu
+          - darwin
+          - msvc
         cmake:
-        # - 3.12.4
-        - 3.18.0
+          - 3.12.4
+          - 3.18.0
         rust:
-        # - 1.44.1 # Earliest targeted version
-        # - 1.45.0 # Earliest version compatible with Windows GNU
-        - stable
-        # - nightly
+          - 1.44.1 # Earliest targeted version
+          - 1.45.0 # Earliest version compatible with Windows GNU
+          - stable
+          - nightly
         generator:
-        # - default # This is just whatever the platform default is
-        - ninja
+          - default # This is just whatever the platform default is
+          - ninja
         exclude:
-        # Something's busted when building with Visual Studio with CMake 3.12 - perhaps should
-        # look into this at some point
-        - os: windows-latest
-          cmake: 3.12.4
-          generator: default # Default generator is Visual Studio
+          # Something's busted when building with Visual Studio with CMake 3.12 - perhaps should
+          # look into this at some point
+          - os: windows-latest
+            cmake: 3.12.4
+            generator: default # Default generator is Visual Studio
 
-        # You cannot build with GNU using Visual Studio on Windows
-        - os: windows-latest
-          abi: gnu
-          generator: default # Default generator is Visual Studio
-          
-        # ARCH
-        - os: windows-latest
-          arch: i686
-          abi: gnu
-        - os: windows-latest
-          arch: aarch64
-          abi: gnu
-        - os: windows-latest
-          arch: i686
-          generator: ninja
-        - os: windows-latest
-          arch: aarch64
-          generator: ninja
-        - os: windows-latest
-          arch: powerpc64le
-        - os: macos-latest
-          arch: i686
-        - os: macos-latest
-          arch: aarch64
-        - os: macos-latest
-          arch: powerpc64le
+          # You cannot build with GNU using Visual Studio on Windows
+          - os: windows-latest
+            abi: gnu
+            generator: default # Default generator is Visual Studio
+            
+          # ARCH
+          - os: windows-latest
+            arch: i686
+            abi: gnu
+          - os: windows-latest
+            arch: aarch64
+            abi: gnu
+          - os: windows-latest
+            arch: i686
+            generator: ninja
+          - os: windows-latest
+            arch: aarch64
+            generator: ninja
+          - os: windows-latest
+            arch: powerpc64le
+          - os: macos-latest
+            arch: i686
+          - os: macos-latest
+            arch: aarch64
+          - os: macos-latest
+            arch: powerpc64le
 
-        # ABI
-        - os: ubuntu-latest
-          abi: msvc
-        - os: ubuntu-latest
-          abi: darwin
-        - os: windows-latest
-          abi: darwin
-        - os: macos-latest
-          abi: msvc
-        - os: macos-latest
-          abi: gnu
-          
-        # Rust
-        # Build each set only with the earliest compatible versioned Rust
-        - os: macos-latest
-          rust: 1.45.0
-        - os: ubuntu-latest
-          rust: 1.45.0
-        - os: windows-latest
-          abi: msvc
-          rust: 1.45.0
-        # Prior to 1.45.0, -nostdlib is erroneously passed to g++ when for the *-pc-windows-gnu
-        # target. See: https://github.com/rust-lang/rust/pull/71769
-        - os: windows-latest
-          abi: gnu
-          rust: 1.44.1
+          # ABI
+          - os: ubuntu-latest
+            abi: msvc
+          - os: ubuntu-latest
+            abi: darwin
+          - os: windows-latest
+            abi: darwin
+          - os: macos-latest
+            abi: msvc
+          - os: macos-latest
+            abi: gnu
+            
+          # Rust
+          # Build each set only with the earliest compatible versioned Rust
+          - os: macos-latest
+            rust: 1.45.0
+          - os: ubuntu-latest
+            rust: 1.45.0
+          - os: windows-latest
+            abi: msvc
+            rust: 1.45.0
+          # Prior to 1.45.0, -nostdlib is erroneously passed to g++ when for the *-pc-windows-gnu
+          # target. See: https://github.com/rust-lang/rust/pull/71769
+          - os: windows-latest
+            abi: gnu
+            rust: 1.44.1
 
     steps:
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Determine Rust OS
-      id: determine_rust_os
-      run: |
-        if [ "${{ runner.os }}" == "Windows" ]; then
-          echo "::set-output name=os::pc-windows"
-          echo "::set-output name=host_abi::msvc"
-        elif [ "${{ runner.os }}" == "Linux" ]; then
-          echo "::set-output name=os::unknown-linux"
-          echo "::set-output name=host_abi::gnu"
-        elif [ "${{ runner.os }}" == "macOS" ]; then
-          echo "::set-output name=os::apple"
-          echo "::set-output name=host_abi::darwin"
-        fi
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Pick Compiler
-      id: pick_compiler
-      run: |
-        if [ "${{ matrix.abi }}" == "gnu" ]; then
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++"
-          else
-            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=g++"
+      - name: Determine Rust OS
+        id: determine_rust_os
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "::set-output name=os::pc-windows"
+            echo "::set-output name=host_abi::msvc"
+          elif [ "${{ runner.os }}" == "Linux" ]; then
+            echo "::set-output name=os::unknown-linux"
+            echo "::set-output name=host_abi::gnu"
+          elif [ "${{ runner.os }}" == "macOS" ]; then
+            echo "::set-output name=os::apple"
+            echo "::set-output name=host_abi::darwin"
           fi
-        elif [ "${{ matrix.abi }}" == "darwin" ]; then
-          echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=clang++"
-        # elif [ "${{ matrix.abi }}" == "msvc" ]; then
-          # echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=cl"
-        fi
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Pick Generator
-      id: pick_generator
-      run: |
-        if [ "${{ matrix.generator }}" == "ninja" ]; then
-          echo "::set-output name=generator::-GNinja"
-        elif [ "${{ matrix.abi }}" == "default" ]; then
-          echo "::set-output name=generator::"
-        fi
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: CMake Build Flags
-      id: cmake_build_flags
-      run: |
-        if [ "${{ matrix.cmake }}" != "3.12.4" ]; then
-          echo "::set-output name=cmake_build_flags::--verbose"
-        else
-          echo "::set-output name=cmake_build_flags::"
-        fi
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Arch Flags
-      id: arch_flags
-      run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
-        if [ "${{ runner.os }}" == "Windows" ]; then
-          if [ "${{matrix.generator}}" == "default" ]; then
-            if [ "${{ matrix.arch }}" == "x86_64" ]; then
-              echo "::set-output name=msvc::amd64"
-              echo "::set-output name=cmake::-Ax64"
-            elif [ "${{ matrix.arch }}" == "i686" ]; then
-              echo "::set-output name=msvc::amd64_x86"
-              echo "::set-output name=cmake::-AWin32"
-            elif [ "${{ matrix.arch }}" == "aarch64" ]; then
-              echo "::set-output name=msvc::amd64_arm64"
-              echo "::set-output name=cmake::-AARM64"
+      - name: Pick Compiler
+        id: pick_compiler
+        run: |
+          if [ "${{ matrix.abi }}" == "gnu" ]; then
+            if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+              echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++"
+            else
+              echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=g++"
             fi
-          elif [ "${{matrix.generator}}" == "ninja" ]; then
-            # We don't do cross-compiling builds with Ninja
-            echo "::set-output name=msvc::amd64"
+          elif [ "${{ matrix.abi }}" == "darwin" ]; then
+            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=clang++"
           fi
-        elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          echo "::set-output name=cmake::-DRust_CARGO_TARGET=${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}"
-        fi
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    # - name: Setup MSVC Development Environment
-    #   uses: ilammy/msvc-dev-cmd@v1
-    #   with:
-    #     arch: ${{ steps.arch_flags.outputs.msvc }}
-    #   if: ${{ 'msvc' == matrix.abi }}
-    # - name: DEBUG
-    #   run: | # Debugging
-    #     echo $PATH
-    #     which link.exe
-    - uses: actions/checkout@v2
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Install CMake
-      uses: AndrewGaspar/install-cmake@master
-      with:
-        cmake: ${{matrix.cmake}}
-        ninja: 1.10.0
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{matrix.rust}}
-        target: ${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Install Cross Compiler
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y g++-$(echo "${{matrix.arch}}" | tr _ -)-linux-gnu
-      if: ${{ 'ubuntu-latest' == matrix.os }}
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: CMake Version
-      run: cmake --version
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Rust Version
-      run: rustc +${{matrix.rust}} --version
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Configure
-      run: |
-        cmake \
-          -H. \
-          -Bbuild \
-          -DCORROSION_VERBOSE_OUTPUT=ON \
-          ${{ steps.arch_flags.outputs.cmake }} \
-          ${{ steps.pick_compiler.outputs.compiler }} \
-          ${{ steps.pick_generator.outputs.generator }} \
-          -DRust_TOOLCHAIN=${{matrix.rust}}
-    - name: Build C++ program linking Rust
-      run: |
-        cmake \
-          --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-          --target cpp-exe
-    - name: Build Rust program linking C++
-      run: |
-        cmake \
-          --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-          --target cargo-build_rust-exe 
+      - name: Pick Generator
+        id: pick_generator
+        run: |
+          if [ "${{ matrix.generator }}" == "ninja" ]; then
+            echo "::set-output name=generator::-GNinja"
+          elif [ "${{ matrix.abi }}" == "default" ]; then
+            echo "::set-output name=generator::"
+          fi
+      - name: CMake Build Flags
+        id: cmake_build_flags
+        run: |
+          if [ "${{ matrix.cmake }}" != "3.12.4" ]; then
+            echo "::set-output name=cmake_build_flags::--verbose"
+          else
+            echo "::set-output name=cmake_build_flags::"
+          fi
+      - name: Arch Flags
+        id: arch_flags
+        run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            if [ "${{matrix.generator}}" == "default" ]; then
+              if [ "${{ matrix.arch }}" == "x86_64" ]; then
+                echo "::set-output name=msvc::amd64"
+                echo "::set-output name=cmake::-Ax64"
+              elif [ "${{ matrix.arch }}" == "i686" ]; then
+                echo "::set-output name=msvc::amd64_x86"
+                echo "::set-output name=cmake::-AWin32"
+              elif [ "${{ matrix.arch }}" == "aarch64" ]; then
+                echo "::set-output name=msvc::amd64_arm64"
+                echo "::set-output name=cmake::-AARM64"
+              fi
+            elif [ "${{matrix.generator}}" == "ninja" ]; then
+              # We don't do cross-compiling builds with Ninja
+              echo "::set-output name=msvc::amd64"
+            fi
+          elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            echo "::set-output name=cmake::-DRust_CARGO_TARGET=${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}"
+          fi
+      - name: Setup MSVC Development Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ steps.arch_flags.outputs.msvc }}
+        if: ${{ 'msvc' == matrix.abi }}
+      - uses: actions/checkout@v2
+      - name: Install CMake
+        uses: AndrewGaspar/install-cmake@master
+        with:
+          cmake: ${{matrix.cmake}}
+          ninja: 1.10.0
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{matrix.rust}}
+          target: ${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
+      - name: Install Cross Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-$(echo "${{matrix.arch}}" | tr _ -)-linux-gnu
+        if: ${{ 'ubuntu-latest' == matrix.os }}
+      - name: CMake Version
+        run: cmake --version
+      - name: Rust Version
+        run: rustc +${{matrix.rust}} --version
+      - name: Configure
+        run: |
+          cmake \
+            -H. \
+            -Bbuild \
+            -DCORROSION_VERBOSE_OUTPUT=ON \
+            ${{ steps.arch_flags.outputs.cmake }} \
+            ${{ steps.pick_compiler.outputs.compiler }} \
+            ${{ steps.pick_generator.outputs.generator }} \
+            -DRust_TOOLCHAIN=${{matrix.rust}}
+      - name: Build C++ program linking Rust
+        run: |
+          cmake \
+            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
+            --target cpp-exe
+      - name: Build Rust program linking C++
+        run: |
+          cmake \
+            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
+            --target cargo-build_rust-exe 
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
@@ -273,90 +219,54 @@ jobs:
       matrix:
         os: 
           - windows-latest
-          # - ubuntu-latest
-          # - macos-latest
+          - ubuntu-latest
+          - macos-latest
         method:
           - subdirectory
           - install
     steps:
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Check tests external
-      id: check_external
-      run: |
-        if [ "${{ matrix.method }}" == "subdirectory" ]; then
-          echo "::set-output name=find::OFF"
-        elif [ "${{ matrix.method }}" == "install" ]; then
-          echo "::set-output name=find::ON"
-        fi
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - uses: actions/checkout@v2
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Install CMake
-      uses: AndrewGaspar/install-cmake@master
-      with:
-        cmake: 3.18.0
-        ninja: 1.10.0
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: 1.44.1
-        default: true
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: CMake Version
-      run: cmake --version
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Rust Version
-      run: rustc --version
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Install Corrosion
-      run: |
-        cmake \
-          -H. \
-          -Bbuild-corrosion \
-          -DCORROSION_VERBOSE_OUTPUT=ON \
-          -DCORROSION_BUILD_TESTS=OFF \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_INSTALL_PREFIX=install-corrosion
-        cmake --build build-corrosion --config Release
-        cmake --install build-corrosion --config Release
-      if: ${{ matrix.method == 'install' }}
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Configure Tests
-      run: |
-        cmake \
-          -Htest \
-          -Bbuild-tests \
-          -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}} \
-          -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
-    - name: Build Tests
-      run: cmake --build build-tests
+      - name: Check tests external
+        id: check_external
+        run: |
+          if [ "${{ matrix.method }}" == "subdirectory" ]; then
+            echo "::set-output name=find::OFF"
+          elif [ "${{ matrix.method }}" == "install" ]; then
+            echo "::set-output name=find::ON"
+          fi
+      - uses: actions/checkout@v2
+      - name: Install CMake
+        uses: AndrewGaspar/install-cmake@master
+        with:
+          cmake: 3.18.0
+          ninja: 1.10.0
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.44.1
+          default: true
+      - name: CMake Version
+        run: cmake --version
+      - name: Rust Version
+        run: rustc --version
+      - name: Install Corrosion
+        run: |
+          cmake \
+            -H. \
+            -Bbuild-corrosion \
+            -DCORROSION_VERBOSE_OUTPUT=ON \
+            -DCORROSION_BUILD_TESTS=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=install-corrosion
+          cmake --build build-corrosion --config Release
+          cmake --install build-corrosion --config Release
+        if: ${{ matrix.method == 'install' }}
+      - name: Configure Tests
+        run: |
+          cmake \
+            -Htest \
+            -Bbuild-tests \
+            -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}} \
+            -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
+      - name: Build Tests
+        run: cmake --build build-tests
       
