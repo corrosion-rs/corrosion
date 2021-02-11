@@ -192,15 +192,15 @@ jobs:
       run: | # Debugging
         echo $PATH
         which link.exe
-    - name: Setup MSVC Development Environment
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: ${{ steps.arch_flags.outputs.msvc }}
-      if: ${{ 'msvc' == matrix.abi }}
-    - name: DEBUG
-      run: | # Debugging
-        echo $PATH
-        which link.exe
+    # - name: Setup MSVC Development Environment
+    #   uses: ilammy/msvc-dev-cmd@v1
+    #   with:
+    #     arch: ${{ steps.arch_flags.outputs.msvc }}
+    #   if: ${{ 'msvc' == matrix.abi }}
+    # - name: DEBUG
+    #   run: | # Debugging
+    #     echo $PATH
+    #     which link.exe
     - uses: actions/checkout@v2
     - name: DEBUG
       run: | # Debugging
