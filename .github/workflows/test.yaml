@@ -127,6 +127,8 @@ jobs:
             fi
           elif [ "${{ matrix.abi }}" == "darwin" ]; then
             echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=clang++"
+          elif [ "${{ matrix.abi }}" == "msvc" ]; then
+            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=cl"
           fi
       - name: Pick Generator
         id: pick_generator
