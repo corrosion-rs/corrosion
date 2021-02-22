@@ -146,6 +146,21 @@ from `rustup`, or from a toolchain available in the user's `PATH`.
 Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
 the default target triple reported by `${Rust_COMPILER} --version --verbose`.
 
+### Developer/Maintainer Options
+These options are not used in the course of normal Corrosion usage, but are used to configure how
+Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.
+
+- `CORROSION_DEV_MODE:BOOL` - Indicates that Corrosion is being actively developed. Default: `OFF`
+if Corrosion is a subdirectory, `ON` if it is the top-level project
+- `CORROSION_BUILD_TESTS:BOOL` - Build the Corrosion tests. Default: `Off` if Corrosion is a
+subdirectory, `ON` if it is the top-level project
+- `CORROSION_GENERATOR_EXECUTABLE:STRING` - Specify a path to the corrosion-generator executable.
+This is to support scenarios where it's easier to build corrosion-generator outside of the normal
+bootstrap path, such as in the case of package managers that make it very easy to import Rust
+crates for fully reproducible, offline builds.
+- `CORROSION_INSTALL_EXECUTABLE:BOOL` - Controls whetehr corrosion-generator is installed with the
+package. Default: `ON` with `CORROSION_GENERATOR_EXECUTABLE` unset, otherwise `OFF`
+
 ### Importing C-Style Libraries Written in Rust
 Corrosion makes it completely trivial to import a crate into an existing CMake project. Consider
 a project called [rust2cpp](test/rust2cpp) with the following file structure:
