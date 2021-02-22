@@ -10,9 +10,15 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     else()
         add_subdirectory(.. corrosion)
     endif()
+
+    set(_TOP_LEVEL ON)
 endif()
 
 add_subdirectory(cpp2rust)
 add_subdirectory(rust2cpp)
 add_subdirectory(workspace)
-add_subdirectory(config)
+
+# Config tests don't work if this is the top level directory.
+if (NOT _TOP_LEVEL)
+    add_subdirectory(config)
+endif()
