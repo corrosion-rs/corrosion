@@ -6,8 +6,8 @@ add_custom_target(
             -DCORROSION_BUILD_TESTS=OFF
             -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/test-install
             -DCORROSION_GENERATOR_EXECUTABLE=$<TARGET_FILE:corrosion-generator>
-    COMMAND ${CMAKE_COMMAND} --build test-build
-    COMMAND ${CMAKE_COMMAND} --install test-build
+    COMMAND ${CMAKE_COMMAND} --build test-build --config Debug # Ignored for single-config builds
+    COMMAND ${CMAKE_COMMAND} --install test-build --config Debug # Ignored for single-config builds
 )
 
 file(
