@@ -210,7 +210,7 @@ jobs:
             --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target test-install
           ctest --verbose
-        if: ${{ 'x86_64' == matrix.arch && !('windows-latest' == matrix.os && 'gnu' == matrix.abi) }}
+        if: ${{ 'x86_64' == matrix.arch && !('windows-latest' == matrix.os && 'gnu' == matrix.abi) && '3.12.4' != matrix.cmake }}
       - name: Build C++ program linking Rust
         run: |
           cmake \
