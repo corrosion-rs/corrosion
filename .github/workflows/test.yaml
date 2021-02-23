@@ -203,6 +203,14 @@ jobs:
             ${{ steps.pick_compiler.outputs.compiler }} \
             ${{ steps.pick_generator.outputs.generator }} \
             -DRust_TOOLCHAIN=${{matrix.rust}}
+      - name: Run Config Tests (x86_64 Only)
+        run: |
+          cd build
+          cmake \
+            --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
+            --target test-install
+          ctest --verbose --build-config Debug
+        if: ${{ 'x86_64' == matrix.arch && !('windows-latest' == matrix.os && 'gnu' == matrix.abi) && '3.12.4' != matrix.cmake }}
       - name: Build C++ program linking Rust
         run: |
           cmake \
@@ -212,7 +220,7 @@ jobs:
         run: |
           cmake \
             --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target cargo-build_rust-exe 
+            --target cargo-build_rust-exe
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
