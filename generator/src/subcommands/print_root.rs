@@ -8,7 +8,7 @@ pub fn subcommand() -> App<'static, 'static> {
 }
 
 pub fn invoke(args: &crate::GeneratorSharedArgs) -> Result<(), Box<dyn std::error::Error>> {
-    println!("{}", args.metadata.workspace_root.to_str().unwrap());
+    println!("{}", args.metadata.workspace_root);
 
     std::process::exit(0);
 }

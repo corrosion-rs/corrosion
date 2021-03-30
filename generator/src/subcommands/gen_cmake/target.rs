@@ -166,8 +166,7 @@ _add_cargo_build(
             self.cargo_target.name,
             self.cargo_package
                 .manifest_path
-                .to_str()
-                .unwrap()
+                .as_str()
                 .replace("\\", "/"),
             byproducts.join(" ")
         )?;
