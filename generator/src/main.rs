@@ -33,6 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("manifest-path")
                 .value_name("Cargo.toml")
                 .help("Specifies the target Cargo project")
+                .required(true)
                 .takes_value(true),
         )
         .arg(
