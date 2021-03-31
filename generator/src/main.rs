@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     cmd.manifest_path(manifest_path);
     cmd.cargo_path(cargo_executable);
 
-    let metadata = cmd.exec().unwrap();
+    let metadata = cmd.exec()?;
 
     let shared_args = GeneratorSharedArgs {
         manifest_path: manifest_path.into(),
