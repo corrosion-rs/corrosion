@@ -54,7 +54,7 @@ pub fn invoke(
         cargo.arg("--release");
     }
 
-    let languages: Vec<String> = env::var("CMAKECARGO_LINKER_LANGUAGES")
+    let languages: Vec<String> = env::var("CORROSION_LINKER_LANGUAGES")
         .unwrap_or("".to_string())
         .split(";")
         .map(Into::into)
@@ -68,7 +68,7 @@ pub fn invoke(
         for language in &languages {
             highest_preference = Some(
                 if let Ok(preference) =
-                    env::var(&format!("CMAKECARGO_{}_LINKER_PREFERENCE", language))
+                    env::var(&format!("CORROSION_{}_LINKER_PREFERENCE", language))
                 {
                     let preference = preference
                         .parse()
@@ -90,7 +90,7 @@ pub fn invoke(
         // If a preferred compiler is selected, use it as the linker so that the correct standard, implicit libraries
         // are linked in.
         if let Some((_, language)) = highest_preference {
-            if let Ok(compiler) = env::var(&format!("CMAKECARGO_{}_COMPILER", language)) {
+            if let Ok(compiler) = env::var(&format!("CORROSION_{}_COMPILER", language)) {
                 let linker_arg = format!(
                     "CARGO_TARGET_{}_LINKER",
                     target.replace("-", "_").to_uppercase()
@@ -99,7 +99,7 @@ pub fn invoke(
                 cargo.env(linker_arg, compiler);
             }
 
-            if let Ok(target) = env::var(format!("CMAKECARGO_{}_COMPILER_TARGET", language)) {
+            if let Ok(target) = env::var(format!("CORROSION_{}_COMPILER_TARGET", language)) {
                 rustflags += " -C link-args=--target=";
                 rustflags += &target;
             }

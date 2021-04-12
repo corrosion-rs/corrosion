@@ -116,18 +116,18 @@ function(_add_cargo_build)
                 list(
                     APPEND
                     link_prefs
-                    CMAKECARGO_${language}_LINKER_PREFERENCE="${CMAKE_${language}_LINKER_PREFERENCE}")
+                    CORROSION_${language}_LINKER_PREFERENCE="${CMAKE_${language}_LINKER_PREFERENCE}")
 
                 list(
                     APPEND
                     compilers
-                    CMAKECARGO_${language}_COMPILER="${CMAKE_${language}_COMPILER}")
+                    CORROSION_${language}_COMPILER="${CMAKE_${language}_COMPILER}")
 
                 if (CMAKE_${language}_COMPILER_TARGET)
                     list(
                         APPEND
                         lang_targets
-                        CMAKECARGO_${language}_COMPILER_TARGET="${CMAKE_${language}_COMPILER_TARGET}")
+                        CORROSION_${language}_COMPILER_TARGET="${CMAKE_${language}_COMPILER_TARGET}")
                 endif()
             endif()
         endforeach()
@@ -171,13 +171,13 @@ function(_add_cargo_build)
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
-                CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
-                CMAKECARGO_LINK_LIBRARIES=${link_libs}
-                CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
+                CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                CORROSION_LINK_LIBRARIES=${link_libs}
+                CORROSION_LINK_DIRECTORIES=${search_dirs}
                 ${link_prefs}
                 ${compilers}
                 ${lang_targets}
-                CMAKECARGO_LINKER_LANGUAGES="$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>"
+                CORROSION_LINKER_LANGUAGES="$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>"
             ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
                 build-crate
