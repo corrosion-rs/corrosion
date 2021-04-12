@@ -241,7 +241,7 @@ function(corrosion_import_crate)
 
     set(
         generated_cmake
-        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/cmake-cargo/${toml_dir_name}.dir/cargo-build.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/corrosion/${toml_dir_name}.dir/cargo-build.cmake"
     )
 
     if (CMAKE_VS_PLATFORM_NAME)

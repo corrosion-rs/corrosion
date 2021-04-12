@@ -72,7 +72,7 @@ pub fn invoke(
                 {
                     let preference = preference
                         .parse()
-                        .expect("cmake-cargo internal error: PREFERENCE wrong format");
+                        .expect("Corrosion internal error: PREFERENCE wrong format");
                     match highest_preference {
                         Some((Some(current), language)) if current > preference => {
                             (Some(current), language)
