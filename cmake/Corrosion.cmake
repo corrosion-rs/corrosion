@@ -193,6 +193,11 @@ function(_add_cargo_build)
     endforeach()
 
 
+    set(features_args)
+    foreach(feature ${COR_FEATURES})
+        list(APPEND features_args --features ${feature})
+    endforeach()
+
     add_custom_target(
         cargo-build_${target_name}
         ALL
@@ -215,6 +220,7 @@ function(_add_cargo_build)
                 --manifest-path "${path_to_toml}"
                 build-crate
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
+                    ${features_args}
                     ${cargo_target_option}
                     --package ${package_name}
         # Copy crate artifacts to the binary dir
@@ -246,7 +252,7 @@ endfunction(_add_cargo_build)
 function(corrosion_import_crate)
     set(OPTIONS)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH)
-    set(MULTI_VALUE_KEYWORDS CRATES)
+    set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)

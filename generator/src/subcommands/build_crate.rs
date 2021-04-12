@@ -9,6 +9,9 @@ const RELEASE: &str = "release";
 const PACKAGE: &str = "package";
 const TARGET: &str = "target";
 
+// build-crate features list
+const FEATURES: &str = "features";
+
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(BUILD_CRATE)
         .arg(Arg::with_name(RELEASE).long("release"))
@@ -26,6 +29,15 @@ pub fn subcommand() -> App<'static, 'static> {
                 .required(true)
                 .help("The name of the package being built with cargo"),
         )
+        .arg(
+            Arg::with_name(FEATURES)
+                .long("features")
+                .value_name("features")
+                .takes_value(true)
+                .multiple(true)
+                .require_delimiter(true)
+                .help("Specifies which features of the crate to use"),
+        )
 }
 
 pub fn invoke(
@@ -33,6 +45,10 @@ pub fn invoke(
     matches: &ArgMatches,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let target = matches.value_of(TARGET).unwrap();
+    let features = matches
+        .values_of(FEATURES)
+        .map_or(Vec::new(), |c| c.collect())
+        .join("");
 
     let mut cargo = process::Command::new(&args.cargo_executable);
 
@@ -40,6 +56,8 @@ pub fn invoke(
         "build",
         "--target",
         target,
+        "--features",
+        &features,
         "--package",
         matches.value_of(PACKAGE).unwrap(),
         "--manifest-path",

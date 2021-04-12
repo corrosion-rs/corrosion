@@ -9,3 +9,7 @@ edition = "2018"
 
 [lib]
 crate-type=["staticlib"]
+
+[features]
+default = []
+myfeature = []
