@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.12)
+cmake_minimum_required(VERSION 3.12)
 project(Corrosion VERSION 0.0.1 LANGUAGES NONE)
 
 # Default behavior:
@@ -30,7 +30,7 @@ set(
   "Use prebuilt, non-bootstrapped corrosion-generator")
 mark_as_advanced(CORROSION_GENERATOR_EXECUTABLE)
 
-if (CORROSION_GENERATOR_EXECUTABLE) 
+if (CORROSION_GENERATOR_EXECUTABLE)
     add_executable(Corrosion::Generator IMPORTED GLOBAL)
     set_property(
         TARGET Corrosion::Generator

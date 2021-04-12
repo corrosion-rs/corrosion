@@ -82,7 +82,7 @@ function(_add_cargo_build)
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
     endif()
-    
+
     if (CMAKE_VS_PLATFORM_NAME)
         set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
     elseif(CMAKE_CONFIGURATION_TYPES)
@@ -202,7 +202,7 @@ function(_add_cargo_build)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
         ${set_corrosion_cargo_pool}
     )
-    
+
     if (NOT TARGET cargo-clean)
         add_custom_target(cargo-clean)
         add_dependencies(cargo-clean cargo-clean_${target_name})
@@ -251,7 +251,7 @@ function(corrosion_import_crate)
     if (_CORROSION_RUST_CARGO_TARGET)
         set(_CMAKE_CARGO_TARGET --target ${_CORROSION_RUST_CARGO_TARGET})
     endif()
-    
+
     if(CMAKE_CONFIGURATION_TYPES)
         string (REPLACE ";" "," _CONFIGURATION_TYPES
             "${CMAKE_CONFIGURATION_TYPES}")
@@ -348,7 +348,7 @@ function(corrosion_install)
     # types. For example, on Windows, a shared library will have both an ARCHIVE component and a
     # RUNTIME component.
     set(INSTALL_TARGET_TYPES ARCHIVE LIBRARY RUNTIME PRIVATE_HEADER PUBLIC_HEADER)
-    
+
     # Arguments to each install target type
     set(OPTIONS)
     set(ONE_VALUE_ARGS DESTINATION)
@@ -376,7 +376,7 @@ function(corrosion_install)
 
             list(APPEND INSTALL_TARGETS ${FRONT})
             list(REMOVE_AT ARGN 0)
-            
+
             # Update ARGN_LENGTH
             list(LENGTH ARGN ARGN_LENGTH)
         endwhile()
@@ -438,7 +438,7 @@ function(corrosion_install)
             if (COR_CONFIGURATIONS)
                 set(COR_INSTALL_${INSTALL_TARGET_TYPE}_CONFIGURATIONS ${COR_CONFIGURATIONS})
             endif()
-            
+
             # Update ARG_LENGTH
             list(LENGTH ARGN ARGN_LENGTH)
         endwhile()

@@ -59,7 +59,7 @@ else()
         endif()
 
         set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
-        
+
         # Get `rustup` next to the `rustc` proxy
         get_filename_component(_RUST_PROXIES_PATH ${_Rust_COMPILER_TEST} DIRECTORY)
         find_program(Rust_RUSTUP rustup HINTS ${_RUST_PROXIES_PATH} NO_DEFAULT_PATH)
@@ -113,7 +113,7 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     set(Rust_TOOLCHAIN ${_TOOLCHAIN_DEFAULT} CACHE STRING "The rustup toolchain to use")
 
     if (NOT Rust_TOOLCHAIN IN_LIST _DISCOVERED_TOOLCHAINS)
-        # If the precise toolchain wasn't found, try appending the default host 
+        # If the precise toolchain wasn't found, try appending the default host
         execute_process(
             COMMAND
                 ${Rust_RUSTUP} show
@@ -138,7 +138,7 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
 
             message(FATAL_ERROR "")
         endif()
-        
+
         set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}-${_DEFAULT_HOST}")
     else()
         set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}")
