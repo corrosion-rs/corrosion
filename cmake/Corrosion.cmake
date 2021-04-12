@@ -245,20 +245,20 @@ function(corrosion_import_crate)
     )
 
     if (CMAKE_VS_PLATFORM_NAME)
-        set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
+        set (_CORROSION_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
     endif()
 
     if (_CORROSION_RUST_CARGO_TARGET)
-        set(_CMAKE_CARGO_TARGET --target ${_CORROSION_RUST_CARGO_TARGET})
+        set(_CORROSION_TARGET --target ${_CORROSION_RUST_CARGO_TARGET})
     endif()
 
     if(CMAKE_CONFIGURATION_TYPES)
         string (REPLACE ";" "," _CONFIGURATION_TYPES
             "${CMAKE_CONFIGURATION_TYPES}")
-        set (_CMAKE_CARGO_CONFIGURATION_TYPES --configuration-types
+        set (_CORROSION_CONFIGURATION_TYPES --configuration-types
             ${_CONFIGURATION_TYPES})
     elseif(CMAKE_BUILD_TYPE)
-        set (_CMAKE_CARGO_CONFIGURATION_TYPES --configuration-type
+        set (_CORROSION_CONFIGURATION_TYPES --configuration-type
             ${CMAKE_BUILD_TYPE})
     else()
         # uses default build type
@@ -274,9 +274,9 @@ function(corrosion_import_crate)
             ${_CORROSION_GENERATOR}
                 --manifest-path ${COR_MANIFEST_PATH}
                 gen-cmake
-                    ${_CMAKE_CARGO_CONFIGURATION_ROOT}
-                    ${_CMAKE_CARGO_TARGET}
-                    ${_CMAKE_CARGO_CONFIGURATION_TYPES}
+                    ${_CORROSION_CONFIGURATION_ROOT}
+                    ${_CORROSION_TARGET}
+                    ${_CORROSION_CONFIGURATION_TYPES}
                     ${crates_args}
                     --cargo-version ${_CORROSION_CARGO_VERSION}
                     -o ${generated_cmake}
