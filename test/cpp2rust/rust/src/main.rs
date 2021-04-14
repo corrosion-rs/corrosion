@@ -1,6 +1,8 @@
 use std::os::raw::{c_char};
 
-extern "C" {fn cpp_function(name: *const c_char);}
+extern "C" {
+    fn cpp_function(name: *const c_char);
+}
 
 fn greeting(name: &str) {
     let name = std::ffi::CString::new(name).unwrap();
