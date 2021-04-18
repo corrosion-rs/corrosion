@@ -82,7 +82,7 @@ function(_add_cargo_build)
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
     endif()
-    
+
     if (CMAKE_VS_PLATFORM_NAME)
         set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
     elseif(CMAKE_CONFIGURATION_TYPES)
@@ -116,18 +116,18 @@ function(_add_cargo_build)
                 list(
                     APPEND
                     link_prefs
-                    CMAKECARGO_${language}_LINKER_PREFERENCE="${CMAKE_${language}_LINKER_PREFERENCE}")
+                    CORROSION_${language}_LINKER_PREFERENCE="${CMAKE_${language}_LINKER_PREFERENCE}")
 
                 list(
                     APPEND
                     compilers
-                    CMAKECARGO_${language}_COMPILER="${CMAKE_${language}_COMPILER}")
+                    CORROSION_${language}_COMPILER="${CMAKE_${language}_COMPILER}")
 
                 if (CMAKE_${language}_COMPILER_TARGET)
                     list(
                         APPEND
                         lang_targets
-                        CMAKECARGO_${language}_COMPILER_TARGET="${CMAKE_${language}_COMPILER_TARGET}")
+                        CORROSION_${language}_COMPILER_TARGET="${CMAKE_${language}_COMPILER_TARGET}")
                 endif()
             endif()
         endforeach()
@@ -176,13 +176,13 @@ function(_add_cargo_build)
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
-                CMAKECARGO_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
-                CMAKECARGO_LINK_LIBRARIES=${link_libs}
-                CMAKECARGO_LINK_DIRECTORIES=${search_dirs}
+                CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                CORROSION_LINK_LIBRARIES=${link_libs}
+                CORROSION_LINK_DIRECTORIES=${search_dirs}
                 ${link_prefs}
                 ${compilers}
                 ${lang_targets}
-                CMAKECARGO_LINKER_LANGUAGES="$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>"
+                CORROSION_LINKER_LANGUAGES="$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>"
             ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
                 build-crate
@@ -208,7 +208,7 @@ function(_add_cargo_build)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
         ${set_corrosion_cargo_pool}
     )
-    
+
     if (NOT TARGET cargo-clean)
         add_custom_target(cargo-clean)
         add_dependencies(cargo-clean cargo-clean_${target_name})
@@ -247,24 +247,24 @@ function(corrosion_import_crate)
 
     set(
         generated_cmake
-        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/cmake-cargo/${toml_dir_name}.dir/cargo-build.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/corrosion/${toml_dir_name}.dir/cargo-build.cmake"
     )
 
     if (CMAKE_VS_PLATFORM_NAME)
-        set (_CMAKE_CARGO_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
+        set (_CORROSION_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
     endif()
 
     if (_CORROSION_RUST_CARGO_TARGET)
-        set(_CMAKE_CARGO_TARGET --target ${_CORROSION_RUST_CARGO_TARGET})
+        set(_CORROSION_TARGET --target ${_CORROSION_RUST_CARGO_TARGET})
     endif()
-    
+
     if(CMAKE_CONFIGURATION_TYPES)
         string (REPLACE ";" "," _CONFIGURATION_TYPES
             "${CMAKE_CONFIGURATION_TYPES}")
-        set (_CMAKE_CARGO_CONFIGURATION_TYPES --configuration-types
+        set (_CORROSION_CONFIGURATION_TYPES --configuration-types
             ${_CONFIGURATION_TYPES})
     elseif(CMAKE_BUILD_TYPE)
-        set (_CMAKE_CARGO_CONFIGURATION_TYPES --configuration-type
+        set (_CORROSION_CONFIGURATION_TYPES --configuration-type
             ${CMAKE_BUILD_TYPE})
     else()
         # uses default build type
@@ -280,9 +280,9 @@ function(corrosion_import_crate)
             ${_CORROSION_GENERATOR}
                 --manifest-path ${COR_MANIFEST_PATH}
                 gen-cmake
-                    ${_CMAKE_CARGO_CONFIGURATION_ROOT}
-                    ${_CMAKE_CARGO_TARGET}
-                    ${_CMAKE_CARGO_CONFIGURATION_TYPES}
+                    ${_CORROSION_CONFIGURATION_ROOT}
+                    ${_CORROSION_TARGET}
+                    ${_CORROSION_CONFIGURATION_TYPES}
                     ${crates_args}
                     --cargo-version ${_CORROSION_CARGO_VERSION}
                     -o ${generated_cmake}
@@ -354,7 +354,7 @@ function(corrosion_install)
     # types. For example, on Windows, a shared library will have both an ARCHIVE component and a
     # RUNTIME component.
     set(INSTALL_TARGET_TYPES ARCHIVE LIBRARY RUNTIME PRIVATE_HEADER PUBLIC_HEADER)
-    
+
     # Arguments to each install target type
     set(OPTIONS)
     set(ONE_VALUE_ARGS DESTINATION)
@@ -382,7 +382,7 @@ function(corrosion_install)
 
             list(APPEND INSTALL_TARGETS ${FRONT})
             list(REMOVE_AT ARGN 0)
-            
+
             # Update ARGN_LENGTH
             list(LENGTH ARGN ARGN_LENGTH)
         endwhile()
@@ -444,7 +444,7 @@ function(corrosion_install)
             if (COR_CONFIGURATIONS)
                 set(COR_INSTALL_${INSTALL_TARGET_TYPE}_CONFIGURATIONS ${COR_CONFIGURATIONS})
             endif()
-            
+
             # Update ARG_LENGTH
             list(LENGTH ARGN ARGN_LENGTH)
         endwhile()

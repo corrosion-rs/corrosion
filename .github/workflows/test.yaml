@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: 
+        os:
           - windows-latest
           - ubuntu-latest
           - macos-latest
@@ -52,7 +52,7 @@ jobs:
           - os: windows-latest
             abi: gnu
             generator: default # Default generator is Visual Studio
-            
+
           # ARCH
           - os: windows-latest
             arch: i686
@@ -86,7 +86,7 @@ jobs:
             abi: msvc
           - os: macos-latest
             abi: gnu
-            
+
           # Rust
           # Build each set only with the earliest compatible versioned Rust
           - os: macos-latest
@@ -227,7 +227,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: 
+        os:
           - windows-latest
           - ubuntu-latest
           - macos-latest
@@ -279,4 +279,4 @@ jobs:
             -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
       - name: Build Tests
         run: cmake --build build-tests
-      
+

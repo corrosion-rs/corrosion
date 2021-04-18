@@ -23,6 +23,6 @@ execute_process(
     RESULT_VARIABLE SUCCESS
 )
 
-if (NOT SUCCESS EQUAL "0")  
+if (NOT SUCCESS EQUAL "0")
     message(FATAL_ERROR)
 endif()

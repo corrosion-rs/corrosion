@@ -1,5 +1,5 @@
 # Corrosion
-[![Build Status](https://github.com/AndrewGaspar/cmake-cargo/workflows/.github/workflows/test.yaml/badge.svg)](https://github.com/AndrewGaspar/cmake-cargo/actions?query=branch%3Amaster)
+[![Build Status](https://github.com/AndrewGaspar/corrosion/workflows/.github/workflows/test.yaml/badge.svg)](https://github.com/AndrewGaspar/corrosion/actions?query=branch%3Amaster)
 
 Corrosion, formerly known as cmake-cargo, is a tool for integrating Rust into an existing CMake
 project. Corrosion is capable of importing executables, static libraries, and dynamic libraries
