@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 cargo_metadata = "0.13"
 semver = "0.11"
-platforms = "1.0"
+platforms = "1.1"
 
 [dependencies.clap]
 version = "2.33"
