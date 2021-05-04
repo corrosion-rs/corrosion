@@ -17,6 +17,7 @@ endif()
 add_subdirectory(cpp2rust)
 add_subdirectory(rust2cpp)
 add_subdirectory(workspace)
+add_subdirectory(envvar)
 
 # Config tests don't work if this is the top level directory.
 if (NOT _TOP_LEVEL)

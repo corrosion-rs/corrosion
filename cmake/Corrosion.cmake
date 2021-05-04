@@ -163,6 +163,7 @@ function(_add_cargo_build)
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
+                $<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>
                 CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
                 CORROSION_LINK_LIBRARIES=${link_libs}
                 CORROSION_LINK_DIRECTORIES=${search_dirs}
@@ -184,6 +185,7 @@ function(_add_cargo_build)
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
         USES_TERMINAL
+        COMMAND_EXPAND_LISTS
     )
 
     add_custom_target(
