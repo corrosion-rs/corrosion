@@ -150,6 +150,7 @@ If you want to set environment variables during the invocation of `cargo build`,
 `CORROSION_ENVIRONMENT_VARIABLES` property to `KEY=VALUE` pairs on the targets created by `corrosion_import_crate`.
 The pairs can also be generator expressions, as they will be evaluated using $<GENEX_EVAL>.
 For example this may be useful if the build scripts of crates look for environment variables.
+This feature requires CMake >= 3.19.0.
 
 ### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how
