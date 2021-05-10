@@ -93,14 +93,19 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     string(REPLACE "\n" ";" _TOOLCHAINS_RAW "${_TOOLCHAINS_RAW}")
 
     foreach(_TOOLCHAIN_RAW ${_TOOLCHAINS_RAW})
-        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)([ \t\r\n]+\\(default\\))?[ \t\r\n]+(.+)")
+        if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t\r\n]?(\\(default\\) \\(override\\)|\\(default\\)|\\(override\\))?[ \t\r\n]+(.+)")
             set(_TOOLCHAIN "${CMAKE_MATCH_1}")
+            set(_TOOLCHAIN_TYPE ${CMAKE_MATCH_2})
             list(APPEND _DISCOVERED_TOOLCHAINS ${_TOOLCHAIN})
 
             set(${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
 
-            if (CMAKE_MATCH_2)
+            if (_TOOLCHAIN_TYPE MATCHES ".*\\(default\\).*")
                 set(_TOOLCHAIN_DEFAULT ${_TOOLCHAIN})
+            endif()
+
+            if (_TOOLCHAIN_TYPE MATCHES ".*\\(override\\).*")
+                set(_TOOLCHAIN_OVERRIDE ${_TOOLCHAIN})
             endif()
         else()
             message(WARNING "Didn't reconize toolchain: ${_TOOLCHAIN_RAW}")
@@ -108,9 +113,14 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     endforeach()
 
     if (NOT DEFINED Rust_TOOLCHAIN)
-        message(STATUS "Rust Toolchain: ${_TOOLCHAIN_DEFAULT}")
+        if (NOT DEFINED _TOOLCHAIN_OVERRIDE)
+            set(_TOOLCHAIN_SELECTED ${_TOOLCHAIN_DEFAULT})
+        else()
+            set(_TOOLCHAIN_SELECTED ${_TOOLCHAIN_OVERRIDE})
+        endif()
     endif()
-    set(Rust_TOOLCHAIN ${_TOOLCHAIN_DEFAULT} CACHE STRING "The rustup toolchain to use")
+    set(Rust_TOOLCHAIN ${_TOOLCHAIN_SELECTED} CACHE STRING "The rustup toolchain to use")
+    message(STATUS "Rust Toolchain: ${Rust_TOOLCHAIN}")
 
     if (NOT Rust_TOOLCHAIN IN_LIST _DISCOVERED_TOOLCHAINS)
         # If the precise toolchain wasn't found, try appending the default host
@@ -145,6 +155,8 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     endif()
 
     set(_RUST_TOOLCHAIN_PATH "${${_RUSTUP_TOOLCHAIN_FULL}_PATH}")
+    message(VERBOSE "Rust toolchain ${_RUSTUP_TOOLCHAIN_FULL}")
+    message(VERBOSE "Rust toolchain path ${_RUST_TOOLCHAIN_PATH}")
 
     # Is overrided if the user specifies `Rust_COMPILER` explicitly.
     find_program(
