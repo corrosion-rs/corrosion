@@ -146,6 +146,12 @@ from `rustup`, or from a toolchain available in the user's `PATH`.
 Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
 the default target triple reported by `${Rust_COMPILER} --version --verbose`.
 
+If you want to set environment variables during the invocation of `cargo build`, you can set the
+`CORROSION_ENVIRONMENT_VARIABLES` property to `KEY=VALUE` pairs on the targets created by `corrosion_import_crate`.
+The pairs can also be generator expressions, as they will be evaluated using $<GENEX_EVAL>.
+For example this may be useful if the build scripts of crates look for environment variables.
+This feature requires CMake >= 3.19.0.
+
 ### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how
 Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.

@@ -154,6 +154,10 @@ function(_add_cargo_build)
         endif()
     endforeach()
 
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
+        set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
+    endif()
+
     add_custom_target(
         cargo-build_${target_name}
         ALL
@@ -163,6 +167,7 @@ function(_add_cargo_build)
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
+                ${build_env_variable_genex}
                 CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
                 CORROSION_LINK_LIBRARIES=${link_libs}
                 CORROSION_LINK_DIRECTORIES=${search_dirs}
@@ -184,6 +189,7 @@ function(_add_cargo_build)
         # dependencies are shared
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
         USES_TERMINAL
+        COMMAND_EXPAND_LISTS
     )
 
     add_custom_target(

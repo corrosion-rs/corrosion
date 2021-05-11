@@ -17,6 +17,9 @@ endif()
 add_subdirectory(cpp2rust)
 add_subdirectory(rust2cpp)
 add_subdirectory(workspace)
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
+    add_subdirectory(envvar)
+endif()
 
 # Config tests don't work if this is the top level directory.
 if (NOT _TOP_LEVEL)
