@@ -291,3 +291,13 @@ prefer over any CMake you've installed locally. CMake 3.10 is insufficient for u
 which requires a minimum of CMake 3.12. If you're using Android Studio to build your project,
 follow the instructions in the Android Studio documentation for
 [using a specific version of CMake](https://developer.android.com/studio/projects/install-ndk#vanilla_cmake).
+
+#### Host Builds
+
+By default, Corrosion will cross-compile the imported crates to the specified
+target triple. If some of your crates are for example build tools, then you may
+want those not to be cross-compiled but rather built as a host binary. This can
+be done by setting the `CORROSION_USE_HOST_BUILD` boolean property to true on
+the imported cmake target.
+
+Note that this requires the use of CMake 3.19 or newer.
