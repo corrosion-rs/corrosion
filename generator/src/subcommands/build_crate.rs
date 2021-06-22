@@ -105,6 +105,12 @@ pub fn invoke(
             }
         }
 
+        let extra_link_args = env::var("CORROSION_LINK_ARGS").unwrap_or("".to_string());
+        if !extra_link_args.is_empty() {
+            rustflags += " -C link-args=";
+            rustflags += &extra_link_args;
+        }
+
         cargo.env("RUSTFLAGS", rustflags);
     }
 

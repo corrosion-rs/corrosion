@@ -172,6 +172,12 @@ function(_add_cargo_build)
 
     set(linker_languages "${linker_languages}$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>")
 
+    # If a CMake sysroot is specified, forward it to the linker rustc invokes, too. CMAKE_SYSROOT is documented
+    # to be passed via --sysroot, so we assume that when it's set, the linker supports this option in that style.
+    if(CMAKE_CROSSCOMPILING AND CMAKE_SYSROOT)
+        set(corrosion_link_args "CORROSION_LINK_ARGS=\"--sysroot=${CMAKE_SYSROOT}\"")
+    endif()
+
     add_custom_target(
         cargo-build_${target_name}
         ALL
@@ -185,6 +191,7 @@ function(_add_cargo_build)
                 CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
                 CORROSION_LINK_LIBRARIES=${link_libs}
                 CORROSION_LINK_DIRECTORIES=${search_dirs}
+                ${corrosion_link_args}
                 ${link_prefs}
                 ${compilers}
                 ${lang_targets}
