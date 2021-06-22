@@ -104,13 +104,14 @@ function(_add_cargo_build)
             endif()
         endforeach()
 
-        if (NOT has_compiler)
+        # When cross-compiling a Rust crate, at the very least we need a C linker
+        if (NOT has_compiler OR CMAKE_CROSSCOMPILING)
             message(STATUS "Enabling the C compiler for linking Rust programs")
             enable_language(C)
         endif()
 
         foreach(language ${languages})
-            if(CMAKE_${language}_COMPILER AND CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES)
+            if(CMAKE_${language}_COMPILER AND (CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES OR CMAKE_CROSSCOMPILING))
                 list(
                     APPEND
                     link_prefs
@@ -158,6 +159,19 @@ function(_add_cargo_build)
         set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
     endif()
 
+    set(target_linker_language "$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>")
+
+    # When cross-compiling, fall back to specifying at least the cross-compiling C linker, unless
+    # an override is set.
+    if(CMAKE_CROSSCOMPILING)
+        set(has_target_linker_language "$<BOOL:${target_linker_language}>")
+        set(linker_languages "$<IF:${has_target_linker_language},${target_linker_language},C>")
+    else()
+        set(linker_languages "${target_linker_language}")
+    endif()
+
+    set(linker_languages "${linker_languages}$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>")
+
     add_custom_target(
         cargo-build_${target_name}
         ALL
@@ -174,7 +188,7 @@ function(_add_cargo_build)
                 ${link_prefs}
                 ${compilers}
                 ${lang_targets}
-                CORROSION_LINKER_LANGUAGES="$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>"
+                CORROSION_LINKER_LANGUAGES="${linker_languages}"
             ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
                 build-crate
