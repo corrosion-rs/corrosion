@@ -145,20 +145,6 @@ function(_add_cargo_build)
         set(build_type_dir $<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>)
     endif()
 
-    set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${_CORROSION_RUST_CARGO_TARGET}/${build_type_dir}")
-    foreach(byproduct_file ${ACB_BYPRODUCTS})
-        list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
-        if (NOT CMAKE_CONFIGURATION_TYPES)
-            # BYPRODUCTS can't use generator expressions, so it's broken on multi-config generators
-            # This is only an issue for Ninja Multi-Config
-            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
-        endif()
-    endforeach()
-
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
-        set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
-    endif()
-
     set(target_linker_language "$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>")
 
     # When cross-compiling, fall back to specifying at least the cross-compiling C linker, unless
@@ -177,6 +163,35 @@ function(_add_cargo_build)
     if(CMAKE_CROSSCOMPILING AND CMAKE_SYSROOT)
         set(corrosion_link_args "CORROSION_LINK_ARGS=\"--sysroot=${CMAKE_SYSROOT}\"")
     endif()
+
+    set(cargo_target_option "--target=${_CORROSION_RUST_CARGO_TARGET}")
+
+    set(target_artifact_dir "${_CORROSION_RUST_CARGO_TARGET}")
+
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
+        set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
+
+        set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>>>")
+
+        set(linker_languages "$<${if_not_host_build_condition}:${linker_languages}>")
+        set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
+        set(cargo_target_option "$<${if_not_host_build_condition}:${cargo_target_option}>")
+
+        file(GENERATE OUTPUT "debug-${target_name}.txt" CONTENT "$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>")
+
+        set(target_artifact_dir "$<${if_not_host_build_condition}:${target_artifact_dir}>")
+    endif()
+
+    set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${target_artifact_dir}/${build_type_dir}")
+    foreach(byproduct_file ${ACB_BYPRODUCTS})
+        list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
+        if (NOT CMAKE_CONFIGURATION_TYPES)
+            # BYPRODUCTS can't use generator expressions, so it's broken on multi-config generators
+            # This is only an issue for Ninja Multi-Config
+            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
+        endif()
+    endforeach()
+
 
     add_custom_target(
         cargo-build_${target_name}
@@ -200,7 +215,7 @@ function(_add_cargo_build)
                 --manifest-path "${path_to_toml}"
                 build-crate
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
-                    --target ${_CORROSION_RUST_CARGO_TARGET}
+                    ${cargo_target_option}
                     --package ${package_name}
         # Copy crate artifacts to the binary dir
         COMMAND
