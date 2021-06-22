@@ -121,14 +121,19 @@ jobs:
         run: |
           if [ "${{ matrix.abi }}" == "gnu" ]; then
             if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-              echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++"
+              echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=${{matrix.arch}}-linux-gnu-gcc"
+              echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++"
+              echo "::set-output name=system_name::-DCMAKE_SYSTEM_NAME=Linux"
             else
-              echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=g++"
+              echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=gcc"
+              echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=g++"
             fi
           elif [ "${{ matrix.abi }}" == "darwin" ]; then
-            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=clang++"
+            echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=clang"
+            echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=clang++"
           elif [ "${{ matrix.abi }}" == "msvc" ]; then
-            echo "::set-output name=compiler::-DCMAKE_CXX_COMPILER=cl"
+            echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=cl"
+            echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=cl"
           fi
       - name: Pick Generator
         id: pick_generator
@@ -200,7 +205,9 @@ jobs:
             -Bbuild \
             -DCORROSION_VERBOSE_OUTPUT=ON \
             ${{ steps.arch_flags.outputs.cmake }} \
-            ${{ steps.pick_compiler.outputs.compiler }} \
+            ${{ steps.pick_compiler.outputs.c_compiler }} \
+            ${{ steps.pick_compiler.outputs.cxx_compiler }} \
+            ${{ steps.pick_compiler.outputs.system_name }} \
             ${{ steps.pick_generator.outputs.generator }} \
             -DRust_TOOLCHAIN=${{matrix.rust}}
       - name: Run Config Tests (x86_64 Only)
@@ -221,6 +228,12 @@ jobs:
           cmake \
             --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target cargo-build_rust-exe
+      - name: Build Rust cdylib and link against C++
+        run: |
+          cmake \
+            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
+            --target my_program
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' }}
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
