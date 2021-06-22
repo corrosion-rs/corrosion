@@ -33,6 +33,7 @@ jobs:
         cmake:
           - 3.12.4
           - 3.18.0
+          - 3.19.0
         rust:
           - 1.44.1 # Earliest targeted version
           - 1.45.0 # Earliest version compatible with Windows GNU
