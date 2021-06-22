@@ -235,6 +235,16 @@ jobs:
             --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target my_program
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' }}
+      - name: Build host program in cross-compile setup
+        run: |
+          cmake \
+            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
+            --target cargo-build_rust-host-program
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' && matrix.cmake == '3.19.0' }}
+      - name: Run host program in cross-compile setup
+        run: |
+          ./build/test/hostbuild/rust-host-program
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' && matrix.cmake == '3.19.0' }}
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
