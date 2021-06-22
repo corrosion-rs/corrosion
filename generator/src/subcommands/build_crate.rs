@@ -64,7 +64,8 @@ pub fn invoke(
 
     let languages: Vec<String> = env::var("CORROSION_LINKER_LANGUAGES")
         .unwrap_or("".to_string())
-        .split(";")
+        .trim()
+        .split(" ")
         .map(Into::into)
         .collect();
 

@@ -156,7 +156,9 @@ function(_add_cargo_build)
         set(linker_languages "${target_linker_language}")
     endif()
 
-    set(linker_languages "${linker_languages}$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>")
+    # The linker languages are constructed as a list with two items: the target linker language and
+    # the dep linker languages list expanded, to prevent a double-expansion.
+    set(linker_languages "$<$<BOOL:${linker_languages}>:${linker_languages}$<SEMICOLON>>$<JOIN:$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>, >")
 
     # If a CMake sysroot is specified, forward it to the linker rustc invokes, too. CMAKE_SYSROOT is documented
     # to be passed via --sysroot, so we assume that when it's set, the linker supports this option in that style.
