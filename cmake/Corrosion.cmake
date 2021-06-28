@@ -179,9 +179,6 @@ function(_add_cargo_build)
         set(linker_languages "$<${if_not_host_build_condition}:${linker_languages}>")
         set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
         set(cargo_target_option "$<IF:${if_not_host_build_condition},${cargo_target_option},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
-
-        file(GENERATE OUTPUT "debug-${target_name}.txt" CONTENT "$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>")
-
         set(target_artifact_dir "$<IF:${if_not_host_build_condition},${target_artifact_dir},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
     endif()
 
