@@ -60,6 +60,7 @@ set(
 
 set(_CORROSION_CARGO_VERSION ${Rust_CARGO_VERSION} CACHE INTERNAL "cargo version used by corrosion")
 set(_CORROSION_RUST_CARGO_TARGET ${Rust_CARGO_TARGET} CACHE INTERNAL "target triple used by corrosion")
+set(_CORROSION_RUST_CARGO_HOST_TARGET ${Rust_CARGO_HOST_TARGET} CACHE INTERNAL "host triple used by corrosion")
 
 function(_add_cargo_build)
     set(options "")
@@ -177,11 +178,11 @@ function(_add_cargo_build)
 
         set(linker_languages "$<${if_not_host_build_condition}:${linker_languages}>")
         set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
-        set(cargo_target_option "$<${if_not_host_build_condition}:${cargo_target_option}>")
+        set(cargo_target_option "$<IF:${if_not_host_build_condition},${cargo_target_option},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
 
         file(GENERATE OUTPUT "debug-${target_name}.txt" CONTENT "$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>")
 
-        set(target_artifact_dir "$<${if_not_host_build_condition}:${target_artifact_dir}>")
+        set(target_artifact_dir "$<IF:${if_not_host_build_condition},${target_artifact_dir},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
     endif()
 
     set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${target_artifact_dir}/${build_type_dir}")
