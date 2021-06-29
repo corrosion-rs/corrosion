@@ -72,7 +72,7 @@ endif()
 # best source for a Rust toolchain was determined to be_.
 
 # List of user variables that will override any toolchain-provided setting
-set(_Rust_USER_VARS Rust_COMPILER Rust_CARGO Rust_CARGO_TARGET)
+set(_Rust_USER_VARS Rust_COMPILER Rust_CARGO Rust_CARGO_TARGET Rust_CARGO_HOST_TARGET)
 foreach(_VAR ${_Rust_USER_VARS})
     if (DEFINED ${_VAR})
         set(${_VAR}_CACHED ${${_VAR}} CACHE INTERNAL "Internal cache of ${_VAR}")
@@ -221,6 +221,7 @@ endif()
 
 if (_RUSTC_VERSION_RAW MATCHES "host: ([a-zA-Z0-9_\\-]*)\n")
     set(Rust_DEFAULT_HOST_TARGET "${CMAKE_MATCH_1}")
+    set(Rust_CARGO_HOST_TARGET_CACHED "${Rust_DEFAULT_HOST_TARGET}" CACHE STRING "Host triple")
 else()
     message(
         FATAL_ERROR
@@ -298,7 +299,7 @@ endforeach()
 
 find_package_handle_standard_args(
     Rust
-    REQUIRED_VARS Rust_COMPILER Rust_VERSION Rust_CARGO Rust_CARGO_VERSION Rust_CARGO_TARGET
+    REQUIRED_VARS Rust_COMPILER Rust_VERSION Rust_CARGO Rust_CARGO_VERSION Rust_CARGO_TARGET Rust_CARGO_HOST_TARGET
     VERSION_VAR Rust_VERSION)
 
 function(_gen_config config_type use_config_dir)

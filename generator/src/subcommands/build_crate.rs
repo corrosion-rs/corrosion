@@ -16,7 +16,7 @@ pub fn subcommand() -> App<'static, 'static> {
             Arg::with_name(TARGET)
                 .long("target")
                 .value_name("TRIPLE")
-                .required(false)
+                .required(true)
                 .help("The target triple to build for"),
         )
         .arg(
@@ -32,23 +32,15 @@ pub fn invoke(
     args: &crate::GeneratorSharedArgs,
     matches: &ArgMatches,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let target = matches.value_of(TARGET);
+    let target = matches.value_of(TARGET).unwrap();
 
     let mut cargo = process::Command::new(&args.cargo_executable);
 
     cargo.args(&[
-        "build"
-    ]);
-
-    if let Some(target) = target {
-        cargo.args(&[
+        "build",
         "--target",
-        target
-    ]);
-    }
-
-    cargo.args(&[
-            "--package",
+        target,
+        "--package",
         matches.value_of(PACKAGE).unwrap(),
         "--manifest-path",
         args.manifest_path.to_str().unwrap(),
@@ -68,8 +60,6 @@ pub fn invoke(
         .split(" ")
         .map(Into::into)
         .collect();
-
-    let target = target.unwrap_or_default();
 
     if !languages.is_empty() {
         let mut rustflags = "-C default-linker-libraries=yes".to_owned();
