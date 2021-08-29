@@ -1,0 +1,14 @@
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15")
+    set(CE COMMAND_ECHO STDOUT)
+endif()
+
+execute_process(
+    COMMAND
+        ${CMAKE_COMMAND} ${CMAKE_CURRENT_LIST_DIR}
+    ${CE}
+    RESULT_VARIABLE SUCCESS
+)
+
+if (NOT SUCCESS EQUAL 0)
+    message(FATAL_ERROR)
+endif()
