@@ -340,14 +340,16 @@ else()
     _gen_config(Debug OFF)
 endif()
 
-add_executable(Rust::Rustc IMPORTED GLOBAL)
-set_property(
-    TARGET Rust::Rustc
-    PROPERTY IMPORTED_LOCATION ${Rust_COMPILER_CACHED}
-)
+if(NOT TARGET Rust::Rustc)
+    add_executable(Rust::Rustc IMPORTED GLOBAL)
+    set_property(
+        TARGET Rust::Rustc
+        PROPERTY IMPORTED_LOCATION ${Rust_COMPILER_CACHED}
+    )
 
-add_executable(Rust::Cargo IMPORTED GLOBAL)
-set_property(
-    TARGET Rust::Cargo
-    PROPERTY IMPORTED_LOCATION ${Rust_CARGO_CACHED}
-)
+    add_executable(Rust::Cargo IMPORTED GLOBAL)
+    set_property(
+        TARGET Rust::Cargo
+        PROPERTY IMPORTED_LOCATION ${Rust_CARGO_CACHED}
+    )
+endif()
