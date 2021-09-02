@@ -152,6 +152,10 @@ The pairs can also be generator expressions, as they will be evaluated using $<G
 For example this may be useful if the build scripts of crates look for environment variables.
 This feature requires CMake >= 3.19.0.
 
+Cargo crates sometimes offer features, which traditionally can be specified with `cargo build` on the
+command line as opt-in. You can select the features to use for a crate imported with Corrosion by
+setting the `CORROSION_FEATURES` target list property on the targets created by `corrosion_import_crate`.
+
 ### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how
 Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.
