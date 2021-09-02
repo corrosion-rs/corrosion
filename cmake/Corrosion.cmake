@@ -176,7 +176,7 @@ function(_add_cargo_build)
         
         set(features_target_property "$<TARGET_PROPERTY:${target_name},CORROSION_FEATURES>")
         set(features_property_condition "$<BOOL:${features_target_property}>")
-        set(features_genex "$<IF:$<BOOL:${features_target_property}>,--features=${features_target_property},>")
+        set(features_genex "$<IF:$<BOOL:${features_target_property}>,--features=$<JOIN:${features_target_property},$<COMMA>>,>")
 
         set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>>>")
 

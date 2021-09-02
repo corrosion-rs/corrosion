@@ -7,3 +7,8 @@ set_property(
     APPEND
     PROPERTY CORROSION_FEATURES myfeature
 )
+set_property(
+    TARGET rust-feature-lib
+    APPEND
+    PROPERTY CORROSION_FEATURES secondfeature
+)

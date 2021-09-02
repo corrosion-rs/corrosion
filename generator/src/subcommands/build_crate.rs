@@ -48,7 +48,7 @@ pub fn invoke(
     let features = matches
         .values_of(FEATURES)
         .map_or(Vec::new(), |c| c.collect())
-        .join("");
+        .join(" ");
 
     let mut cargo = process::Command::new(&args.cargo_executable);
 
