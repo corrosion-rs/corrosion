@@ -166,6 +166,12 @@ That's equivalent to calling `cargo build --features chocolate vanilla`.
 It is also possible to specify the features as a target list property on the CMake targest created
 by `corrosion_import_crate`. The property is called `CORROSION_FEATURES`.
 
+Finally, regarding features, cargo offers the ability to turn off default features or enable all
+features, with the `--all-features` and `--no-default-features` options. Corrosion offers corresponding
+parameters for `corrosion_import_crate` called `ALL_FEATURES` and `NO_DEFAULT_FEATURES`. The corresponding
+boolean target properties - which override any specified values with `corrosion_import_crate` are called
+`CORROSION_ALL_FEATURES` and `CORROSION_NO_DEFAULT_FEATURES`.
+
 ### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how
 Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.

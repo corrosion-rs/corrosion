@@ -11,7 +11,8 @@ edition = "2018"
 crate-type=["staticlib"]
 
 [features]
-default = []
+default = ["compile-breakage"]
 myfeature = []
 secondfeature = []
 thirdfeature = []
+compile-breakage = []

@@ -11,6 +11,8 @@ const TARGET: &str = "target";
 
 // build-crate features list
 const FEATURES: &str = "features";
+const ALL_FEATURES: &str = "all-features";
+const NO_DEFAULT_FEATURES: &str = "no-default-features";
 
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(BUILD_CRATE)
@@ -37,6 +39,16 @@ pub fn subcommand() -> App<'static, 'static> {
                 .multiple(true)
                 .require_delimiter(true)
                 .help("Specifies which features of the crate to use"),
+        )
+        .arg(
+            Arg::with_name(ALL_FEATURES)
+            .long(ALL_FEATURES)
+                .help("Specifies that all features of the crate are to be activated"),
+        )
+        .arg(
+            Arg::with_name(NO_DEFAULT_FEATURES)
+            .long(NO_DEFAULT_FEATURES)
+                .help("Specifies that the default features of the crate are to be disabled"),
         )
 }
 
@@ -66,6 +78,14 @@ pub fn invoke(
 
     if args.verbose {
         cargo.arg("--verbose");
+    }
+
+    if matches.is_present(ALL_FEATURES) {
+        cargo.arg("--all-features");
+    }
+
+    if matches.is_present(NO_DEFAULT_FEATURES) {
+        cargo.arg("--no-default-features");
     }
 
     if matches.is_present(RELEASE) {
