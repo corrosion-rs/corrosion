@@ -153,8 +153,18 @@ For example this may be useful if the build scripts of crates look for environme
 This feature requires CMake >= 3.19.0.
 
 Cargo crates sometimes offer features, which traditionally can be specified with `cargo build` on the
-command line as opt-in. You can select the features to use for a crate imported with Corrosion by
-setting the `CORROSION_FEATURES` target list property on the targets created by `corrosion_import_crate`.
+command line as opt-in. You can select the features to enable with the `FEATURES` argument when
+calling `corrosion_import_crate`. The following example enables the "chocolate" and "vanilla"
+features of the imported Cargo.toml that hypothetically provides ice cream:
+
+```cmake
+corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml FEATURES chocolate vanilla)
+```
+
+That's equivalent to calling `cargo build --features chocolate vanilla`.
+
+It is also possible to specify the features as a target list property on the CMake targest created
+by `corrosion_import_crate`. The property is called `CORROSION_FEATURES`.
 
 ### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how
