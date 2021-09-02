@@ -173,6 +173,10 @@ function(_add_cargo_build)
 
     if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
         set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
+        
+        set(features_target_property "$<TARGET_PROPERTY:${target_name},CORROSION_FEATURES>")
+        set(features_property_condition "$<BOOL:${features_target_property}>")
+        set(features_genex "$<IF:$<BOOL:${features_target_property}>,--features=${features_target_property},>")
 
         set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>>>")
 
@@ -190,12 +194,6 @@ function(_add_cargo_build)
             # This is only an issue for Ninja Multi-Config
             list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
         endif()
-    endforeach()
-
-
-    set(features_args)
-    foreach(feature ${COR_FEATURES})
-        list(APPEND features_args --features ${feature})
     endforeach()
 
     add_custom_target(
@@ -220,7 +218,7 @@ function(_add_cargo_build)
                 --manifest-path "${path_to_toml}"
                 build-crate
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
-                    ${features_args}
+                    ${features_genex}
                     ${cargo_target_option}
                     --package ${package_name}
         # Copy crate artifacts to the binary dir
@@ -252,7 +250,7 @@ endfunction(_add_cargo_build)
 function(corrosion_import_crate)
     set(OPTIONS)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH)
-    set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
+    set(MULTI_VALUE_KEYWORDS CRATES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)
