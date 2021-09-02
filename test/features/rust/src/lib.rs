@@ -14,3 +14,10 @@ pub extern "C" fn rust_second_function(name: *const c_char) {
     let name = unsafe { std::ffi::CStr::from_ptr(name).to_str().unwrap() };
     println!("Hello, {}! I'm Rust again!", name);
 }
+
+#[no_mangle]
+#[cfg(feature = "thirdfeature")]
+pub extern "C" fn rust_third_function(name: *const c_char) {
+    let name = unsafe { std::ffi::CStr::from_ptr(name).to_str().unwrap() };
+    println!("Hello, {}! I'm Rust again, third time the charm!", name);
+}

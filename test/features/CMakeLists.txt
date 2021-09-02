@@ -1,4 +1,4 @@
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
+corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml FEATURES thirdfeature)
 
 add_executable(features-cpp-exe main.cpp)
 target_link_libraries(features-cpp-exe PUBLIC rust-feature-lib)
