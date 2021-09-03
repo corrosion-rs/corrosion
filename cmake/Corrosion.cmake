@@ -186,9 +186,14 @@ function(_add_cargo_build)
 
         # target property overrides corrosion_import_crate argument
         set(all_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ALL_FEATURES>>")
-        set(all_features_arg "$<IF:$<BOOL:${all_features_target_property}>,${all_features_target_property},${all_features_arg}>")
+        set(all_features_property_exists_condition "$<NOT:$<STREQUAL:${all_features_target_property},>>")
+        set(all_features_property_arg "$<IF:$<BOOL:${all_features_target_property}>,--all-features,>")
+        set(all_features_arg "$<IF:${all_features_property_exists_condition},${all_features_property_arg},${all_features_arg}>")
+
         set(no_default_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_NO_DEFAULT_FEATURES>>")
-        set(no_default_features_arg "$<IF:$<BOOL:${no_default_features_target_property}>,${no_default_features_target_property},${no_default_features_arg}>")
+        set(no_default_features_property_exists_condition "$<NOT:$<STREQUAL:${no_default_features_target_property},>>")
+        set(no_default_features_property_arg "$<IF:$<BOOL:${no_default_features_target_property}>,--no-default-features,>")
+        set(no_default_features_arg "$<IF:${no_default_features_property_exists_condition},${no_default_features_property_arg},${no_default_features_arg}>")
 
         set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>>>")
 
