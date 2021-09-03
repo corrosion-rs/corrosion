@@ -171,8 +171,29 @@ function(_add_cargo_build)
 
     set(target_artifact_dir "${_CORROSION_RUST_CARGO_TARGET}")
 
+    if(COR_ALL_FEATURES)
+        set(all_features_arg --all-features)
+    endif()
+    if(COR_NO_DEFAULT_FEATURES)
+        set(no_default_features_arg --no-default-features)
+    endif()
+
     if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
         set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
+        
+        set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_FEATURES>>")
+        set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
+
+        # target property overrides corrosion_import_crate argument
+        set(all_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ALL_FEATURES>>")
+        set(all_features_property_exists_condition "$<NOT:$<STREQUAL:${all_features_target_property},>>")
+        set(all_features_property_arg "$<IF:$<BOOL:${all_features_target_property}>,--all-features,>")
+        set(all_features_arg "$<IF:${all_features_property_exists_condition},${all_features_property_arg},${all_features_arg}>")
+
+        set(no_default_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_NO_DEFAULT_FEATURES>>")
+        set(no_default_features_property_exists_condition "$<NOT:$<STREQUAL:${no_default_features_target_property},>>")
+        set(no_default_features_property_arg "$<IF:$<BOOL:${no_default_features_target_property}>,--no-default-features,>")
+        set(no_default_features_arg "$<IF:${no_default_features_property_exists_condition},${no_default_features_property_arg},${no_default_features_arg}>")
 
         set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>>>")
 
@@ -192,6 +213,10 @@ function(_add_cargo_build)
         endif()
     endforeach()
 
+    set(features_args)
+    foreach(feature ${COR_FEATURES})
+        list(APPEND features_args --features ${feature})
+    endforeach()
 
     add_custom_target(
         cargo-build_${target_name}
@@ -215,6 +240,10 @@ function(_add_cargo_build)
                 --manifest-path "${path_to_toml}"
                 build-crate
                     $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
+                    ${features_args}
+                    ${all_features_arg}
+                    ${no_default_features_arg}
+                    ${features_genex}
                     ${cargo_target_option}
                     --package ${package_name}
         # Copy crate artifacts to the binary dir
@@ -244,9 +273,9 @@ function(_add_cargo_build)
 endfunction(_add_cargo_build)
 
 function(corrosion_import_crate)
-    set(OPTIONS)
+    set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH)
-    set(MULTI_VALUE_KEYWORDS CRATES)
+    set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)
