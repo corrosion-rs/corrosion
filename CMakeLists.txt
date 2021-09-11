@@ -102,7 +102,7 @@ configure_package_config_file(
         ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion
 )
 
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.13")
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.14")
     set(arch_independent ARCH_INDEPENDENT)
 endif()
 
