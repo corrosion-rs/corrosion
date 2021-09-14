@@ -166,9 +166,19 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
             NO_DEFAULT_PATH)
 else()
     find_program(Rust_COMPILER_CACHED rustc)
+    if (Rust_COMPILER_CACHED)
+        get_filename_component(_RUST_TOOLCHAIN_PATH ${Rust_COMPILER_CACHED} DIRECTORY)
+        get_filename_component(_RUST_TOOLCHAIN_PATH ${_RUST_TOOLCHAIN_PATH} DIRECTORY)
+    endif()
+endif()
 
-    get_filename_component(_RUST_TOOLCHAIN_PATH ${Rust_COMPILER_CACHED} DIRECTORY)
-    get_filename_component(_RUST_TOOLCHAIN_PATH ${_RUST_TOOLCHAIN_PATH} DIRECTORY)
+if (NOT Rust_COMPILER_CACHED)
+    message(
+        WARNING "The rustc executable was not found. "
+        "Rust not installed or ~/.cargo/bin not added to path? "
+        "Aborting further actions of find_package(Rust). ")
+    set(Rust_FOUND false)
+    return()
 endif()
 
 # Look for Cargo next to rustc.
@@ -358,4 +368,5 @@ if(NOT TARGET Rust::Rustc)
         TARGET Rust::Cargo
         PROPERTY IMPORTED_LOCATION ${Rust_CARGO_CACHED}
     )
+    set(Rust_FOUND true)
 endif()
