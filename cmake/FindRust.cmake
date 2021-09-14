@@ -198,6 +198,12 @@ if (_CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
     set(Rust_CARGO_VERSION_MINOR "${CMAKE_MATCH_2}")
     set(Rust_CARGO_VERSION_PATCH "${CMAKE_MATCH_3}")
     set(Rust_CARGO_VERSION "${Rust_CARGO_VERSION_MAJOR}.${Rust_CARGO_VERSION_MINOR}.${Rust_CARGO_VERSION_PATCH}")
+# Workaround for the version strings where the `cargo ` prefix is missing.
+elseif(_CARGO_VERSION_RAW MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+    set(Rust_CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    set(Rust_CARGO_VERSION_MINOR "${CMAKE_MATCH_2}")
+    set(Rust_CARGO_VERSION_PATCH "${CMAKE_MATCH_3}")
+    set(Rust_CARGO_VERSION "${Rust_CARGO_VERSION_MAJOR}.${Rust_CARGO_VERSION_MINOR}.${Rust_CARGO_VERSION_PATCH}")
 else()
     message(
         FATAL_ERROR
