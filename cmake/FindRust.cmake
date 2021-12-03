@@ -224,11 +224,14 @@ execute_process(
     COMMAND ${Rust_COMPILER_CACHED} --version --verbose
     OUTPUT_VARIABLE _RUSTC_VERSION_RAW)
 
-if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?")
     set(Rust_VERSION_MAJOR "${CMAKE_MATCH_1}")
     set(Rust_VERSION_MINOR "${CMAKE_MATCH_2}")
     set(Rust_VERSION_PATCH "${CMAKE_MATCH_3}")
     set(Rust_VERSION "${Rust_VERSION_MAJOR}.${Rust_VERSION_MINOR}.${Rust_VERSION_PATCH}")
+    if(CMAKE_MATCH_4)
+        set(Rust_IS_NIGHTLY 1)
+    endif()
 else()
     message(
         FATAL_ERROR
