@@ -187,7 +187,16 @@ parameters for `corrosion_import_crate` called `ALL_FEATURES` and `NO_DEFAULT_FE
 boolean target properties - which override any specified values with `corrosion_import_crate` are called
 `CORROSION_ALL_FEATURES` and `CORROSION_NO_DEFAULT_FEATURES`.
 
-#### RUSTFLAGS
+### Selecting a custom cargo profile
+
+[Rust 1.57](https://blog.rust-lang.org/2021/12/02/Rust-1.57.0.html) stabilized the support for custom 
+[profiles](https://doc.rust-lang.org/cargo/reference/profiles.html). If you are using a sufficiently new rust toolchain,
+you may select a custom profile by adding the optional argument `PROFILE <profile_name>` to
+`corrosion_import_crate()`. If you do not specify a profile, or you use an older toolchain, corrosion will select
+the standard `dev` profile if the CMake config is either `Debug` or unspecified. In all other cases the `release`
+profile is chosen for cargo.
+
+### RUSTFLAGS
 
 Sometimes you may need to pass `RUSTFLAGS` to rustc, e.g. to enable some nightly option. Corrosion allows you to set
 RUSTFLAGS on a per-crate basis:

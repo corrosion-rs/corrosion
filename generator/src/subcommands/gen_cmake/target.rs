@@ -103,6 +103,7 @@ impl CargoTarget {
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
         cargo_version: &semver::Version,
+        cargo_profile: Option<&str>,
     ) -> Result<(), Box<dyn Error>> {
         // This bit aggregates the byproducts of "cargo build", which is needed for generators like Ninja.
         let mut byproducts = vec![];
@@ -152,6 +153,12 @@ impl CargoTarget {
             byproducts.push(prefix.to_string() + &self.pdb_name());
         }
 
+        let cargo_build_profile_option = if let Some(profile) = cargo_profile {
+            format!("PROFILE {}", profile)
+        } else {
+            String::default()
+        };
+
         writeln!(
             out_file,
             "\
@@ -160,6 +167,7 @@ _add_cargo_build(
     TARGET {1}
     MANIFEST_PATH \"{2}\"
     BYPRODUCTS {3}
+    {4}
 )
 ",
             self.cargo_package.name,
@@ -168,7 +176,8 @@ _add_cargo_build(
                 .manifest_path
                 .as_str()
                 .replace("\\", "/"),
-            byproducts.join(" ")
+            byproducts.join(" "),
+            cargo_build_profile_option
         )?;
 
         match self.target_type {

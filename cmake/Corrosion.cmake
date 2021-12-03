@@ -64,7 +64,7 @@ set(_CORROSION_RUST_CARGO_HOST_TARGET ${Rust_CARGO_HOST_TARGET} CACHE INTERNAL "
 
 function(_add_cargo_build)
     set(options "")
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE)
     set(multi_value_args BYPRODUCTS)
     cmake_parse_arguments(
         ACB
@@ -77,6 +77,7 @@ function(_add_cargo_build)
     set(package_name "${ACB_PACKAGE}")
     set(target_name "${ACB_TARGET}")
     set(path_to_toml "${ACB_MANIFEST_PATH}")
+    set(cargo_profile_name "${ACB_PROFILE}")
 
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
@@ -209,6 +210,13 @@ function(_add_cargo_build)
         set(target_artifact_dir "$<IF:${if_not_host_build_condition},${target_artifact_dir},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
     endif()
 
+    if(cargo_profile_name)
+        set(cargo_profile "--profile=${cargo_profile_name}")
+        set(build_type_dir "${cargo_profile_name}")
+    else()
+        set(cargo_profile $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>)
+    endif()
+
     set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${target_artifact_dir}/${build_type_dir}")
     foreach(byproduct_file ${ACB_BYPRODUCTS})
         list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
@@ -223,6 +231,7 @@ function(_add_cargo_build)
     foreach(feature ${COR_FEATURES})
         list(APPEND features_args --features ${feature})
     endforeach()
+
 
     add_custom_target(
         cargo-build_${target_name}
@@ -245,7 +254,7 @@ function(_add_cargo_build)
             ${_CORROSION_GENERATOR}
                 --manifest-path "${path_to_toml}"
                 build-crate
-                    $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>
+                    ${cargo_profile}
                     ${features_args}
                     ${all_features_arg}
                     ${no_default_features_arg}
@@ -281,12 +290,22 @@ endfunction(_add_cargo_build)
 
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES)
-    set(ONE_VALUE_KEYWORDS MANIFEST_PATH)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE)
     set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)
         message(FATAL_ERROR "MANIFEST_PATH is a required keyword to corrosion_add_crate")
+    endif()
+
+    if(COR_PROFILE)
+        if(Rust_VERSION VERSION_LESS 1.57.0)
+            message(FATAL_ERROR "Selecting custom profiles via `PROFILE` requires at least rust 1.57.0, but you "
+                        "have ${Rust_VERSION}."
+        )
+        else()
+            set(cargo_profile --profile=${COR_PROFILE})
+        endif()
     endif()
 
     if (NOT IS_ABSOLUTE "${COR_MANIFEST_PATH}")
@@ -348,6 +367,7 @@ function(corrosion_import_crate)
                     ${_CORROSION_TARGET}
                     ${_CORROSION_CONFIGURATION_TYPES}
                     ${crates_args}
+                    ${cargo_profile}
                     --cargo-version ${_CORROSION_CARGO_VERSION}
                     -o ${generated_cmake}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}

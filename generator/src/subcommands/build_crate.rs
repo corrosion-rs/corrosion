@@ -6,6 +6,7 @@ pub const BUILD_CRATE: &str = "build-crate";
 
 // build-crate options
 const RELEASE: &str = "release";
+const PROFILE: &str = "profile";
 const PACKAGE: &str = "package";
 const TARGET: &str = "target";
 const RUSTFLAGS: &str = "rustflags";
@@ -18,6 +19,13 @@ const NO_DEFAULT_FEATURES: &str = "no-default-features";
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(BUILD_CRATE)
         .arg(Arg::with_name(RELEASE).long("release"))
+        .arg(
+            Arg::with_name(PROFILE)
+                .long("profile")
+                .takes_value(true)
+                .help("The cargo profile to build with, e.g. 'dev' or 'release'")
+                .conflicts_with(RELEASE)
+        )
         .arg(
             Arg::with_name(TARGET)
                 .long("target")
@@ -99,6 +107,11 @@ pub fn invoke(
 
     if matches.is_present(RELEASE) {
         cargo.arg("--release");
+    }
+
+    if matches.is_present(PROFILE) {
+        cargo.arg("--profile");
+        cargo.arg(matches.value_of(PROFILE).unwrap());
     }
 
     let mut rustflags = matches.value_of(RUSTFLAGS).unwrap_or_default().to_owned();

@@ -22,6 +22,7 @@ const CONFIGURATION_TYPES: &str = "configuration-types";
 const CONFIGURATION_ROOT: &str = "configuration-root";
 const TARGET: &str = "target";
 const CARGO_VERSION: &str = "cargo-version";
+const PROFILE: &str = "profile";
 const CRATES: &str = "crates";
 
 pub fn subcommand() -> App<'static, 'static> {
@@ -84,6 +85,13 @@ pub fn subcommand() -> App<'static, 'static> {
                 .help("Version of target cargo"),
         )
         .arg(
+            Arg::with_name(PROFILE)
+                .long(PROFILE)
+                .value_name("PROFILE")
+                .required(false)
+                .help("Custom cargo profile to select.")
+        )
+        .arg(
             Arg::with_name(OUT_FILE)
                 .short("o")
                 .long("out-file")
@@ -103,6 +111,9 @@ pub fn invoke(
 
     if cargo_target.is_none() {
         println!("WARNING: The target was not recognized.");
+    }
+    if matches.value_of(PROFILE).is_some() && cargo_version < Version::new(1, 57, 0) {
+        panic!("Selecting a custom cargo profile requires rust/cargo >= 1.57.0");
     }
 
     let cargo_platform = platform::Platform::from_rust_version_target(&cargo_version, cargo_target);
@@ -172,9 +183,11 @@ cmake_minimum_required(VERSION 3.12)
         })
         .collect();
 
+    let cargo_profile =  matches.value_of(PROFILE);
+
     for target in &targets {
         target
-            .emit_cmake_target(&mut out_file, &cargo_platform, &cargo_version)
+            .emit_cmake_target(&mut out_file, &cargo_platform, &cargo_version, cargo_profile)
             .unwrap();
     }
 
