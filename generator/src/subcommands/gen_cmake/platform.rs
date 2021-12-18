@@ -26,11 +26,11 @@ impl Platform {
                     let mut libs_release = vec![];
 
                     match cargo_target.target_env {
-                        Some(Env::MSVC) => {
+                        Some(Env::Msvc) => {
                             libs_debug.extend_from_slice(&["msvcrtd".to_string()]);
                             libs_release.extend_from_slice(&["msvcrt".to_string()]);
                         }
-                        Some(Env::GNU) => {
+                        Some(Env::Gnu) => {
                             libs.extend_from_slice(&["gcc_eh".to_string(), "pthread".to_string()]);
                         }
                         // not sure why we need an exhaustive match here
@@ -95,7 +95,7 @@ impl Platform {
             && self
                 .cargo_target
                 .as_ref()
-                .map_or(false, |t| t.target_env == Some(Env::MSVC))
+                .map_or(false, |t| t.target_env == Some(Env::Msvc))
     }
 
     pub fn is_windows_gnu(&self) -> bool {
@@ -103,7 +103,7 @@ impl Platform {
             && self
                 .cargo_target
                 .as_ref()
-                .map_or(false, |t| t.target_env == Some(Env::GNU))
+                .map_or(false, |t| t.target_env == Some(Env::Gnu))
     }
 
     pub fn is_macos(&self) -> bool {
