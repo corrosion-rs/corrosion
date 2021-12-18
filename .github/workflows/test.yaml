@@ -20,7 +20,7 @@ jobs:
         os:
           - windows-latest
           - ubuntu-latest
-          - macos-latest
+          - macos-10.15 # macos-11 is currently not working.
         arch:
           - x86_64
           - i686
@@ -69,11 +69,11 @@ jobs:
             generator: ninja
           - os: windows-latest
             arch: powerpc64le
-          - os: macos-latest
+          - os: macos-10.15
             arch: i686
-          - os: macos-latest
+          - os: macos-10.15
             arch: aarch64
-          - os: macos-latest
+          - os: macos-10.15
             arch: powerpc64le
 
           # ABI
@@ -83,14 +83,14 @@ jobs:
             abi: darwin
           - os: windows-latest
             abi: darwin
-          - os: macos-latest
+          - os: macos-10.15
             abi: msvc
-          - os: macos-latest
+          - os: macos-10.15
             abi: gnu
 
           # Rust
           # Build each set only with the earliest compatible versioned Rust
-          - os: macos-latest
+          - os: macos-10.15
             rust: 1.45.0
           - os: ubuntu-latest
             rust: 1.45.0
@@ -254,7 +254,7 @@ jobs:
         os:
           - windows-latest
           - ubuntu-latest
-          - macos-latest
+          - macos-10.15
         method:
           - subdirectory
           - install
