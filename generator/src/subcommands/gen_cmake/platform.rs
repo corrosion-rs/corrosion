@@ -41,6 +41,10 @@ impl Platform {
                         libs.extend_from_slice(&["shell32".to_string(), "kernel32".to_string()]);
                     }
 
+                    if version >= &Version::parse("1.57.0").unwrap() {
+                        libs.extend_from_slice(&["bcrypt".to_string()]);
+                    }
+
                     (libs, libs_debug, libs_release)
                 }
                 OS::MacOS => (
