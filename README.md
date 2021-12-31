@@ -163,7 +163,7 @@ corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml FEATURES chocolate vanilla)
 
 That's equivalent to calling `cargo build --features chocolate vanilla`.
 
-It is also possible to specify the features as a target list property on the CMake targest created
+It is also possible to specify the features as a target list property on the CMake target created
 by `corrosion_import_crate`. The property is called `CORROSION_FEATURES`.
 
 Finally, regarding features, cargo offers the ability to turn off default features or enable all
@@ -184,7 +184,7 @@ subdirectory, `ON` if it is the top-level project
 This is to support scenarios where it's easier to build corrosion-generator outside of the normal
 bootstrap path, such as in the case of package managers that make it very easy to import Rust
 crates for fully reproducible, offline builds.
-- `CORROSION_INSTALL_EXECUTABLE:BOOL` - Controls whetehr corrosion-generator is installed with the
+- `CORROSION_INSTALL_EXECUTABLE:BOOL` - Controls whether corrosion-generator is installed with the
 package. Default: `ON` with `CORROSION_GENERATOR_EXECUTABLE` unset, otherwise `OFF`
 
 ### Importing C-Style Libraries Written in Rust

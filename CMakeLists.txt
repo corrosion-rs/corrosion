@@ -40,7 +40,11 @@ else()
     set(CORROSION_INSTALL_EXECUTABLE_DEFAULT ON)
 endif()
 
-option(CORROSION_INSTALL_EXECUTABLE ${CORROSION_INSTALL_EXECUTABLE_DEFAULT})
+option(
+    CORROSION_INSTALL_EXECUTABLE
+    "Controls whether corrosion-generator is installed with the package"
+    ${CORROSION_INSTALL_EXECUTABLE_DEFAULT}
+)
 mark_as_advanced(CORROSION_INSTALL_EXECUTABLE)
 
 if (_CORROSION_TOP_LEVEL)
@@ -88,10 +92,16 @@ corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
 # Set the link language to CXX since it's already enabled
 corrosion_set_linker_language(corrosion-generator CXX)
 
-corrosion_install(
-    TARGETS corrosion-generator
-    DESTINATION ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBEXECDIR}
-)
+if (CORROSION_INSTALL_EXECUTABLE)
+    corrosion_install(
+        TARGETS corrosion-generator
+        DESTINATION ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBEXECDIR}
+    )
+elseif (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.15.0")
+    message(DEBUG "Not installing corrosion-generator since "
+        "`CORROSION_INSTALL_EXECUTABLE` is set to ${CORROSION_INSTALL_EXECUTABLE}"
+    )
+endif()
 
 # Generate the Config file
 include(CMakePackageConfigHelpers)
