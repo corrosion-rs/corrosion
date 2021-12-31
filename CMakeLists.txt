@@ -92,10 +92,16 @@ corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
 # Set the link language to CXX since it's already enabled
 corrosion_set_linker_language(corrosion-generator CXX)
 
+if (IS_ABSOLUTE ${CMAKE_INSTALL_LIBEXECDIR})
+    set(_CORROSION_GENERATOR_DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
+else()
+    set(_CORROSION_GENERATOR_DESTINATION "${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBEXECDIR}")
+endif()
+
 if (CORROSION_INSTALL_EXECUTABLE)
     corrosion_install(
         TARGETS corrosion-generator
-        DESTINATION ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBEXECDIR}
+        DESTINATION "${_CORROSION_GENERATOR_DESTINATION}"
     )
 elseif (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.15.0")
     message(DEBUG "Not installing corrosion-generator since "
