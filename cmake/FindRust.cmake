@@ -248,6 +248,18 @@ else()
     )
 endif()
 
+if (_RUSTC_VERSION_RAW MATCHES "LLVM version: ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+    set(Rust_LLVM_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    set(Rust_LLVM_VERSION_MINOR "${CMAKE_MATCH_2}")
+    set(Rust_LLVM_VERSION_PATCH "${CMAKE_MATCH_3}")
+    set(Rust_LLVM_VERSION "${Rust_LLVM_VERSION_MAJOR}.${Rust_LLVM_VERSION_MINOR}.${Rust_LLVM_VERSION_PATCH}")
+else()
+    message(
+            WARNING
+            "Failed to parse rustc LLVM version. `rustc --version --verbose` evaluated to:\n${_RUSTC_VERSION_RAW}"
+    )
+endif()
+
 if (NOT Rust_CARGO_TARGET_CACHED)
     if (WIN32)
         if (CMAKE_VS_PLATFORM_NAME)
