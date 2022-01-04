@@ -146,7 +146,7 @@ function(_add_cargo_build)
         set(build_type_dir $<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>)
     endif()
 
-    set(target_linker_language "$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>")
+    set(target_linker_language "$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINKER_LANGUAGE>")
 
     # When cross-compiling, fall back to specifying at least the cross-compiling C linker, unless
     # an override is set.
@@ -362,7 +362,7 @@ endfunction(add_crate)
 function(corrosion_set_linker_language target_name language)
     set_property(
         TARGET cargo-build_${target_name}
-        PROPERTY LINKER_LANGUAGE ${language}
+        PROPERTY CARGO_LINKER_LANGUAGE ${language}
     )
 endfunction()
 
