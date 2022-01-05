@@ -152,6 +152,21 @@ The pairs can also be generator expressions, as they will be evaluated using $<G
 For example this may be useful if the build scripts of crates look for environment variables.
 This feature requires CMake >= 3.19.0.
 
+#### Information provided by Corrosion
+
+For your convenience, Corrosion sets a number of variables which contain information about the version of the rust 
+toolchain. You can use the CMake version comparison operators 
+(e.g. [`VERSION_GREATER_EQUAL`](https://cmake.org/cmake/help/latest/command/if.html#version-comparisons)) on the main
+variable (e.g. `if(Rust_VERSION VERSION_GREATER_EQUAL "1.57.0")`), or you can inspect the major, minor and patch 
+versions individually.
+- `Rust_VERSION<_MAJOR|_MINOR|_PATCH>` - The version of rustc.
+- `Rust_CARGO_VERSION<_MAJOR|_MINOR|_PATCH>` - The cargo version.
+- `Rust_LLVM_VERSION<_MAJOR|_MINOR|_PATCH>` - The LLVM version used by rustc.
+- `Rust_IS_NIGHTLY` - 1 if a nightly toolchain is used, otherwise 0. Useful for selecting an unstable feature for a 
+  crate, that is only available on nightly toolchains.
+
+### Cargo feature selection
+
 Cargo crates sometimes offer features, which traditionally can be specified with `cargo build` on the
 command line as opt-in. You can select the features to enable with the `FEATURES` argument when
 calling `corrosion_import_crate`. The following example enables the "chocolate" and "vanilla"
@@ -171,6 +186,7 @@ features, with the `--all-features` and `--no-default-features` options. Corrosi
 parameters for `corrosion_import_crate` called `ALL_FEATURES` and `NO_DEFAULT_FEATURES`. The corresponding
 boolean target properties - which override any specified values with `corrosion_import_crate` are called
 `CORROSION_ALL_FEATURES` and `CORROSION_NO_DEFAULT_FEATURES`.
+
 
 ### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how
