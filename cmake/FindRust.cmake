@@ -231,6 +231,8 @@ if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?"
     set(Rust_VERSION "${Rust_VERSION_MAJOR}.${Rust_VERSION_MINOR}.${Rust_VERSION_PATCH}")
     if(CMAKE_MATCH_4)
         set(Rust_IS_NIGHTLY 1)
+    else()
+        set(Rust_IS_NIGHTLY 0)
     endif()
 else()
     message(
