@@ -108,7 +108,7 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
                 set(_TOOLCHAIN_OVERRIDE ${_TOOLCHAIN})
             endif()
         else()
-            message(WARNING "Didn't reconize toolchain: ${_TOOLCHAIN_RAW}")
+            message(WARNING "Didn't recognize toolchain: ${_TOOLCHAIN_RAW}")
         endif()
     endforeach()
 
@@ -158,7 +158,7 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     message(VERBOSE "Rust toolchain ${_RUSTUP_TOOLCHAIN_FULL}")
     message(VERBOSE "Rust toolchain path ${_RUST_TOOLCHAIN_PATH}")
 
-    # Is overrided if the user specifies `Rust_COMPILER` explicitly.
+    # Is overridden if the user specifies `Rust_COMPILER` explicitly.
     find_program(
         Rust_COMPILER_CACHED
         rustc
