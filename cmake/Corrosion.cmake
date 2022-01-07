@@ -75,6 +75,16 @@ set(
 set(_CORROSION_CARGO_VERSION ${Rust_CARGO_VERSION} CACHE INTERNAL "cargo version used by corrosion")
 set(_CORROSION_RUST_CARGO_TARGET ${Rust_CARGO_TARGET} CACHE INTERNAL "target triple used by corrosion")
 set(_CORROSION_RUST_CARGO_HOST_TARGET ${Rust_CARGO_HOST_TARGET} CACHE INTERNAL "host triple used by corrosion")
+set(_CORROSION_RUSTC "${RUSTC_EXECUTABLE}" CACHE INTERNAL  "Path to rustc used by corrosion")
+set(_CORROSION_CARGO "${CARGO_EXECUTABLE}" CACHE INTERNAL "Path to cargo used by corrosion")
+
+string(REPLACE "-" "_" _CORROSION_RUST_CARGO_TARGET_UNDERSCORE "${Rust_CARGO_TARGET}")
+string(TOUPPER "${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}" _CORROSION_TARGET_TRIPLE_UPPER)
+set(_CORROSION_RUST_CARGO_TARGET_UPPER
+        "${_CORROSION_TARGET_TRIPLE_UPPER}"
+        CACHE INTERNAL
+        "target triple in uppercase with underscore"
+)
 
 # We previously specified some Custom properties as part of our public API, however the chosen names prevented us from
 # supporting CMake versions before 3.19. In order to both support older CMake versions and not break existing code
@@ -142,32 +152,22 @@ function(_add_cargo_build)
             enable_language(C)
         endif()
 
-        set(link_prefs)
-        set(compilers)
-        set(lang_targets)
+        # Determine the linker CMake prefers based on the enabled languages.
+        set(_CORROSION_LINKER_PREFERENCE_SCORE "0")
         foreach(language ${languages})
-            if(CMAKE_${language}_COMPILER AND (CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES OR CMAKE_CROSSCOMPILING))
-                list(
-                    APPEND
-                    link_prefs
-                    CORROSION_${language}_LINKER_PREFERENCE="${CMAKE_${language}_LINKER_PREFERENCE}")
-
-                list(
-                    APPEND
-                    compilers
-                    CORROSION_${language}_COMPILER="${CMAKE_${language}_COMPILER}")
-
-                if (CMAKE_${language}_COMPILER_TARGET)
-                    list(
-                        APPEND
-                        lang_targets
-                        CORROSION_${language}_COMPILER_TARGET="${CMAKE_${language}_COMPILER_TARGET}")
+            if( ${CMAKE_${language}_LINKER_PREFERENCE} )
+                if(NOT CORROSION_LINKER_PREFERENCE
+                    OR (${CMAKE_${language}_LINKER_PREFERENCE} GREATER ${_CORROSION_LINKER_PREFERENCE_SCORE}))
+                    set(CORROSION_LINKER_PREFERENCE "${CMAKE_${language}_COMPILER}")
+                    set(CORROSION_LINKER_PREFERENCE_TARGET "${CMAKE_${language}_COMPILER_TARGET}")
+                    set(CORROSION_LINKER_PREFERENCE_LANGUAGE "${language}")
+                    set(_CORROSION_LINKER_PREFERENCE_SCORE "${CMAKE_${language}_LINKER_PREFERENCE}")
                 endif()
             endif()
         endforeach()
+        message(VERBOSE "CORROSION_LINKER_PREFERENCE for target ${target_name}: ${CORROSION_LINKER_PREFERENCE}")
     endif()
 
-    # BYPRODUCTS doesn't support generator expressions, so only add BYPRODUCTS for single-config generators
     if (NOT CMAKE_CONFIGURATION_TYPES)
         set(target_dir ${CMAKE_CURRENT_BINARY_DIR})
         if (CMAKE_BUILD_TYPE STREQUAL "" OR CMAKE_BUILD_TYPE STREQUAL Debug)
@@ -180,30 +180,11 @@ function(_add_cargo_build)
         set(build_type_dir $<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>)
     endif()
 
-    set(target_linker_language "$<TARGET_PROPERTY:cargo-build_${target_name},LINKER_LANGUAGE>")
-
-    # When cross-compiling, fall back to specifying at least the cross-compiling C linker, unless
-    # an override is set.
-    if(CMAKE_CROSSCOMPILING)
-        set(has_target_linker_language "$<BOOL:${target_linker_language}>")
-        set(linker_languages "$<IF:${has_target_linker_language},${target_linker_language},C>")
-    else()
-        set(linker_languages "${target_linker_language}")
-    endif()
-
-    # The linker languages are constructed as a list with two items: the target linker language and
-    # the dep linker languages list expanded, to prevent a double-expansion.
-    set(linker_languages "$<$<BOOL:${linker_languages}>:${linker_languages}$<SEMICOLON>>$<JOIN:$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>>, >")
-
     # If a CMake sysroot is specified, forward it to the linker rustc invokes, too. CMAKE_SYSROOT is documented
     # to be passed via --sysroot, so we assume that when it's set, the linker supports this option in that style.
     if(CMAKE_CROSSCOMPILING AND CMAKE_SYSROOT)
-        set(corrosion_link_args "CORROSION_LINK_ARGS=\"--sysroot=${CMAKE_SYSROOT}\"")
+        set(corrosion_link_args "--sysroot=${CMAKE_SYSROOT}")
     endif()
-
-    set(cargo_target_option "--target=${_CORROSION_RUST_CARGO_TARGET}")
-
-    set(target_artifact_dir "${_CORROSION_RUST_CARGO_TARGET}")
 
     if(COR_ALL_FEATURES)
         set(all_features_arg --all-features)
@@ -238,10 +219,10 @@ function(_add_cargo_build)
     set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_ENV_VARS}>>")
     set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_HOST_BUILD}>>>")
 
-    set(linker_languages "$<${if_not_host_build_condition}:${linker_languages}>")
     set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
-    set(cargo_target_option "$<IF:${if_not_host_build_condition},${cargo_target_option},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
-    set(target_artifact_dir "$<IF:${if_not_host_build_condition},${target_artifact_dir},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
+    set(cargo_target_option "$<IF:${if_not_host_build_condition},--target=${_CORROSION_RUST_CARGO_TARGET},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
+    set(target_artifact_dir "$<IF:${if_not_host_build_condition},${_CORROSION_RUST_CARGO_TARGET},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
+
 
     if(cargo_profile_name)
         set(cargo_profile "--profile=${cargo_profile_name}")
@@ -267,7 +248,6 @@ function(_add_cargo_build)
         list(APPEND features_args --features ${feature})
     endforeach()
 
-    # Todo: Refactor this together with the "$compilers section above."
     if(CMAKE_C_COMPILER)
         set(corrosion_cc "CC=${CMAKE_C_COMPILER}")
     elseif(DEFINED ENV{CC})
@@ -279,45 +259,83 @@ function(_add_cargo_build)
         set(corrosion_cc "CXX=$ENV{CXX}")
     endif()
 
+    corrosion_add_target_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
+
+    # todo: this should probably also be guarded by if_not_host_build_condition.
+    if(COR_NO_STD)
+        corrosion_add_target_rustflags("${target_name}" "-Cdefault-linker-libraries=no")
+    else()
+        corrosion_add_target_rustflags("${target_name}" "-Cdefault-linker-libraries=yes")
+    endif()
+
+    set(rustflags_genex_test "$<$<BOOL:${rustflags_target_property}>:RUSTFLAGS=\"${rustflags_target_property}\">")
+
+    if(CORROSION_LINKER_PREFERENCE)
+        if(CMAKE_CROSSCOMPILING)
+            # CMake does not offer a host compiler we could select when configured for cross-compiling. This
+            # effectively means that by default cc will be selected for builds targeting host. The user can still
+            # override this by manually adding the appropriate rustflags to select the compiler for the target!
+            set(cargo_target_linker "$<${if_not_host_build_condition}:CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER=${CORROSION_LINKER_PREFERENCE}>")
+        else()
+            set(cargo_target_linker "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER=${CORROSION_LINKER_PREFERENCE}")
+        endif()
+        # Will be only set for cross-compilers like clang, c.f. `CMAKE_<LANG>_COMPILER_TARGET`.
+        if(CORROSION_LINKER_PREFERENCE_TARGET)
+            corrosion_add_target_rustflags("${target_name}" "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
+        endif()
+    else()
+        message(WARNING "No linker preference for target ${target_name}")
+    endif()
+
+    # Remove the target triple from the rust toolchain (which may or may not be present).
+    # Note: This should match as expected for stable, beta, nightly, version specific stable toolchains,
+    # and specific nightly toolchains, but restricts the possible names of custom toolchains.
+    if("${Rust_TOOLCHAIN}" MATCHES "^([a-z0-9\.]+)(-[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9])?" )
+        set(rust_toolchain_override "+${CMAKE_MATCH_0}")
+    else()
+        message(WARNING "Regex didnt match on ${Rust_TOOLCHAIN}. If you are using a custom toolchain"
+                " consider renaming your toolchain to contain only lowercase letters, or open an issue.")
+    endif()
+
     add_custom_target(
-        cargo-build_${target_name}
-        ALL
-        # Ensure the target directory exists
-        COMMAND
-            ${CMAKE_COMMAND} -E make_directory ${target_dir}
-        # Build crate
-        COMMAND
-            ${CMAKE_COMMAND} -E env
-                ${build_env_variable_genex}
-                CORROSION_BUILD_DIR="${CMAKE_CURRENT_BINARY_DIR}"
-                ${corrosion_cc}
-                ${corrosion_cxx}
-                ${corrosion_link_args}
-                ${link_prefs}
-                ${compilers}
-                ${lang_targets}
-                CORROSION_LINKER_LANGUAGES="${linker_languages}"
-            ${_CORROSION_GENERATOR}
-                --manifest-path "${path_to_toml}"
-                build-crate
-                    ${cargo_profile}
-                    ${features_args}
-                    ${all_features_arg}
-                    ${no_default_features_arg}
-                    ${no_default_libraries_arg}
-                    ${features_genex}
-                    ${cargo_target_option}
-                    ${rustflags_genex}
-                    --package ${package_name}
-        # Copy crate artifacts to the binary dir
-        COMMAND
-            ${CMAKE_COMMAND} -E copy_if_different ${build_byproducts} ${target_dir}
-        BYPRODUCTS ${byproducts}
-        # The build is conducted in root build directory so that cargo
-        # dependencies are shared
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
-        USES_TERMINAL
-        COMMAND_EXPAND_LISTS
+    cargo-build_${target_name}
+    ALL
+    # Ensure the target directory exists
+    COMMAND
+        ${CMAKE_COMMAND} -E make_directory ${target_dir}
+    # Build crate
+    COMMAND
+        ${CMAKE_COMMAND} -E env
+            ${build_env_variable_genex}
+            ${rustflags_genex_test}
+            ${cargo_target_linker}
+            ${corrosion_cc}
+            ${corrosion_cxx}
+            CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+            CARGO_BUILD_RUSTC="${_CORROSION_RUSTC}"
+        "${_CORROSION_CARGO}"
+            build
+            ${cargo_target_option}
+            ${_CORROSION_VERBOSE_OUTPUT_FLAG}
+            # Global --features arguments added via corrosion_import_crate()
+            ${features_args}
+            ${all_features_arg}
+            ${no_default_features_arg}
+            # Target specific features added via corrosion_set_features().
+            ${features_genex}
+            --package ${package_name}
+            --manifest-path "${path_to_toml}"
+            ${cargo_profile}
+
+    # Copy crate artifacts to the binary dir
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_if_different ${build_byproducts} ${target_dir}
+    BYPRODUCTS ${byproducts}
+    # The build is conducted in root build directory so that cargo
+    # dependencies are shared
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
+    USES_TERMINAL
+    COMMAND_EXPAND_LISTS
     )
 
     add_custom_target(

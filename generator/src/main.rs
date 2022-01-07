@@ -4,7 +4,6 @@ use cargo_metadata::Metadata;
 use clap::{App, Arg};
 
 mod subcommands {
-    pub mod build_crate;
     pub mod gen_cmake;
     pub mod print_root;
 }
@@ -50,7 +49,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .subcommand(print_root::subcommand())
         .subcommand(gen_cmake::subcommand())
-        .subcommand(build_crate::subcommand())
         .get_matches();
 
     let mut cmd = cargo_metadata::MetadataCommand::new();
@@ -72,7 +70,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match matches.subcommand() {
         (print_root::PRINT_ROOT, _) => print_root::invoke(&shared_args)?,
-        (build_crate::BUILD_CRATE, Some(matches)) => build_crate::invoke(&shared_args, matches)?,
         (gen_cmake::GEN_CMAKE, Some(matches)) => gen_cmake::invoke(&shared_args, matches)?,
         _ => unreachable!(),
     };
