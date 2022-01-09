@@ -1,4 +1,5 @@
 corrosion_import_crate(MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml)
+corrosion_set_linker_language(rust-lib-requiring-envvar C)
 
 set_property(
     TARGET rust-lib-requiring-envvar
