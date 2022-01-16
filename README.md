@@ -187,6 +187,15 @@ parameters for `corrosion_import_crate` called `ALL_FEATURES` and `NO_DEFAULT_FE
 boolean target properties - which override any specified values with `corrosion_import_crate` are called
 `CORROSION_ALL_FEATURES` and `CORROSION_NO_DEFAULT_FEATURES`.
 
+#### RUSTFLAGS
+
+Sometimes you may need to pass `RUSTFLAGS` to rustc, e.g. to enable some nightly option. Corrosion allows you to set
+RUSTFLAGS on a per-crate basis:
+```cmake
+corrosion_add_target_rustflags(cmake_target rustflag [additional_rustflag1 ...])
+```
+`corrosion_add_target_rustflags()` can be called multiple times, each time appending the new rustflag to the list of 
+flags.
 
 ### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how

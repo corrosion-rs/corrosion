@@ -178,9 +178,15 @@ function(_add_cargo_build)
         set(no_default_features_arg --no-default-features)
     endif()
 
+    set(rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTFLAGS>>")
+    # `rustflags_target_property` may contain multiple arguments and double quotes, so we _should_ single quote it to
+    # preserve any double quotes and keep it as one argument value. However single quotes don't work on windows, so we
+    # can only add double quotes here. Any double quotes _in_ the rustflags must be escaped like `\\\"`.
+    set(rustflags_genex "$<$<BOOL:${rustflags_target_property}>:--rustflags=\"${rustflags_target_property}\">")
+
     if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
         set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
-        
+
         set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_FEATURES>>")
         set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
 
@@ -245,6 +251,7 @@ function(_add_cargo_build)
                     ${no_default_features_arg}
                     ${features_genex}
                     ${cargo_target_option}
+                    ${rustflags_genex}
                     --package ${package_name}
         # Copy crate artifacts to the binary dir
         COMMAND
@@ -363,6 +370,15 @@ function(corrosion_set_linker_language target_name language)
     set_property(
         TARGET cargo-build_${target_name}
         PROPERTY LINKER_LANGUAGE ${language}
+    )
+endfunction()
+
+function(corrosion_add_target_rustflags target_name rustflag)
+    # Additional rustflags may be passed as optional parameters after rustflag.
+    set_property(
+            TARGET ${target_name}
+            APPEND
+            PROPERTY INTERFACE_CORROSION_RUSTFLAGS ${rustflag} ${ARGN}
     )
 endfunction()
 
