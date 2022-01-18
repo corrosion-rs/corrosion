@@ -8,6 +8,7 @@ pub const BUILD_CRATE: &str = "build-crate";
 const RELEASE: &str = "release";
 const PACKAGE: &str = "package";
 const TARGET: &str = "target";
+const RUSTFLAGS: &str = "rustflags";
 
 // build-crate features list
 const FEATURES: &str = "features";
@@ -30,6 +31,13 @@ pub fn subcommand() -> App<'static, 'static> {
                 .value_name("PACKAGE")
                 .required(true)
                 .help("The name of the package being built with cargo"),
+        )
+        .arg(Arg::with_name(RUSTFLAGS)
+            .long(RUSTFLAGS)
+            .value_name("RUSTFLAGS")
+            .takes_value(true)
+            .multiple(false)
+            .help("The RUSTFLAGS to pass to rustc.")
         )
         .arg(
             Arg::with_name(FEATURES)
@@ -61,6 +69,7 @@ pub fn invoke(
         .values_of(FEATURES)
         .map_or(Vec::new(), |c| c.collect())
         .join(" ");
+    let package_name = matches.value_of(PACKAGE).unwrap();
 
     let mut cargo = process::Command::new(&args.cargo_executable);
 
@@ -71,7 +80,7 @@ pub fn invoke(
         "--features",
         &features,
         "--package",
-        matches.value_of(PACKAGE).unwrap(),
+        package_name,
         "--manifest-path",
         args.manifest_path.to_str().unwrap(),
     ]);
@@ -92,6 +101,8 @@ pub fn invoke(
         cargo.arg("--release");
     }
 
+    let mut rustflags = matches.value_of(RUSTFLAGS).unwrap_or_default().to_owned();
+
     let languages: Vec<String> = env::var("CORROSION_LINKER_LANGUAGES")
         .unwrap_or("".to_string())
         .trim()
@@ -100,7 +111,7 @@ pub fn invoke(
         .collect();
 
     if !languages.is_empty() {
-        let mut rustflags = "-C default-linker-libraries=yes".to_owned();
+        rustflags += " -Cdefault-linker-libraries=yes";
 
         // This loop gets the highest preference link language to use for the linker
         let mut highest_preference: Option<(Option<i32>, &str)> = None;
@@ -139,18 +150,20 @@ pub fn invoke(
             }
 
             if let Ok(target) = env::var(format!("CORROSION_{}_COMPILER_TARGET", language)) {
-                rustflags += " -C link-args=--target=";
-                rustflags += &target;
+                rustflags += format!(" -Clink-args=--target={}", target).as_str();
             }
         }
 
         let extra_link_args = env::var("CORROSION_LINK_ARGS").unwrap_or("".to_string());
         if !extra_link_args.is_empty() {
-            rustflags += " -C link-args=";
-            rustflags += &extra_link_args;
+            rustflags += format!(" -Clink-args={}", extra_link_args).as_str();
         }
 
-        cargo.env("RUSTFLAGS", rustflags);
+        let rustflags_trimmed = rustflags.trim();
+        if args.verbose {
+            println!("Rustflags for package {} are: `{}`", matches.value_of(PACKAGE).unwrap(), rustflags_trimmed);
+        }
+        cargo.env("RUSTFLAGS", rustflags_trimmed);
     }
 
     if args.verbose {
