@@ -1,5 +1,5 @@
 # Corrosion
-[![Build Status](https://github.com/AndrewGaspar/corrosion/workflows/.github/workflows/test.yaml/badge.svg)](https://github.com/AndrewGaspar/corrosion/actions?query=branch%3Amaster)
+[![Build Status](https://github.com/corrosion-rs/corrosion/workflows/.github/workflows/test.yaml/badge.svg)](https://github.com/corrosion-rs/corrosion/actions?query=branch%3Amaster)
 
 Corrosion, formerly known as cmake-cargo, is a tool for integrating Rust into an existing CMake
 project. Corrosion is capable of importing executables, static libraries, and dynamic libraries
@@ -73,7 +73,7 @@ comes with git submodules or other primitive dependency solutions.
 
 First, download and install Corrosion:
 ```bash
-git clone https://github.com/AndrewGaspar/corrosion.git
+git clone https://github.com/corrosion-rs/corrosion.git
 # Optionally, specify -DCMAKE_INSTALL_PREFIX=<target-install-path>. You can install Corrosion anyway
 cmake -Scorrosion -Bbuild -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
@@ -104,7 +104,7 @@ include(FetchContent)
 
 FetchContent_Declare(
     Corrosion
-    GIT_REPOSITORY https://github.com/AndrewGaspar/corrosion.git
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
     GIT_TAG origin/master # Optionally specify a version tag or branch here
 )
 
@@ -117,7 +117,7 @@ projects, but it's discouraged for large projects with many dependencies, especi
 themselves use Corrosion. Either copy the Corrosion library into your source tree, being sure to
 preserve the `LICENSE` file, or add this repository as a git submodule:
 ```bash
-git submodule add https://github.com/AndrewGaspar/corrosion.git
+git submodule add https://github.com/corrosion-rs/corrosion.git
 ```
 
 From there, using Corrosion is easy. In your CMakeLists.txt:
