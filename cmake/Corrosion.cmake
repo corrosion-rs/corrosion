@@ -268,8 +268,8 @@ function(_add_cargo_build)
 
     if (NOT TARGET cargo-clean)
         add_custom_target(cargo-clean)
-        add_dependencies(cargo-clean cargo-clean_${target_name})
     endif()
+    add_dependencies(cargo-clean cargo-clean_${target_name})
 endfunction(_add_cargo_build)
 
 function(corrosion_import_crate)
