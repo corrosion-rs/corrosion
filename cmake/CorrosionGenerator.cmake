@@ -22,13 +22,6 @@ function(_cargo_metadata out manifest)
     set(${out} ${json} PARENT_SCOPE)
 endfunction()
 
-function(_generator_get_workspace_root out manifest)
-    _cargo_metadata(json ${manifest})
-    string(JSON root GET ${json} "workspace_root")
-
-    set(${out} ${root} PARENT_SCOPE)
-endfunction()
-
 function(_generator_parse_platform manifest version target)
     string(REGEX MATCH ".+-([^-]+)-([^-]+)$" os_env ${target})
     set(os ${CMAKE_MATCH_1})
@@ -192,7 +185,7 @@ function(_generator_parse_target manifest package target)
     )
 endfunction()
 
-function(_generator_emit_cmake_target out_file manifest ix cargo_version)
+function(_generator_add_target manifest ix cargo_version)
     get_source_file_property(package_name ${manifest} CORROSION_TARGET${ix}_PACKAGE_NAME)
     get_source_file_property(manifest_path ${manifest} CORROSION_TARGET${ix}_MANIFEST_PATH)
     get_source_file_property(target_name ${manifest} CORROSION_TARGET${ix}_TARGET_NAME)
@@ -219,10 +212,6 @@ function(_generator_emit_cmake_target out_file manifest ix cargo_version)
 
     string(REPLACE "\\" "/" manifest_path "${manifest_path}")
 
-    list(JOIN libs " " libs)
-    list(JOIN libs_debug " " libs_debug)
-    list(JOIN libs_release " " libs_release)
-
     if(is_library)
         if(has_staticlib)
             list(APPEND byproducts ${static_lib_name})
@@ -248,18 +237,12 @@ function(_generator_emit_cmake_target out_file manifest ix cargo_version)
         list(APPEND byproducts "${prefix}${pdb_name}")
     endif()
 
-    list(JOIN byproducts " " byproducts)
-
-    file(APPEND ${out_file}
-"\
-_add_cargo_build(
-    PACKAGE ${package_name}
-    TARGET ${target_name}
-    MANIFEST_PATH \"${manifest_path}\"
-    BYPRODUCTS ${byproducts}
-)
-
-")
+    _add_cargo_build(
+        PACKAGE ${package_name}
+        TARGET ${target_name}
+        MANIFEST_PATH "${manifest_path}"
+        BYPRODUCTS ${byproducts}
+    )
 
     if(is_library)
         if(NOT (has_staticlib OR has_cdylib))
@@ -267,86 +250,60 @@ _add_cargo_build(
         endif()
 
         if(has_staticlib)
-            file(APPEND ${out_file}
-"\
-add_library(${target_name}-static STATIC IMPORTED GLOBAL)
-add_dependencies(${target_name}-static cargo-build_${target_name})
-")
+            add_library(${target_name}-static STATIC IMPORTED GLOBAL)
+            add_dependencies(${target_name}-static cargo-build_${target_name})
 
             if(libs)
-                file(APPEND ${out_file}
-"\
-set_property(TARGET ${target_name}-static PROPERTY \
-INTERFACE_LINK_LIBRARIES ${libs})
-")
+                set_property(
+                    TARGET ${target_name}-static
+                    PROPERTY INTERFACE_LINK_LIBRARIES ${libs}
+                )
             endif()
 
             if(libs_debug)
-                file(APPEND ${out_file}
-"\
-set_property(TARGET ${target_name}-static PROPERTY \
-INTERFACE_LINK_LIBRARIES_DEBUG ${libs_debug})
-")
+                set_property(
+                    TARGET ${target_name}-static
+                    PROPERTY INTERFACE_LINK_LIBRARIES_DEBUG ${libs_debug}
+                )
             endif()
 
             if(libs_release)
                 foreach(config "RELEASE" "MINSIZEREL" "RELWITHDEBINFO")
-                    file(APPEND ${out_file}
-"\
-set_property(TARGET ${target_name}-static PROPERTY \
-INTERFACE_LINK_LIBRARIES_${config} ${libs_release})
-")
+                    set_property(
+                        TARGET ${target_name}-static
+                        PROPERTY INTERFACE_LINK_LIBRARIES_${config} ${libs_release}
+                    )
                 endforeach()
             endif()
         endif()
 
         if(has_cdylib)
-            file(APPEND ${out_file}
-"\
-add_library(${target_name}-shared SHARED IMPORTED GLOBAL)
-add_dependencies(${target_name}-shared cargo-build_${target_name})
-")
+            add_library(${target_name}-shared SHARED IMPORTED GLOBAL)
+            add_dependencies(${target_name}-shared cargo-build_${target_name})
         endif()
 
-        file(APPEND ${out_file}
-"\
-add_library(${target_name} INTERFACE)
-")
+        add_library(${target_name} INTERFACE)
 
         if(has_cdylib AND has_staticlib)
-            file(APPEND ${out_file}
-"\
-if(BUILD_SHARED_LIBS)
-    target_link_libraries(${target_name} INTERFACE ${target_name}-shared)
-else()
-    target_link_libraries(${target_name} INTERFACE ${target_name}-static)
-endif()
-")
+            if(BUILD_SHARED_LIBS)
+                target_link_libraries(${target_name} INTERFACE ${target_name}-shared)
+            else()
+                target_link_libraries(${target_name} INTERFACE ${target_name}-static)
+            endif()
         elseif(has_cdylib)
-            file(APPEND ${out_file}
-"\
-target_link_libraries(${target_name} INTERFACE ${target_name}-shared)
-")
+            target_link_libraries(${target_name} INTERFACE ${target_name}-shared)
         else()
-            file(APPEND ${out_file}
-"\
-target_link_libraries(${target_name} INTERFACE ${target_name}-static)
-")
+            target_link_libraries(${target_name} INTERFACE ${target_name}-static)
         endif()
     elseif(is_executable)
-        file(APPEND ${out_file}
-"\
-add_executable(${target_name} IMPORTED GLOBAL)
-add_dependencies(${target_name} cargo-build_${target_name})
-")
+        add_executable(${target_name} IMPORTED GLOBAL)
+        add_dependencies(${target_name} cargo-build_${target_name})
     else()
         message(FATAL_ERROR "unknown target type")
     endif()
-
-    file(APPEND ${out_file} "\n")
 endfunction()
 
-function(_generator_emit_cmake_config_info out_file manifest ix is_multi_config config_type)
+function(_generator_add_config_info manifest ix is_multi_config config_type)
     get_source_file_property(target_name ${manifest} CORROSION_TARGET${ix}_TARGET_NAME)
 
     get_source_file_property(is_library ${manifest} CORROSION_TARGET${ix}_IS_LIBRARY)
@@ -371,49 +328,45 @@ function(_generator_emit_cmake_config_info out_file manifest ix is_multi_config 
     endif()
 
     if(is_multi_config)
-        set(binary_root "\${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
     else()
-        set(binary_root "\${CMAKE_CURRENT_BINARY_DIR}")
+        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
 
     if(is_library)
         if(has_staticlib)
-            file(APPEND ${out_file}
-"\
-set_property(TARGET ${target_name}-static PROPERTY \
-${imported_location} \"${binary_root}/${static_lib_name}\")
-")
+            set_property(
+                TARGET ${target_name}-static
+                PROPERTY ${imported_location} "${binary_root}/${static_lib_name}"
+            )
         endif()
 
         if(has_cdylib)
-            file(APPEND ${out_file}
-"\
-set_property(TARGET ${target_name}-shared PROPERTY \
-${imported_location} \"${binary_root}/${dynamic_lib_name}\")
-")
+            set_property(
+                TARGET ${target_name}-shared
+                PROPERTY ${imported_location} "${binary_root}/${dynamic_lib_name}"
+            )
 
             if(is_windows)
-                file(APPEND ${out_file}
-"\
-set_property(TARGET ${target_name}-shared PROPERTY \
-${imported_implib} \"${binary_root}/${implib_name}\")
-")
+                set_property(
+                    TARGET ${target_name}-shared
+                    PROPERTY ${imported_implib} "${binary_root}/${implib_name}"
+                )
             endif()
         endif()
     elseif(is_executable)
-        file(APPEND ${out_file}
-"\
-set_property(TARGET ${target_name} PROPERTY \
-${imported_location} \"${binary_root}/${exe_name}\")
-")
+        set_property(
+            TARGET ${target_name}
+            PROPERTY ${imported_location} "${binary_root}/${exe_name}"
+        )
     else()
         message(FATAL_ERROR "unknown target type")
     endif()
 endfunction()
 
-function(_generator_gen_cmake)
+function(_generator_add_cargo_targets)
     set(options "")
-    set(one_value_args MANIFEST_PATH CONFIGURATION_ROOT CONFIGURATION_TYPE TARGET CARGO_VERSION OUT_FILE)
+    set(one_value_args MANIFEST_PATH CONFIGURATION_ROOT CONFIGURATION_TYPE TARGET CARGO_VERSION)
     set(multi_value_args CONFIGURATION_TYPES CRATES)
     cmake_parse_arguments(
         GGC
@@ -422,12 +375,6 @@ function(_generator_gen_cmake)
         "${multi_value_args}"
         ${ARGN}
     )
-
-    file(WRITE ${GGC_OUT_FILE}
-"\
-cmake_minimum_required(VERSION 3.19)
-
-")
 
     set(config_root "${CMAKE_BINARY_DIR}/${GGC_CONFIGURATION_ROOT}")
 
@@ -495,20 +442,16 @@ cmake_minimum_required(VERSION 3.19)
     math(EXPR num_targets-1 "${num_targets} - 1")
 
     foreach(ix RANGE ${num_targets-1})
-        _generator_emit_cmake_target(
-            ${GGC_OUT_FILE}
+        _generator_add_target(
             ${GGC_MANIFEST_PATH}
             ${ix}
             ${GGC_CARGO_VERSION}
         )
     endforeach()
 
-    file(APPEND ${GGC_OUT_FILE} "\n")
-
     foreach(config_type config_folder IN ZIP_LISTS config_types config_folders)
         foreach(ix RANGE ${num_targets-1})
-            _generator_emit_cmake_config_info(
-                ${GGC_OUT_FILE}
+            _generator_add_config_info(
                 ${GGC_MANIFEST_PATH}
                 ${ix}
                 ${is_multi_config}

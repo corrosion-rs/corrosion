@@ -234,6 +234,7 @@ function(_add_cargo_build)
     endif()
 
     set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${target_artifact_dir}/${build_type_dir}")
+    set(byproducts)
     foreach(byproduct_file ${ACB_BYPRODUCTS})
         list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
         if (NOT CMAKE_CONFIGURATION_TYPES)
@@ -329,34 +330,7 @@ function(corrosion_import_crate)
     endif()
 
     if (_CORROSION_CMAKE_GREATER_EQUAL_3_19 AND CORROSION_PARSE_METADATA_BY_CMAKE)
-        _generator_get_workspace_root(toml_dir ${COR_MANIFEST_PATH})
-    else()
-        execute_process(
-            COMMAND
-                ${_CORROSION_GENERATOR}
-                    --manifest-path ${COR_MANIFEST_PATH}
-                    print-root
-            OUTPUT_VARIABLE toml_dir
-            RESULT_VARIABLE ret)
-
-        if (NOT ret EQUAL "0")
-            message(FATAL_ERROR "corrosion-generator failed: ${ret}")
-        endif()
-    endif()
-
-    string(STRIP "${toml_dir}" toml_dir)
-
-    get_filename_component(toml_dir_name ${toml_dir} NAME)
-
-    set(
-        generated_cmake
-        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/corrosion/${toml_dir_name}.dir/cargo-build.cmake"
-    )
-
-    if (_CORROSION_CMAKE_GREATER_EQUAL_3_19 AND CORROSION_PARSE_METADATA_BY_CMAKE)
-        _generator_gen_cmake(
-            OUT_FILE
-                "${generated_cmake}"
+        _generator_add_cargo_targets(
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
             CONFIGURATION_ROOT
@@ -373,6 +347,27 @@ function(corrosion_import_crate)
                 "${COR_CRATES}"
         )
     else()
+        execute_process(
+            COMMAND
+                ${_CORROSION_GENERATOR}
+                    --manifest-path ${COR_MANIFEST_PATH}
+                    print-root
+            OUTPUT_VARIABLE toml_dir
+            RESULT_VARIABLE ret)
+
+        if (NOT ret EQUAL "0")
+            message(FATAL_ERROR "corrosion-generator failed: ${ret}")
+        endif()
+
+        string(STRIP "${toml_dir}" toml_dir)
+
+        get_filename_component(toml_dir_name ${toml_dir} NAME)
+
+        set(
+            generated_cmake
+            "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/corrosion/${toml_dir_name}.dir/cargo-build.cmake"
+        )
+
         if (CMAKE_VS_PLATFORM_NAME)
             set (_CORROSION_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
         endif()
@@ -416,9 +411,9 @@ function(corrosion_import_crate)
         if (NOT ret EQUAL "0")
             message(FATAL_ERROR "corrosion-generator failed")
         endif()
-    endif()
 
-    include(${generated_cmake})
+        include(${generated_cmake})
+    endif()
 endfunction(corrosion_import_crate)
 
 function(add_crate path_to_toml)
