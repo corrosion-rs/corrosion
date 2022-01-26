@@ -345,6 +345,8 @@ function(corrosion_import_crate)
                 "${CMAKE_CONFIGURATION_TYPES}"
             CRATES
                 "${COR_CRATES}"
+            PROFILE
+                "${COR_PROFILE}"
         )
     else()
         execute_process(

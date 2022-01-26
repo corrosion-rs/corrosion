@@ -185,7 +185,7 @@ function(_generator_parse_target manifest package target)
     )
 endfunction()
 
-function(_generator_add_target manifest ix cargo_version)
+function(_generator_add_target manifest ix cargo_version profile)
     get_source_file_property(package_name ${manifest} CORROSION_TARGET${ix}_PACKAGE_NAME)
     get_source_file_property(manifest_path ${manifest} CORROSION_TARGET${ix}_MANIFEST_PATH)
     get_source_file_property(target_name ${manifest} CORROSION_TARGET${ix}_TARGET_NAME)
@@ -242,6 +242,7 @@ function(_generator_add_target manifest ix cargo_version)
         TARGET ${target_name}
         MANIFEST_PATH "${manifest_path}"
         BYPRODUCTS ${byproducts}
+        PROFILE "${profile}"
     )
 
     if(is_library)
@@ -366,7 +367,7 @@ endfunction()
 
 function(_generator_add_cargo_targets)
     set(options "")
-    set(one_value_args MANIFEST_PATH CONFIGURATION_ROOT CONFIGURATION_TYPE TARGET CARGO_VERSION)
+    set(one_value_args MANIFEST_PATH CONFIGURATION_ROOT CONFIGURATION_TYPE TARGET CARGO_VERSION PROFILE)
     set(multi_value_args CONFIGURATION_TYPES CRATES)
     cmake_parse_arguments(
         GGC
@@ -446,6 +447,7 @@ function(_generator_add_cargo_targets)
             ${GGC_MANIFEST_PATH}
             ${ix}
             ${GGC_CARGO_VERSION}
+            "${GGC_PROFILE}"
         )
     endforeach()
 
