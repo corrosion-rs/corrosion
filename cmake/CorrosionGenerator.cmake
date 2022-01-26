@@ -90,6 +90,7 @@ function(_generator_parse_target manifest package target)
     string(JSON target_kind_len LENGTH ${target_kind})
     math(EXPR target_kind_len-1 "${target_kind_len} - 1")
 
+    set(kinds)
     foreach(ix RANGE ${target_kind_len-1})
         string(JSON kind GET ${target_kind} ${ix})
         list(APPEND kinds ${kind})
@@ -212,6 +213,7 @@ function(_generator_add_target manifest ix cargo_version profile)
 
     string(REPLACE "\\" "/" manifest_path "${manifest_path}")
 
+    set(byproducts)
     if(is_library)
         if(has_staticlib)
             list(APPEND byproducts ${static_lib_name})
@@ -379,6 +381,8 @@ function(_generator_add_cargo_targets)
 
     set(config_root "${CMAKE_BINARY_DIR}/${GGC_CONFIGURATION_ROOT}")
 
+    set(config_types)
+    set(config_folders)
     if(GGC_CONFIGURATION_TYPES)
         set(is_multi_config TRUE)
         foreach(config_type ${GGC_CONFIGURATION_TYPES})

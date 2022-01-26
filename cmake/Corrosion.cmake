@@ -128,6 +128,9 @@ function(_add_cargo_build)
             enable_language(C)
         endif()
 
+        set(link_prefs)
+        set(compilers)
+        set(lang_targets)
         foreach(language ${languages})
             if(CMAKE_${language}_COMPILER AND (CMAKE_${language}_LINKER_PREFERENCE_PROPAGATES OR CMAKE_CROSSCOMPILING))
                 list(
@@ -234,6 +237,7 @@ function(_add_cargo_build)
     endif()
 
     set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${target_artifact_dir}/${build_type_dir}")
+    set(build_byproducts)
     set(byproducts)
     foreach(byproduct_file ${ACB_BYPRODUCTS})
         list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
