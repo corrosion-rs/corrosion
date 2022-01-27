@@ -144,7 +144,7 @@ function(_generator_parse_target manifest package target)
         set(implib_name "${lib_name}.dll.lib")
     elseif(is_windows_gnu)
         set(implib_name "lib${lib_name}.dll.a")
-    else(is_windows)
+    elseif(is_windows)
         message(FATAL_ERROR "Unknown windows environment - Can't determine implib name")
     endif()
 
