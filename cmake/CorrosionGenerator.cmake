@@ -103,7 +103,7 @@ function(_generator_parse_target manifest package target)
     set(is_executable FALSE)
 
     if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds)
-        set(is_library TUE)
+        set(is_library TRUE)
 
         if("staticlib" IN_LIST kinds)
             set(has_staticlib TRUE)
@@ -144,8 +144,8 @@ function(_generator_parse_target manifest package target)
         set(implib_name "${lib_name}.dll.lib")
     elseif(is_windows_gnu)
         set(implib_name "lib${lib_name}.dll.a")
-    else()
-        set(implib_name "lib${lib_name}.a")
+    else(is_windows)
+        message(FATAL_ERROR "Unknown windows environment - Can't determine implib name")
     endif()
 
     set(pdb_name "${lib_name}.pdb")
@@ -232,6 +232,8 @@ function(_generator_add_target manifest ix cargo_version profile)
         message(FATAL_ERROR "unknown target type")
     endif()
 
+    # Only shared libraries and executables have PDBs on Windows
+    # We don't know why PDBs aren't generated for staticlibs...
     if(is_windows_msvc AND (has_cdylib OR is_executable))
         if(cargo_version VERSION_LESS "1.45.0")
             set(prefix "deps/")
@@ -249,7 +251,7 @@ function(_generator_add_target manifest ix cargo_version profile)
 
     if(is_library)
         if(NOT (has_staticlib OR has_cdylib))
-            message(FATAL_ERROR "has not static or dynamic library")
+            message(FATAL_ERROR "Unknown library type")
         endif()
 
         if(has_staticlib)
