@@ -15,8 +15,8 @@ endif()
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
 
 option(
-    CORROSION_PARSE_METADATA_BY_CMAKE
-    "Enable Corrosion to parse cargo metadata by cmake string(JSON ...) command"
+    CORROSION_EXPERIMENTAL_PARSER
+    "Enable Corrosion to parse cargo metadata by CMake string(JSON ...) command"
     ${_CORROSION_CMAKE_GREATER_EQUAL_3_19}
 )
 
@@ -36,7 +36,7 @@ get_property(
     TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
 )
 
-if (_CORROSION_CMAKE_GREATER_EQUAL_3_19 AND CORROSION_PARSE_METADATA_BY_CMAKE)
+if (_CORROSION_CMAKE_GREATER_EQUAL_3_19 AND CORROSION_EXPERIMENTAL_PARSER)
     include(CorrosionGenerator)
 endif()
 
@@ -333,7 +333,7 @@ function(corrosion_import_crate)
         set(COR_MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${COR_MANIFEST_PATH})
     endif()
 
-    if (_CORROSION_CMAKE_GREATER_EQUAL_3_19 AND CORROSION_PARSE_METADATA_BY_CMAKE)
+    if (_CORROSION_CMAKE_GREATER_EQUAL_3_19 AND CORROSION_EXPERIMENTAL_PARSER)
         _generator_add_cargo_targets(
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
