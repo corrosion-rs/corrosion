@@ -142,6 +142,7 @@ install(
 install(
     FILES
         cmake/Corrosion.cmake
+        cmake/CorrosionGenerator.cmake
         cmake/FindRust.cmake
     DESTINATION
         ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_DATADIR}/cmake

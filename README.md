@@ -145,6 +145,8 @@ from `rustup`, or from a toolchain available in the user's `PATH`.
 - `Rust_CARGO_TARGET:STRING` - The default target triple to build for. Alter for cross-compiling.
 Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
 the default target triple reported by `${Rust_COMPILER} --version --verbose`.
+- `CORROSION_EXPERIMENTAL_PARSER:BOOL` - Enable Corrosion to parse cargo metadata by CMake `string(JSON ...)` command.
+Default: `ON` if CMake >= 3.19.0.
 
 If you want to set environment variables during the invocation of `cargo build`, you can set the
 `CORROSION_ENVIRONMENT_VARIABLES` property to `KEY=VALUE` pairs on the targets created by `corrosion_import_crate`.
