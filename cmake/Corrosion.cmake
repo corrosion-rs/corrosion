@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
 
-if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
-    message(FATAL_ERROR "Corrosion currently cannot be used with the \"Ninja Multi-Config\" "
-        "generator. Please use a different generator. Follow discussion on this issue at "
-        "https://github.com/corrosion-rs/corrosion/issues/50")
+if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config" AND CMAKE_VERSION VERSION_LESS 3.20.0)
+    message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with the \"Ninja Multi-Config\" "
+       "generator. Please use a different generator or update to cmake >= 3.20.")
 endif()
 
 
@@ -240,9 +239,9 @@ function(_add_cargo_build)
     set(byproducts)
     foreach(byproduct_file ${ACB_BYPRODUCTS})
         list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
-        if (NOT CMAKE_CONFIGURATION_TYPES)
-            # BYPRODUCTS can't use generator expressions, so it's broken on multi-config generators
-            # This is only an issue for Ninja Multi-Config
+        if (CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
+            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${byproduct_file}")
+        else()
             list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
         endif()
     endforeach()
