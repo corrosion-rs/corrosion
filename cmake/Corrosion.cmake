@@ -6,19 +6,18 @@ if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
         "https://github.com/corrosion-rs/corrosion/issues/50")
 endif()
 
-if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
-    set(_CORROSION_CMAKE_GREATER_EQUAL_3_19 ON)
-else()
-    set(_CORROSION_CMAKE_GREATER_EQUAL_3_19 OFF)
-endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
 
 option(
     CORROSION_EXPERIMENTAL_PARSER
     "Enable Corrosion to parse cargo metadata by CMake string(JSON ...) command"
-    ${_CORROSION_CMAKE_GREATER_EQUAL_3_19}
+    ON
 )
+
+if (CMAKE_VERSION VERSION_LESS 3.19.0)
+    set(CORROSION_EXPERIMENTAL_PARSER OFF CACHE INTERNAL "" FORCE)
+endif()
 
 find_package(Rust REQUIRED)
 
@@ -36,7 +35,7 @@ get_property(
     TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
 )
 
-if (_CORROSION_CMAKE_GREATER_EQUAL_3_19 AND CORROSION_EXPERIMENTAL_PARSER)
+if (CORROSION_EXPERIMENTAL_PARSER)
     include(CorrosionGenerator)
 endif()
 
@@ -204,7 +203,7 @@ function(_add_cargo_build)
     # can only add double quotes here. Any double quotes _in_ the rustflags must be escaped like `\\\"`.
     set(rustflags_genex "$<$<BOOL:${rustflags_target_property}>:--rustflags=\"${rustflags_target_property}\">")
 
-    if (_CORROSION_CMAKE_GREATER_EQUAL_3_19)
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
         set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
 
         set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_FEATURES>>")
@@ -333,7 +332,7 @@ function(corrosion_import_crate)
         set(COR_MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${COR_MANIFEST_PATH})
     endif()
 
-    if (_CORROSION_CMAKE_GREATER_EQUAL_3_19 AND CORROSION_EXPERIMENTAL_PARSER)
+    if (CORROSION_EXPERIMENTAL_PARSER)
         _generator_add_cargo_targets(
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
