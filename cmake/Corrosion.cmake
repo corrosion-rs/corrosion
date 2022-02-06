@@ -252,6 +252,17 @@ function(_add_cargo_build)
         list(APPEND features_args --features ${feature})
     endforeach()
 
+    # Todo: Refactor this together with the "$compilers section above."
+    if(CMAKE_C_COMPILER)
+        set(corrosion_cc "CC=${CMAKE_C_COMPILER}")
+    elseif(DEFINED ENV{CC})
+        set(corrosion_cc "CC=$ENV{CC}")
+    endif()
+    if(CMAKE_CXX_COMPILER)
+        set(corrosion_cxx "CXX=${CMAKE_CXX_COMPILER}")
+    elseif(DEFINED ENV{CXX})
+        set(corrosion_cc "CXX=$ENV{CXX}")
+    endif()
 
     add_custom_target(
         cargo-build_${target_name}
@@ -266,6 +277,8 @@ function(_add_cargo_build)
                 CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
                 CORROSION_LINK_LIBRARIES=${link_libs}
                 CORROSION_LINK_DIRECTORIES=${search_dirs}
+                ${corrosion_cc}
+                ${corrosion_cxx}
                 ${corrosion_link_args}
                 ${link_prefs}
                 ${compilers}
