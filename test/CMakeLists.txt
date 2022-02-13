@@ -32,3 +32,8 @@ endif()
 if (NOT _TOP_LEVEL)
     add_subdirectory(config)
 endif()
+
+# gensource only works with external Corrosion
+if (CORROSION_TESTS_FIND_CORROSION)
+    add_subdirectory(gensource)
+endif()
