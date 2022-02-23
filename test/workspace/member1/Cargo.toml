@@ -6,3 +6,7 @@ edition = "2018"
 
 [lib]
 crate-type = [ "lib", "cdylib" ]
+
+[dependencies]
+# issue #146
+fraction = "0.9"
