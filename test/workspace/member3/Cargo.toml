@@ -11,3 +11,4 @@ name = "my_program"
 path = "src/main.rs"
 
 [dependencies]
+member1 = { path = "../member1" }
