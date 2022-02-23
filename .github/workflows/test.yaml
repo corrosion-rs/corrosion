@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-latest
+          - windows-2019 # windows-latest is currently not having a supported MSVC compiler
           - ubuntu-latest
           - macos-10.15 # macos-11 is currently not working.
         arch:
@@ -45,29 +45,29 @@ jobs:
         exclude:
           # Something's busted when building with Visual Studio with CMake 3.12 - perhaps should
           # look into this at some point
-          - os: windows-latest
+          - os: windows-2019
             cmake: 3.12.4
             generator: default # Default generator is Visual Studio
 
           # You cannot build with GNU using Visual Studio on Windows
-          - os: windows-latest
+          - os: windows-2019
             abi: gnu
             generator: default # Default generator is Visual Studio
 
           # ARCH
-          - os: windows-latest
+          - os: windows-2019
             arch: i686
             abi: gnu
-          - os: windows-latest
+          - os: windows-2019
             arch: aarch64
             abi: gnu
-          - os: windows-latest
+          - os: windows-2019
             arch: i686
             generator: ninja
-          - os: windows-latest
+          - os: windows-2019
             arch: aarch64
             generator: ninja
-          - os: windows-latest
+          - os: windows-2019
             arch: powerpc64le
           - os: macos-10.15
             arch: i686
@@ -81,7 +81,7 @@ jobs:
             abi: msvc
           - os: ubuntu-latest
             abi: darwin
-          - os: windows-latest
+          - os: windows-2019
             abi: darwin
           - os: macos-10.15
             abi: msvc
@@ -94,12 +94,12 @@ jobs:
             rust: 1.45.0
           - os: ubuntu-latest
             rust: 1.45.0
-          - os: windows-latest
+          - os: windows-2019
             abi: msvc
             rust: 1.45.0
           # Prior to 1.45.0, -nostdlib is erroneously passed to g++ when for the *-pc-windows-gnu
           # target. See: https://github.com/rust-lang/rust/pull/71769
-          - os: windows-latest
+          - os: windows-2019
             abi: gnu
             rust: 1.44.1
 
@@ -218,7 +218,7 @@ jobs:
             --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target test-install
           ctest --verbose --build-config Debug
-        if: ${{ 'x86_64' == matrix.arch && !('windows-latest' == matrix.os && 'gnu' == matrix.abi) && '3.12.4' != matrix.cmake }}
+        if: ${{ 'x86_64' == matrix.arch && !('windows-2019' == matrix.os && 'gnu' == matrix.abi) && '3.12.4' != matrix.cmake }}
       - name: Build C++ program linking Rust
         run: |
           cmake \
@@ -252,7 +252,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-latest
+          - windows-2019
           - ubuntu-latest
           - macos-10.15
         method:
