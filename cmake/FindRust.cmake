@@ -250,10 +250,12 @@ else()
     )
 endif()
 
-if (_RUSTC_VERSION_RAW MATCHES "LLVM version: ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+if (_RUSTC_VERSION_RAW MATCHES "LLVM version: ([0-9]+)\\.([0-9]+)(\\.([0-9]+))?")
     set(Rust_LLVM_VERSION_MAJOR "${CMAKE_MATCH_1}")
     set(Rust_LLVM_VERSION_MINOR "${CMAKE_MATCH_2}")
-    set(Rust_LLVM_VERSION_PATCH "${CMAKE_MATCH_3}")
+    # With the Rust toolchain 1.44.1 the reported LLVM version is 9.0, i.e. without a patch version.
+    # Since cmake regex does not support non-capturing groups, just ignore Match 3.
+    set(Rust_LLVM_VERSION_PATCH "${CMAKE_MATCH_4}") 
     set(Rust_LLVM_VERSION "${Rust_LLVM_VERSION_MAJOR}.${Rust_LLVM_VERSION_MINOR}.${Rust_LLVM_VERSION_PATCH}")
 else()
     message(
