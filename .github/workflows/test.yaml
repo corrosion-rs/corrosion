@@ -212,18 +212,32 @@ jobs:
         run: cmake --version
       - name: Rust Version
         run: rustc +${{matrix.rust}} --version
+      - name: Configure (3.12 only)
+        run: >
+          cmake
+          -H.
+          -Bbuild
+          -DCORROSION_VERBOSE_OUTPUT=ON
+          ${{ steps.arch_flags.outputs.cmake }}
+          ${{ steps.pick_compiler.outputs.c_compiler }}
+          ${{ steps.pick_compiler.outputs.cxx_compiler }}
+          ${{ steps.pick_compiler.outputs.system_name }}
+          ${{ steps.pick_generator.outputs.generator }}
+          -DRust_TOOLCHAIN="${{matrix.rust}}"
+        if: ${{ matrix.cmake == '3.12.4' }}
       - name: Configure
-        run: |
-          cmake \
-            -H. \
-            -Bbuild \
-            -DCORROSION_VERBOSE_OUTPUT=ON \
-            ${{ steps.arch_flags.outputs.cmake }} \
-            ${{ steps.pick_compiler.outputs.c_compiler }} \
-            ${{ steps.pick_compiler.outputs.cxx_compiler }} \
-            ${{ steps.pick_compiler.outputs.system_name }} \
-            ${{ steps.pick_generator.outputs.generator }} \
-            -DRust_TOOLCHAIN=${{matrix.rust}}
+        run: >
+          cmake
+          -S.
+          -Bbuild
+          -DCORROSION_VERBOSE_OUTPUT=ON
+          ${{ steps.arch_flags.outputs.cmake }}
+          ${{ steps.pick_compiler.outputs.c_compiler }}
+          ${{ steps.pick_compiler.outputs.cxx_compiler }}
+          ${{ steps.pick_compiler.outputs.system_name }}
+          ${{ steps.pick_generator.outputs.generator }}
+          -DRust_TOOLCHAIN="${{matrix.rust}}"
+        if: ${{ matrix.cmake != '3.12.4' }}
       - name: Run Config Tests (x86_64 Only)
         run: |
           cd build
@@ -296,24 +310,26 @@ jobs:
       - name: Rust Version
         run: rustc --version
       - name: Install Corrosion
-        run: |
-          cmake \
-            -H. \
-            -Bbuild-corrosion \
-            -DCORROSION_VERBOSE_OUTPUT=ON \
-            -DCORROSION_BUILD_TESTS=OFF \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=install-corrosion
+        run: >
+          cmake
+          -S.
+          -Bbuild-corrosion
+          -DCORROSION_VERBOSE_OUTPUT=ON
+          -DCORROSION_BUILD_TESTS=OFF
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=install-corrosion
+
           cmake --build build-corrosion --config Release
+
           cmake --install build-corrosion --config Release
         if: ${{ matrix.method == 'install' }}
       - name: Configure Tests
-        run: |
-          cmake \
-            -Htest \
-            -Bbuild-tests \
-            -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}} \
-            -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
+        run: >
+          cmake
+          -Stest
+          -Bbuild-tests
+          -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}}
+          -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
       - name: Build Tests
         run: cmake --build build-tests
 
