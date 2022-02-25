@@ -181,7 +181,7 @@ jobs:
         if: ${{ 'msvc' == matrix.abi }}
       - uses: actions/checkout@v2
       - name: Install CMake
-        uses: AndrewGaspar/install-cmake@master
+        uses: corrosion-rs/install-cmake@v1.1
         with:
           cmake: ${{matrix.cmake}}
           ninja: 1.10.0
