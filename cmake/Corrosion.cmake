@@ -71,6 +71,14 @@ if(Rust_TOOLCHAIN_IS_RUSTUP_MANAGED)
 
 endif()
 
+if(CMAKE_GENERATOR MATCHES "Visual Studio"
+        AND (NOT CMAKE_VS_PLATFORM_NAME STREQUAL CMAKE_VS_PLATFORM_NAME_DEFAULT)
+        AND Rust_VERSION VERSION_LESS "1.54")
+    message(FATAL_ERROR "Due to a cargo issue, cross-compiling with a Visual Studio generator and rust versions"
+            " before 1.54 is not supported. Rust build scripts would be linked with the cross-compiler linker, which"
+            " causes the build to fail. Please upgrade your Rust version to 1.54 or newer.")
+endif()
+
 if (NOT TARGET Corrosion::Generator)
     message(STATUS "Using Corrosion as a subdirectory")
 endif()
