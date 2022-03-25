@@ -184,7 +184,7 @@ It is also possible to specify the features as a target list property on the CMa
 by `corrosion_import_crate`. The property is called `CORROSION_FEATURES`.
 
 To disable linking against system libraries - appropiate when building `no_std` crates - use
-the `NO_STD` property.
+the `NO_STD` parameter for `corrosion_import_crate`.
 
 Finally, regarding features, cargo offers the ability to turn off default features or enable all
 features, with the `--all-features` and `--no-default-features` options. Corrosion offers corresponding
