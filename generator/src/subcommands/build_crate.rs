@@ -15,6 +15,7 @@ const RUSTFLAGS: &str = "rustflags";
 const FEATURES: &str = "features";
 const ALL_FEATURES: &str = "all-features";
 const NO_DEFAULT_FEATURES: &str = "no-default-features";
+const NO_DEFAULT_LIBRARIES: &str = "no-default-libraries";
 
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(BUILD_CRATE)
@@ -24,7 +25,7 @@ pub fn subcommand() -> App<'static, 'static> {
                 .long("profile")
                 .takes_value(true)
                 .help("The cargo profile to build with, e.g. 'dev' or 'release'")
-                .conflicts_with(RELEASE)
+                .conflicts_with(RELEASE),
         )
         .arg(
             Arg::with_name(TARGET)
@@ -40,12 +41,13 @@ pub fn subcommand() -> App<'static, 'static> {
                 .required(true)
                 .help("The name of the package being built with cargo"),
         )
-        .arg(Arg::with_name(RUSTFLAGS)
-            .long(RUSTFLAGS)
-            .value_name("RUSTFLAGS")
-            .takes_value(true)
-            .multiple(false)
-            .help("The RUSTFLAGS to pass to rustc.")
+        .arg(
+            Arg::with_name(RUSTFLAGS)
+                .long(RUSTFLAGS)
+                .value_name("RUSTFLAGS")
+                .takes_value(true)
+                .multiple(false)
+                .help("The RUSTFLAGS to pass to rustc."),
         )
         .arg(
             Arg::with_name(FEATURES)
@@ -58,13 +60,18 @@ pub fn subcommand() -> App<'static, 'static> {
         )
         .arg(
             Arg::with_name(ALL_FEATURES)
-            .long(ALL_FEATURES)
+                .long(ALL_FEATURES)
                 .help("Specifies that all features of the crate are to be activated"),
         )
         .arg(
             Arg::with_name(NO_DEFAULT_FEATURES)
-            .long(NO_DEFAULT_FEATURES)
+                .long(NO_DEFAULT_FEATURES)
                 .help("Specifies that the default features of the crate are to be disabled"),
+        )
+        .arg(
+            Arg::with_name(NO_DEFAULT_LIBRARIES)
+                .long(NO_DEFAULT_LIBRARIES)
+                .help("Disables linking against any default libraries"),
         )
 }
 
@@ -124,7 +131,9 @@ pub fn invoke(
         .collect();
 
     if !languages.is_empty() {
-        rustflags += " -Cdefault-linker-libraries=yes";
+        if !matches.is_present(NO_DEFAULT_LIBRARIES) {
+            rustflags += " -Cdefault-linker-libraries=yes";
+        }
 
         // This loop gets the highest preference link language to use for the linker
         let mut highest_preference: Option<(Option<i32>, &str)> = None;
@@ -174,7 +183,11 @@ pub fn invoke(
 
         let rustflags_trimmed = rustflags.trim();
         if args.verbose {
-            println!("Rustflags for package {} are: `{}`", matches.value_of(PACKAGE).unwrap(), rustflags_trimmed);
+            println!(
+                "Rustflags for package {} are: `{}`",
+                matches.value_of(PACKAGE).unwrap(),
+                rustflags_trimmed
+            );
         }
         cargo.env("RUSTFLAGS", rustflags_trimmed);
     }

@@ -6,8 +6,8 @@ use std::{
 };
 
 use clap::{App, Arg, ArgMatches, SubCommand};
-use semver::Version;
 use platforms::Platform;
+use semver::Version;
 
 mod platform;
 mod target;
@@ -24,6 +24,7 @@ const TARGET: &str = "target";
 const CARGO_VERSION: &str = "cargo-version";
 const PROFILE: &str = "profile";
 const CRATES: &str = "crates";
+const NO_DEFAULT_LIBRARIES: &str = "no-default-libraries";
 
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(GEN_CMAKE)
@@ -89,7 +90,7 @@ pub fn subcommand() -> App<'static, 'static> {
                 .long(PROFILE)
                 .value_name("PROFILE")
                 .required(false)
-                .help("Custom cargo profile to select.")
+                .help("Custom cargo profile to select."),
         )
         .arg(
             Arg::with_name(OUT_FILE)
@@ -97,6 +98,13 @@ pub fn subcommand() -> App<'static, 'static> {
                 .long("out-file")
                 .value_name("FILE")
                 .help("Output CMake file name. Defaults to stdout."),
+        )
+        .arg(
+            Arg::with_name(NO_DEFAULT_LIBRARIES)
+                .long(NO_DEFAULT_LIBRARIES)
+                .help(
+                    "Do not include libraries usually included by default. Use for no-std crates",
+                ),
         )
 }
 
@@ -183,11 +191,17 @@ cmake_minimum_required(VERSION 3.12)
         })
         .collect();
 
-    let cargo_profile =  matches.value_of(PROFILE);
+    let cargo_profile = matches.value_of(PROFILE);
 
     for target in &targets {
         target
-            .emit_cmake_target(&mut out_file, &cargo_platform, &cargo_version, cargo_profile)
+            .emit_cmake_target(
+                &mut out_file,
+                &cargo_platform,
+                &cargo_version,
+                cargo_profile,
+                !matches.is_present(NO_DEFAULT_LIBRARIES),
+            )
             .unwrap();
     }
 

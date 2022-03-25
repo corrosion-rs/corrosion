@@ -104,6 +104,7 @@ impl CargoTarget {
         platform: &super::platform::Platform,
         cargo_version: &semver::Version,
         cargo_profile: Option<&str>,
+        include_platform_libs: bool,
     ) -> Result<(), Box<dyn Error>> {
         // This bit aggregates the byproducts of "cargo build", which is needed for generators like Ninja.
         let mut byproducts = vec![];
@@ -172,10 +173,7 @@ _add_cargo_build(
 ",
             self.cargo_package.name,
             self.cargo_target.name,
-            self.cargo_package
-                .manifest_path
-                .as_str()
-                .replace("\\", "/"),
+            self.cargo_package.manifest_path.as_str().replace("\\", "/"),
             byproducts.join(" "),
             cargo_build_profile_option
         )?;
@@ -195,36 +193,38 @@ _add_cargo_build(
                         self.cargo_target.name
                     )?;
 
-                    if !platform.libs.is_empty() {
-                        writeln!(
-                            out_file,
-                            "set_property(TARGET {0}-static PROPERTY INTERFACE_LINK_LIBRARIES \
-                             {1})",
-                            self.cargo_target.name,
-                            platform.libs.join(" ")
-                        )?;
-                    }
+                    if include_platform_libs {
+                        if !platform.libs.is_empty() {
+                            writeln!(
+                                out_file,
+                                "set_property(TARGET {0}-static PROPERTY INTERFACE_LINK_LIBRARIES \
+                                 {1})",
+                                self.cargo_target.name,
+                                platform.libs.join(" ")
+                            )?;
+                        }
 
-                    if !platform.libs_debug.is_empty() {
-                        writeln!(
-                            out_file,
-                            "set_property(TARGET {0}-static PROPERTY \
-                             INTERFACE_LINK_LIBRARIES_DEBUG {1})",
-                            self.cargo_target.name,
-                            platform.libs_debug.join(" ")
-                        )?;
-                    }
-
-                    if !platform.libs_release.is_empty() {
-                        for config in &["RELEASE", "MINSIZEREL", "RELWITHDEBINFO"] {
+                        if !platform.libs_debug.is_empty() {
                             writeln!(
                                 out_file,
                                 "set_property(TARGET {0}-static PROPERTY \
-                                 INTERFACE_LINK_LIBRARIES_{2} {1})",
+                                 INTERFACE_LINK_LIBRARIES_DEBUG {1})",
                                 self.cargo_target.name,
-                                platform.libs_release.join(" "),
-                                config
+                                platform.libs_debug.join(" ")
                             )?;
+                        }
+
+                        if !platform.libs_release.is_empty() {
+                            for config in &["RELEASE", "MINSIZEREL", "RELWITHDEBINFO"] {
+                                writeln!(
+                                    out_file,
+                                    "set_property(TARGET {0}-static PROPERTY \
+                                     INTERFACE_LINK_LIBRARIES_{2} {1})",
+                                    self.cargo_target.name,
+                                    platform.libs_release.join(" "),
+                                    config
+                                )?;
+                            }
                         }
                     }
                 }

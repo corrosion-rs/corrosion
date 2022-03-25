@@ -195,6 +195,9 @@ function(_add_cargo_build)
     if(COR_NO_DEFAULT_FEATURES)
         set(no_default_features_arg --no-default-features)
     endif()
+    if(COR_NO_DEFAULT_LIBRARIES)
+        set(no_default_libraries_arg --no-default-libraries)
+    endif()
 
     set(rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTFLAGS>>")
     # `rustflags_target_property` may contain multiple arguments and double quotes, so we _should_ single quote it to
@@ -290,6 +293,7 @@ function(_add_cargo_build)
                     ${features_args}
                     ${all_features_arg}
                     ${no_default_features_arg}
+                    ${no_default_libraries_arg}
                     ${features_genex}
                     ${cargo_target_option}
                     ${rustflags_genex}
@@ -321,7 +325,7 @@ function(_add_cargo_build)
 endfunction(_add_cargo_build)
 
 function(corrosion_import_crate)
-    set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES)
+    set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_DEFAULT_LIBRARIES)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE)
     set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
