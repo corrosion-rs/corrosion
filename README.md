@@ -183,6 +183,9 @@ That's equivalent to calling `cargo build --features chocolate vanilla`.
 It is also possible to specify the features as a target list property on the CMake target created
 by `corrosion_import_crate`. The property is called `CORROSION_FEATURES`.
 
+To disable linking against system libraries - appropiate when building `no_std` crates - use
+the `NO_STD` property.
+
 Finally, regarding features, cargo offers the ability to turn off default features or enable all
 features, with the `--all-features` and `--no-default-features` options. Corrosion offers corresponding
 parameters for `corrosion_import_crate` called `ALL_FEATURES` and `NO_DEFAULT_FEATURES`. The corresponding
