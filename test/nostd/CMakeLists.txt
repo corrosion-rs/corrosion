@@ -1,4 +1,4 @@
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml NO_DEFAULT_LIBRARIES)
+corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml NO_STD)
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nostdlib")
 list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_LIBRARIES stdc++)
