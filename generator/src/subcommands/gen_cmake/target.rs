@@ -160,24 +160,6 @@ impl CargoTarget {
             String::default()
         };
 
-        writeln!(
-            out_file,
-            "\
-_add_cargo_build(
-    PACKAGE {0}
-    TARGET {1}
-    MANIFEST_PATH \"{2}\"
-    BYPRODUCTS {3}
-    {4}
-)
-",
-            self.cargo_package.name,
-            self.cargo_target.name,
-            self.cargo_package.manifest_path.as_str().replace("\\", "/"),
-            byproducts.join(" "),
-            cargo_build_profile_option
-        )?;
-
         match self.target_type {
             CargoTargetType::Library {
                 has_staticlib,
@@ -278,6 +260,24 @@ endif()",
                 )?;
             }
         }
+
+        writeln!(
+            out_file,
+            "\
+_add_cargo_build(
+    PACKAGE {0}
+    TARGET {1}
+    MANIFEST_PATH \"{2}\"
+    BYPRODUCTS {3}
+    {4}
+)
+",
+            self.cargo_package.name,
+            self.cargo_target.name,
+            self.cargo_package.manifest_path.as_str().replace("\\", "/"),
+            byproducts.join(" "),
+            cargo_build_profile_option
+        )?;
 
         writeln!(out_file)?;
 
