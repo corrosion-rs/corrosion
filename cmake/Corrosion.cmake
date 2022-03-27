@@ -105,14 +105,6 @@ function(_add_cargo_build)
         set (build_dir .)
     endif()
 
-    # Join the list with `:` as a custom delimiter, since the `;` is expanded when passed
-    # to commands with COMMAND_EXPANDS_LISTS. File/directory paths may contain spaces, so we can't let
-    # the list be expanded.
-    set(_link_libs "$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINK_LIBRARIES>>")
-    set(link_libs "$<JOIN:${_link_libs},:>")
-    set(_search_dirs "$<GENEX_EVAL:$<TARGET_PROPERTY:cargo-build_${target_name},CARGO_LINK_DIRECTORIES>>")
-    set(search_dirs "$<JOIN:${_search_dirs},:>")
-
     # For MSVC targets, don't mess with linker preferences.
     # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
     if (NOT MSVC)
@@ -282,8 +274,6 @@ function(_add_cargo_build)
             ${CMAKE_COMMAND} -E env
                 ${build_env_variable_genex}
                 CORROSION_BUILD_DIR="${CMAKE_CURRENT_BINARY_DIR}"
-                CORROSION_LINK_LIBRARIES="${link_libs}"
-                CORROSION_LINK_DIRECTORIES="${search_dirs}"
                 ${corrosion_cc}
                 ${corrosion_cxx}
                 ${corrosion_link_args}
@@ -482,24 +472,13 @@ function(corrosion_link_libraries target_name)
         set_property(
             TARGET cargo-build_${target_name}
             APPEND
-            PROPERTY CARGO_LINK_DIRECTORIES
-            $<TARGET_LINKER_FILE_DIR:${library}>
-        )
-
-        set_property(
-            TARGET cargo-build_${target_name}
-            APPEND
             PROPERTY CARGO_DEPS_LINKER_LANGUAGES
             $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
         )
+        corrosion_add_target_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
 
         # TODO: The output name of the library can be overridden - find a way to support that.
-        set_property(
-            TARGET cargo-build_${target_name}
-            APPEND
-            PROPERTY CARGO_LINK_LIBRARIES
-            ${library}
-        )
+        corrosion_add_target_rustflags(${target_name} "-l${library}")
     endforeach()
 endfunction(corrosion_link_libraries)
 
