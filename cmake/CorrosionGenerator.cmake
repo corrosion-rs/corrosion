@@ -253,14 +253,6 @@ function(_generator_add_target manifest ix cargo_version profile)
         list(APPEND byproducts "${prefix}${pdb_name}")
     endif()
 
-    _add_cargo_build(
-        PACKAGE ${package_name}
-        TARGET ${target_name}
-        MANIFEST_PATH "${manifest_path}"
-        BYPRODUCTS ${byproducts}
-        PROFILE "${profile}"
-    )
-
     if(is_library)
         if(NOT (has_staticlib OR has_cdylib))
             message(FATAL_ERROR "Unknown library type")
@@ -333,6 +325,14 @@ function(_generator_add_target manifest ix cargo_version profile)
     else()
         message(FATAL_ERROR "unknown target type")
     endif()
+
+    _add_cargo_build(
+            PACKAGE ${package_name}
+            TARGET ${target_name}
+            MANIFEST_PATH "${manifest_path}"
+            BYPRODUCTS ${byproducts}
+            PROFILE "${profile}"
+    )
 endfunction()
 
 function(_generator_add_config_info manifest ix is_multi_config config_type)
