@@ -414,6 +414,11 @@ function(corrosion_import_crate)
             # uses default build type
         endif()
 
+        set(no_default_libs_arg)
+        if(COR_NO_STD)
+            set(no_default_libs_arg "--no-default-libraries"
+        endif()
+
         set(crates_args)
         foreach(crate ${COR_CRATES})
             list(APPEND crates_args --crates ${crate})
@@ -429,6 +434,7 @@ function(corrosion_import_crate)
                         ${_CORROSION_CONFIGURATION_TYPES}
                         ${crates_args}
                         ${cargo_profile}
+                        ${no_default_libs_arg}
                         --cargo-version ${_CORROSION_CARGO_VERSION}
                         -o ${generated_cmake}
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
