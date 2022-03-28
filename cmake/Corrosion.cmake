@@ -416,7 +416,7 @@ function(corrosion_import_crate)
 
         set(no_default_libs_arg)
         if(COR_NO_STD)
-            set(no_default_libs_arg "--no-default-libraries"
+            set(no_default_libs_arg "--no-default-libraries")
         endif()
 
         set(crates_args)
