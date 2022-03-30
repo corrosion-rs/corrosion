@@ -76,6 +76,25 @@ set(_CORROSION_CARGO_VERSION ${Rust_CARGO_VERSION} CACHE INTERNAL "cargo version
 set(_CORROSION_RUST_CARGO_TARGET ${Rust_CARGO_TARGET} CACHE INTERNAL "target triple used by corrosion")
 set(_CORROSION_RUST_CARGO_HOST_TARGET ${Rust_CARGO_HOST_TARGET} CACHE INTERNAL "host triple used by corrosion")
 
+# We previously specified some Custom properties as part of our public API, however the chosen names prevented us from
+# supporting CMake versions before 3.19. In order to both support older CMake versions and not break existing code
+# immediately, we are using a different property name depending on the CMake version. However users avoid using
+# any of the properties directly, as they are no longer part of the public API and are to be considered deprecated.
+# Instead use the corrosion_set_... functions as documented in the Readme.
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
+    set(_CORR_PROP_FEATURES CORROSION_FEATURES CACHE INTERNAL "")
+    set(_CORR_PROP_ALL_FEATURES CORROSION_ALL_FEATURES CACHE INTERNAL "")
+    set(_CORR_PROP_NO_DEFAULT_FEATURES CORROSION_NO_DEFAULT_FEATURES CACHE INTERNAL "")
+    set(_CORR_PROP_ENV_VARS CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
+    set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
+else()
+    set(_CORR_PROP_FEATURES INTERFACE_CORROSION_FEATURES CACHE INTERNAL "")
+    set(_CORR_PROP_ALL_FEATURES INTERFACE_CORROSION_ALL_FEATURES CACHE INTERNAL "")
+    set(_CORR_PROP_NO_DEFAULT_FEATURES INTERFACE_NO_DEFAULT_FEATURES CACHE INTERNAL "")
+    set(_CORR_PROP_ENV_VARS INTERFACE_CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
+    set(_CORR_PROP_HOST_BUILD INTERFACE_CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
+endif()
+
 function(_add_cargo_build)
     set(options "")
     set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE)
@@ -202,30 +221,27 @@ function(_add_cargo_build)
     # can only add double quotes here. Any double quotes _in_ the rustflags must be escaped like `\\\"`.
     set(rustflags_genex "$<$<BOOL:${rustflags_target_property}>:--rustflags=\"${rustflags_target_property}\">")
 
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
-        set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ENVIRONMENT_VARIABLES>>")
+    set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_FEATURES}>>")
+    set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
 
-        set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_FEATURES>>")
-        set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
+    # target property overrides corrosion_import_crate argument
+    set(all_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_ALL_FEATURES}>>")
+    set(all_features_property_exists_condition "$<NOT:$<STREQUAL:${all_features_target_property},>>")
+    set(all_features_property_arg "$<IF:$<BOOL:${all_features_target_property}>,--all-features,>")
+    set(all_features_arg "$<IF:${all_features_property_exists_condition},${all_features_property_arg},${all_features_arg}>")
 
-        # target property overrides corrosion_import_crate argument
-        set(all_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_ALL_FEATURES>>")
-        set(all_features_property_exists_condition "$<NOT:$<STREQUAL:${all_features_target_property},>>")
-        set(all_features_property_arg "$<IF:$<BOOL:${all_features_target_property}>,--all-features,>")
-        set(all_features_arg "$<IF:${all_features_property_exists_condition},${all_features_property_arg},${all_features_arg}>")
+    set(no_default_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_NO_DEFAULT_FEATURES}>>")
+    set(no_default_features_property_exists_condition "$<NOT:$<STREQUAL:${no_default_features_target_property},>>")
+    set(no_default_features_property_arg "$<IF:$<BOOL:${no_default_features_target_property}>,--no-default-features,>")
+    set(no_default_features_arg "$<IF:${no_default_features_property_exists_condition},${no_default_features_property_arg},${no_default_features_arg}>")
 
-        set(no_default_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},CORROSION_NO_DEFAULT_FEATURES>>")
-        set(no_default_features_property_exists_condition "$<NOT:$<STREQUAL:${no_default_features_target_property},>>")
-        set(no_default_features_property_arg "$<IF:$<BOOL:${no_default_features_target_property}>,--no-default-features,>")
-        set(no_default_features_arg "$<IF:${no_default_features_property_exists_condition},${no_default_features_property_arg},${no_default_features_arg}>")
+    set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_ENV_VARS}>>")
+    set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_HOST_BUILD}>>>")
 
-        set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},CORROSION_USE_HOST_BUILD>>>")
-
-        set(linker_languages "$<${if_not_host_build_condition}:${linker_languages}>")
-        set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
-        set(cargo_target_option "$<IF:${if_not_host_build_condition},${cargo_target_option},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
-        set(target_artifact_dir "$<IF:${if_not_host_build_condition},${target_artifact_dir},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
-    endif()
+    set(linker_languages "$<${if_not_host_build_condition}:${linker_languages}>")
+    set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
+    set(cargo_target_option "$<IF:${if_not_host_build_condition},${cargo_target_option},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
+    set(target_artifact_dir "$<IF:${if_not_host_build_condition},${target_artifact_dir},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
 
     if(cargo_profile_name)
         set(cargo_profile "--profile=${cargo_profile_name}")
@@ -451,6 +467,14 @@ function(corrosion_set_linker_language target_name language)
     )
 endfunction()
 
+function(corrosion_set_hostbuild target_name)
+    # Configure the target to be compiled for the Host target and ignore any cross-compile configuration.
+    set_property(
+            TARGET ${target_name}
+            PROPERTY ${_CORR_PROP_HOST_BUILD} 1
+    )
+endfunction()
+
 function(corrosion_add_target_rustflags target_name rustflag)
     # Additional rustflags may be passed as optional parameters after rustflag.
     set_property(
@@ -458,6 +482,49 @@ function(corrosion_add_target_rustflags target_name rustflag)
             APPEND
             PROPERTY INTERFACE_CORROSION_RUSTFLAGS ${rustflag} ${ARGN}
     )
+endfunction()
+
+function(corrosion_set_env_vars target_name env_var)
+    # Additional environment variables may be passed as optional parameters after env_var.
+    set_property(
+        TARGET ${target_name}
+        APPEND
+        PROPERTY ${_CORR_PROP_ENV_VARS} ${env_var} ${ARGN}
+    )
+endfunction()
+
+function(corrosion_set_features target_name)
+    # corrosion_set_features(<target_name> [ALL_FEATURES=Bool] [NO_DEFAULT_FEATURES] [FEATURES <feature1> ... ])
+    set(options NO_DEFAULT_FEATURES)
+    set(one_value_args ALL_FEATURES)
+    set(multi_value_args FEATURES)
+    cmake_parse_arguments(
+            PARSE_ARGV 1
+            SET
+            "${options}"
+            "${one_value_args}"
+            "${multi_value_args}"
+    )
+
+    if(DEFINED SET_ALL_FEATURES)
+        set_property(
+                TARGET ${target_name}
+                PROPERTY ${_CORR_PROP_ALL_FEATURES} ${SET_ALL_FEATURES}
+        )
+    endif()
+    if(SET_NO_DEFAULT_FEATURES)
+        set_property(
+                TARGET ${target_name}
+                PROPERTY ${_CORR_PROP_NO_DEFAULT_FEATURES} 1
+        )
+    endif()
+    if(SET_FEATURES)
+        set_property(
+                TARGET ${target_name}
+                APPEND
+                PROPERTY ${_CORR_PROP_FEATURES} ${SET_FEATURES}
+        )
+    endif()
 endfunction()
 
 function(cargo_link_libraries)
