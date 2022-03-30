@@ -38,8 +38,10 @@ target_link_libraries(cpp-exe PUBLIC rust-lib)
   - [Fetch Content](#fetch-content)
   - [Subdirectory](#subdirectory)
 - [Usage](#usage)
-  - [Options](#options)
-    - [Advanced](#advanced)
+  - [Configuration Options](#configuration-options)
+  - [Information provided by Corrosion](#information-provided-by-corrosion)
+  - [Adding crate targets](#adding-crate-targets)
+  - [Per Target options](#per-target-options)
   - [Importing C-Style Libraries Written in Rust](#importing-c-style-libraries-written-in-rust)
     - [Generate Bindings to Rust Library Automatically](#generate-bindings-to-rust-library-automatically)
   - [Importing Libraries Written in C and C++ Into Rust](#importing-libraries-written-in-c-and-c++-into-rust)
@@ -126,17 +128,16 @@ add_subdirectory(path/to/corrosion)
 ```
 
 ## Usage
-### Options
+### Corrosion Options
 All of the following variables are evaluated automatically in most cases. In typical cases you
-shouldn't need to alter any of these.
+shouldn't need to alter any of these. If you do want to specify them manually, make sure to set 
+them **before** `find_package(Corrosion REQUIRED)`.
 
 - `Rust_TOOLCHAIN:STRING` - Specify a named rustup toolchain to use. Changes to this variable
 resets all other options. Default: If the first-found `rustc` is a `rustup` proxy, then the default
 rustup toolchain (see `rustup show`) is used. Otherwise, the variable is unset by default.
 - `Rust_ROOT:STRING` - CMake provided. Path to a Rust toolchain to use. This is an alternative if
 you want to select a specific Rust toolchain, but it's not managed by rustup. Default: Nothing
-
-#### Advanced
 - `Rust_COMPILER:STRING` - Path to an actual `rustc`. If set to a `rustup` proxy, it will be
 replaced by a path to an actual `rustc`. Default: The `rustc` in the first-found toolchain, either
 from `rustup`, or from a toolchain available in the user's `PATH`.
@@ -145,16 +146,26 @@ from `rustup`, or from a toolchain available in the user's `PATH`.
 - `Rust_CARGO_TARGET:STRING` - The default target triple to build for. Alter for cross-compiling.
 Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
 the default target triple reported by `${Rust_COMPILER} --version --verbose`.
-- `CORROSION_EXPERIMENTAL_PARSER:BOOL` - Enable Corrosion to parse cargo metadata by CMake `string(JSON ...)` command.
-Default: `ON` if CMake >= 3.19.0.
+- `CORROSION_EXPERIMENTAL_PARSER:BOOL` - Use CMake to parse cargo metadata. In the future this will
+  remove the dependency on native tooling and make the subdirectory method as fast as the install method.
+  Default: `ON` if CMake >= 3.19.0. Forced `OFF` for CMake < 3.19.
 
-If you want to set environment variables during the invocation of `cargo build`, you can set the
-`CORROSION_ENVIRONMENT_VARIABLES` property to `KEY=VALUE` pairs on the targets created by `corrosion_import_crate`.
-The pairs can also be generator expressions, as they will be evaluated using $<GENEX_EVAL>.
-For example this may be useful if the build scripts of crates look for environment variables.
-This feature requires CMake >= 3.19.0.
+#### Developer/Maintainer Options
+These options are not used in the course of normal Corrosion usage, but are used to configure how
+Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.
 
-#### Information provided by Corrosion
+- `CORROSION_DEV_MODE:BOOL` - Indicates that Corrosion is being actively developed. Default: `OFF`
+  if Corrosion is a subdirectory, `ON` if it is the top-level project
+- `CORROSION_BUILD_TESTS:BOOL` - Build the Corrosion tests. Default: `Off` if Corrosion is a
+  subdirectory, `ON` if it is the top-level project
+- `CORROSION_GENERATOR_EXECUTABLE:STRING` - Specify a path to the corrosion-generator executable.
+  This is to support scenarios where it's easier to build corrosion-generator outside of the normal
+  bootstrap path, such as in the case of package managers that make it very easy to import Rust
+  crates for fully reproducible, offline builds.
+- `CORROSION_INSTALL_EXECUTABLE:BOOL` - Controls whether corrosion-generator is installed with the
+  package. Default: `ON` with `CORROSION_GENERATOR_EXECUTABLE` unset, otherwise `OFF`
+
+### Information provided by Corrosion
 
 For your convenience, Corrosion sets a number of variables which contain information about the version of the rust 
 toolchain. You can use the CMake version comparison operators 
@@ -167,30 +178,49 @@ versions individually.
 - `Rust_IS_NIGHTLY` - 1 if a nightly toolchain is used, otherwise 0. Useful for selecting an unstable feature for a 
   crate, that is only available on nightly toolchains.
 
-### Cargo feature selection
+### Adding crate targets
 
-Cargo crates sometimes offer features, which traditionally can be specified with `cargo build` on the
-command line as opt-in. You can select the features to enable with the `FEATURES` argument when
-calling `corrosion_import_crate`. The following example enables the "chocolate" and "vanilla"
-features of the imported Cargo.toml that hypothetically provides ice cream:
-
+In order to integrate a Rust crate into CMake, you first need to import a crate or Workspace:
 ```cmake
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml FEATURES chocolate vanilla)
+corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml> 
+        # Equivalent to --all-features passed to cargo build
+        [ALL_FEATURES]
+        # Equivalent to --no-default-features passed to cargo build
+        [NO_DEFAULT_FEATURES] 
+        # Disable linking of standard libraries (required for no_std crates).
+        [NO_STD]
+        # Specify  cargo build profile (e.g. release or a custom profile) 
+        [PROFILE <cargo-profile>]
+        # Only import the specified crates from a workspace
+        [CRATES <crate1> ... <crateN>]
+        # Enable the specified features
+        [FEATURES <feature1> ... <featureN>]
+)
 ```
 
-That's equivalent to calling `cargo build --features chocolate vanilla`.
+This will add a cmake target for each imported crate. Many of the options can also be set per target, see TODO for 
+details.
 
-It is also possible to specify the features as a target list property on the CMake target created
-by `corrosion_import_crate`. The property is called `CORROSION_FEATURES`.
+### Per Target options
 
-To disable linking against system libraries - appropiate when building `no_std` crates - use
-the `NO_STD` parameter for `corrosion_import_crate`.
+Some configuration options can be specified individually for each target. You can set them via the 
+`corrosion_set_xxx()` functions specified below:
 
-Finally, regarding features, cargo offers the ability to turn off default features or enable all
-features, with the `--all-features` and `--no-default-features` options. Corrosion offers corresponding
-parameters for `corrosion_import_crate` called `ALL_FEATURES` and `NO_DEFAULT_FEATURES`. The corresponding
-boolean target properties - which override any specified values with `corrosion_import_crate` are called
-`CORROSION_ALL_FEATURES` and `CORROSION_NO_DEFAULT_FEATURES`.
+- `corrosion_set_env_vars(<target_name> <key1=value1> [... <keyN=valueN>])`: Define environment variables
+  that should be set during the invocation of `cargo build` for the specified target. Please note that
+  the environment variable will only be set for direct builds of the target via cmake, and not for any
+  build where cargo built the crate in question as a dependency for another target.
+  The environment variables may contain generator expressions.
+- `corrosion_add_target_rustflags(<target_name> <rustflag> [... <rustflagN>])`: When building the target,
+  the `RUSTFLAGS` environment variable will contain the flags added via this function. Please note that any
+  dependencies (built by cargo) will also see these flags. In the future corrosion may offer a second function
+  to allow specifying flags only for the target in question, utilizing `cargo rustc` instead of `cargo build`.
+- `corrosion_set_hostbuild(<target_name>)`: The target should be compiled for the Host target and ignore any 
+  cross-compile configuration.
+- `corrosion_set_features(<target_name> [ALL_FEATURES <Bool>] [NO_DEFAULT_FEATURES] [FEATURES <feature1> ... ])`:
+  For a given target, enable specific features via `FEATURES`, toggle `ALL_FEATURES` on or off or disable all features
+  via `NO_DEFAULT_FEATURES`. For more information on features, please see also the 
+  [cargo reference](https://doc.rust-lang.org/cargo/reference/features.html).
 
 ### Selecting a custom cargo profile
 
@@ -200,31 +230,6 @@ you may select a custom profile by adding the optional argument `PROFILE <profil
 `corrosion_import_crate()`. If you do not specify a profile, or you use an older toolchain, corrosion will select
 the standard `dev` profile if the CMake config is either `Debug` or unspecified. In all other cases the `release`
 profile is chosen for cargo.
-
-### RUSTFLAGS
-
-Sometimes you may need to pass `RUSTFLAGS` to rustc, e.g. to enable some nightly option. Corrosion allows you to set
-RUSTFLAGS on a per-crate basis:
-```cmake
-corrosion_add_target_rustflags(cmake_target rustflag [additional_rustflag1 ...])
-```
-`corrosion_add_target_rustflags()` can be called multiple times, each time appending the new rustflag to the list of 
-flags.
-
-### Developer/Maintainer Options
-These options are not used in the course of normal Corrosion usage, but are used to configure how
-Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.
-
-- `CORROSION_DEV_MODE:BOOL` - Indicates that Corrosion is being actively developed. Default: `OFF`
-if Corrosion is a subdirectory, `ON` if it is the top-level project
-- `CORROSION_BUILD_TESTS:BOOL` - Build the Corrosion tests. Default: `Off` if Corrosion is a
-subdirectory, `ON` if it is the top-level project
-- `CORROSION_GENERATOR_EXECUTABLE:STRING` - Specify a path to the corrosion-generator executable.
-This is to support scenarios where it's easier to build corrosion-generator outside of the normal
-bootstrap path, such as in the case of package managers that make it very easy to import Rust
-crates for fully reproducible, offline builds.
-- `CORROSION_INSTALL_EXECUTABLE:BOOL` - Controls whether corrosion-generator is installed with the
-package. Default: `ON` with `CORROSION_GENERATOR_EXECUTABLE` unset, otherwise `OFF`
 
 ### Importing C-Style Libraries Written in Rust
 Corrosion makes it completely trivial to import a crate into an existing CMake project. Consider
@@ -341,8 +346,9 @@ and the Rust target triple will automatically be selected. The CMake
 [cross-compiling instructions for Android](https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android)
 apply here. For example, to build for ARM64:
 
-```cmake
-cmake -S. -Bbuild-android-arm64 -GNinja -DCMAKE_SYSTEM_NAME=Android -DCMAKE_ANDROID_NDK=/path/to/android-ndk-rxxd -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a
+```bash
+cmake -S. -Bbuild-android-arm64 -GNinja -DCMAKE_SYSTEM_NAME=Android \
+      -DCMAKE_ANDROID_NDK=/path/to/android-ndk-rxxd -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a
 ```
 
 **Important note:** The Android SDK ships with CMake 3.10 at newest, which Android Studio will
@@ -350,13 +356,3 @@ prefer over any CMake you've installed locally. CMake 3.10 is insufficient for u
 which requires a minimum of CMake 3.12. If you're using Android Studio to build your project,
 follow the instructions in the Android Studio documentation for
 [using a specific version of CMake](https://developer.android.com/studio/projects/install-ndk#vanilla_cmake).
-
-#### Host Builds
-
-By default, Corrosion will cross-compile the imported crates to the specified
-target triple. If some of your crates are for example build tools, then you may
-want those not to be cross-compiled but rather built as a host binary. This can
-be done by setting the `CORROSION_USE_HOST_BUILD` boolean property to true on
-the imported cmake target.
-
-Note that this requires the use of CMake 3.19 or newer.
