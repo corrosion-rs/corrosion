@@ -137,7 +137,7 @@ function(_add_cargo_build)
         endforeach()
 
         # When cross-compiling a Rust crate, at the very least we need a C linker
-        if (NOT has_compiler OR CMAKE_CROSSCOMPILING)
+        if (NOT has_compiler AND CMAKE_CROSSCOMPILING)
             message(STATUS "Enabling the C compiler for linking Rust programs")
             enable_language(C)
         endif()
