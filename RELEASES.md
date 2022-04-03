@@ -1,3 +1,38 @@
+# Unreleased
+
+## Breaking changes
+
+- Removed the integrator build script ([#156](https://github.com/corrosion-rs/corrosion/pull/156)).
+  The build script provided by corrosion (for rust code that links in foreign code) is no longer necessary,
+  so users can just remove the dependency.
+
+## Deprecations
+
+- Direct usage of the following target properties has been deprecated. The names of the custom properties are
+  no longer considered part of the public API and may change in the future. Instead, please use the functions
+  provided by corrosion.
+  - `CORROSION_FEATURES`, `CORROSION_ALL_FEATURES`, `CORROSION_NO_DEFAULT_FEATURES`. Instead please use
+    `corrosion_set_features()`. See the updated Readme for details.
+  - `CORROSION_ENVIRONMENT_VARIABLES`. Please use `corrosion_set_env_vars()` instead.
+  - `CORROSION_USE_HOST_BUILD`. Please use `corrosion_set_hostbuild()` instead.
+
+## New features
+
+- Add `NO_STD` option to `corrosion_import_crate` ([#154](https://github.com/corrosion-rs/corrosion/pull/154)).
+
+## Fixes
+
+- Improve robustness of parsing the LLVM version (exported in `Rust_LLVM_VERSION`). It now also works for
+  Rust versions, where the LLVM version is reported as `MAJOR.MINOR`. ([#148](https://github.com/corrosion-rs/corrosion/pull/148))
+- Fix a bug which occurred when Corrosion was added multiple times via `add_subdirectory()` 
+  ([#143](https://github.com/corrosion-rs/corrosion/pull/143)).
+- Set `CC` and `CXX` environment variables for the invocation of `cargo build` to the compilers selected by CMake
+  (if any) ([#138](https://github.com/corrosion-rs/corrosion/pull/138)). This should ensure that C dependencies built
+  in cargo buildscripts use the same compiler as CMake built dependencies.
+- Fix Ninja-Multiconfig Generator support for CMake versions >= 3.20. Previous CMake versions are missing a feature,
+  which prevents us from supporting the Ninja-Multiconfig generator. ([#137](https://github.com/corrosion-rs/corrosion/pull/137))
+
+
 # 0.1.0 (2022-02-01)
 
 This is the first release of corrosion after it was moved to the new corrosion-rs organization.
