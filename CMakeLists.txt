@@ -77,26 +77,13 @@ endif()
 
 include(GNUInstallDirs)
 
-# On Windows, convention is to install packages into a prefix.
-# On Unix, convention is to install packages directly into standard GNU
-# locations.
-if (WIN32)
-    set(CORROSION_INSTALL_PREFIX Corrosion/)
-else()
-    set(CORROSION_INSTALL_PREFIX)
-endif()
-
 # Builds the generator executable
 corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
 
 # Set the link language to CXX since it's already enabled
 corrosion_set_linker_language(corrosion-generator CXX)
 
-if (IS_ABSOLUTE ${CMAKE_INSTALL_LIBEXECDIR})
-    set(_CORROSION_GENERATOR_DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
-else()
-    set(_CORROSION_GENERATOR_DESTINATION "${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBEXECDIR}")
-endif()
+set(_CORROSION_GENERATOR_DESTINATION "${CMAKE_INSTALL_FULL_LIBEXECDIR}")
 
 if (CORROSION_INSTALL_EXECUTABLE)
     corrosion_install(
@@ -115,7 +102,7 @@ include(CMakePackageConfigHelpers)
 configure_package_config_file(
     cmake/CorrosionConfig.cmake.in CorrosionConfig.cmake
     INSTALL_DESTINATION
-        ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion
+        "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/Corrosion"
 )
 
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.14")
@@ -123,7 +110,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.14")
 endif()
 
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake
+    "${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake"
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY
         SameMinorVersion # TODO: Should be SameMajorVersion when 1.0 is released
@@ -132,10 +119,10 @@ write_basic_package_version_file(
 
 install(
     FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake
+        "${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake"
     DESTINATION
-        ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion
+        "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/Corrosion"
 )
 
 # These CMake scripts are needed both for the install and as a subdirectory
@@ -145,5 +132,5 @@ install(
         cmake/CorrosionGenerator.cmake
         cmake/FindRust.cmake
     DESTINATION
-        ${CORROSION_INSTALL_PREFIX}${CMAKE_INSTALL_DATADIR}/cmake
+        "${CMAKE_INSTALL_FULL_DATADIR}/cmake"
 )
