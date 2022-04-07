@@ -6,7 +6,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "@CMAKE_INSTALL_FULL_DATADIR@/cmake")
 
-if (NOT TARGET Corrosion::Generator)
+if(NOT CORROSION_EXPERIMENTAL_PARSER AND NOT TARGET Corrosion::Generator)
     add_executable(Corrosion::Generator IMPORTED GLOBAL)
 
     set_property(

@@ -36,6 +36,15 @@ if (CORROSION_GENERATOR_EXECUTABLE)
         TARGET Corrosion::Generator
         PROPERTY IMPORTED_LOCATION ${CORROSION_GENERATOR_EXECUTABLE})
     set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
+# If corrosion is used as a subdirectory, the CMake version is recent enough and the option is not
+# explicitly disabled, then we do not need to build the Rust based parser and use the CMake based
+# parser instead.
+elseif((NOT _CORROSION_TOP_LEVEL)
+        AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0
+        AND ((NOT DEFINED CORROSION_EXPERIMENTAL_PARSER)
+            OR CORROSION_EXPERIMENTAL_PARSER)
+        )
+    set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
 else()
     set(CORROSION_INSTALL_EXECUTABLE_DEFAULT ON)
 endif()
@@ -77,15 +86,15 @@ endif()
 
 include(GNUInstallDirs)
 
-# Builds the generator executable
-corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
+if(CORROSION_INSTALL_EXECUTABLE)
+    # Builds the generator executable
+    corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
 
-# Set the link language to CXX since it's already enabled
-corrosion_set_linker_language(corrosion-generator CXX)
+    # Set the link language to CXX since it's already enabled
+    corrosion_set_linker_language(corrosion-generator CXX)
 
 set(_CORROSION_GENERATOR_DESTINATION "${CMAKE_INSTALL_FULL_LIBEXECDIR}")
 
-if (CORROSION_INSTALL_EXECUTABLE)
     corrosion_install(
         TARGETS corrosion-generator
         DESTINATION "${_CORROSION_GENERATOR_DESTINATION}"
