@@ -543,6 +543,10 @@ function(corrosion_link_libraries target_name)
             $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
         )
         corrosion_add_target_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
+        if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+            corrosion_add_target_rustflags(${target_name} "-L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib")
+        endif()
+        
 
         # TODO: The output name of the library can be overridden - find a way to support that.
         corrosion_add_target_rustflags(${target_name} "-l${library}")
