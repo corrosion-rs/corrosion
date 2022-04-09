@@ -1,11 +1,14 @@
 # Create test install for Corrosion
+if(NOT CORROSION_EXPERIMENTAL_PARSER)
+    set(generator_executable_define -DCORROSION_GENERATOR_EXECUTABLE=$<TARGET_FILE:corrosion-generator>)
+endif()
 add_custom_target(
     test-install ALL
     COMMAND
-        ${CMAKE_COMMAND} -H${Corrosion_SOURCE_DIR} -Btest-build
+        ${CMAKE_COMMAND} -S${Corrosion_SOURCE_DIR} -Btest-build
             -DCORROSION_BUILD_TESTS=OFF
             -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/test-install
-            -DCORROSION_GENERATOR_EXECUTABLE=$<TARGET_FILE:corrosion-generator>
+            ${generator_executable_define}
     COMMAND ${CMAKE_COMMAND} --build test-build --config Debug # Ignored for single-config builds
     COMMAND ${CMAKE_COMMAND} --install test-build --config Debug # Ignored for single-config builds
 )
