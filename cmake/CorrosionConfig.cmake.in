@@ -4,20 +4,14 @@ if (Corrosion_FOUND)
     return()
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${PACKAGE_PREFIX_DIR}/@CORROSION_INSTALL_PREFIX@@CMAKE_INSTALL_DATADIR@/cmake")
+list(APPEND CMAKE_MODULE_PATH "@CMAKE_INSTALL_FULL_DATADIR@/cmake")
 
 if (NOT TARGET Corrosion::Generator)
     add_executable(Corrosion::Generator IMPORTED GLOBAL)
 
-    if(IS_ABSOLUTE @CMAKE_INSTALL_LIBEXECDIR@)
-        set(_CORROSION_GENERATOR_DESTINATION "@CMAKE_INSTALL_LIBEXECDIR@")
-    else()
-        set(_CORROSION_GENERATOR_DESTINATION "${PACKAGE_PREFIX_DIR}/@CORROSION_INSTALL_PREFIX@@CMAKE_INSTALL_LIBEXECDIR@")
-    endif()
-
     set_property(
         TARGET Corrosion::Generator
-        PROPERTY IMPORTED_LOCATION "${_CORROSION_GENERATOR_DESTINATION}/corrosion-generator")
+        PROPERTY IMPORTED_LOCATION "@CMAKE_INSTALL_FULL_LIBEXECDIR@/corrosion-generator")
 endif()
 
 include(Corrosion)
