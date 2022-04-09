@@ -20,7 +20,7 @@ jobs:
         os:
           - windows-2019 # windows-latest is currently not having a supported MSVC compiler
           - ubuntu-latest
-          - macos-10.15 # macos-11 is currently not working.
+          - macos-10.15
         arch:
           - x86_64
           - i686
@@ -42,6 +42,19 @@ jobs:
         generator:
           - default # This is just whatever the platform default is
           - ninja
+        include:
+          - os: macos-latest
+            arch: x86_64
+            abi: darwin
+            cmake: 3.19.0
+            rust: 1.44.1
+            generator: default
+          - os: macos-latest
+            arch: x86_64
+            abi: darwin
+            cmake: 3.19.0
+            rust: stable
+            generator: ninja
         exclude:
           # Something's busted when building with Visual Studio with CMake 3.12 - perhaps should
           # look into this at some point
