@@ -275,6 +275,11 @@ function(_generator_add_target manifest ix cargo_version profile)
                     TARGET ${target_name}-static
                     PROPERTY INTERFACE_LINK_LIBRARIES ${libs}
                 )
+                if(is_macos)
+                    set_property(TARGET ${target_name}-static
+                            PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
+                    )
+                endif()
             endif()
 
             if(libs_debug)
@@ -297,6 +302,11 @@ function(_generator_add_target manifest ix cargo_version profile)
         if(has_cdylib)
             add_library(${target_name}-shared SHARED IMPORTED GLOBAL)
             add_dependencies(${target_name}-shared cargo-build_${target_name})
+            if(is_macos)
+                set_property(TARGET ${target_name}-shared
+                        PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
+                        )
+            endif()
         endif()
 
         add_library(${target_name} INTERFACE)
@@ -315,6 +325,11 @@ function(_generator_add_target manifest ix cargo_version profile)
     elseif(is_executable)
         add_executable(${target_name} IMPORTED GLOBAL)
         add_dependencies(${target_name} cargo-build_${target_name})
+        if(is_macos)
+            set_property(TARGET ${target_name}
+                    PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
+            )
+        endif()
     else()
         message(FATAL_ERROR "unknown target type")
     endif()
