@@ -1,7 +1,3 @@
-# This test uses C++, so we can modify the C compiler to test if it is passed through as CC to 
-# cargo. Must be set before corrosion_import_crate.
-set(CMAKE_C_COMPILER "some-custom-c-compiler")
-
 corrosion_import_crate(MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml)
 
 corrosion_set_env_vars(rust-lib-requiring-envvar
