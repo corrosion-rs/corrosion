@@ -82,6 +82,7 @@ set(_CORROSION_CARGO "${CARGO_EXECUTABLE}" CACHE INTERNAL "Path to cargo used by
 
 string(REPLACE "-" "_" _CORROSION_RUST_CARGO_TARGET_UNDERSCORE "${Rust_CARGO_TARGET}")
 string(TOUPPER "${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}" _CORROSION_TARGET_TRIPLE_UPPER)
+set(_CORROSION_RUST_CARGO_TARGET_UNDERSCORE ${Rust_CARGO_TARGET} CACHE INTERNAL "lowercase target triple with underscores")
 set(_CORROSION_RUST_CARGO_TARGET_UPPER
         "${_CORROSION_TARGET_TRIPLE_UPPER}"
         CACHE INTERNAL
@@ -250,15 +251,23 @@ function(_add_cargo_build)
         list(APPEND features_args --features ${feature})
     endforeach()
 
-    if(CMAKE_C_COMPILER)
-        set(corrosion_cc "CC=${CMAKE_C_COMPILER}")
-    elseif(DEFINED ENV{CC})
-        set(corrosion_cc "CC=$ENV{CC}")
+    set(corrosion_cc_rs_flags)
+
+    if(CMAKE_C_COMPILER AND _CORROSION_RUST_CARGO_TARGET_UNDERSCORE)
+        # This variable is read by cc-rs (often used in build scripts) to determine the c-compiler.
+        # It can still be overridden if the user sets the non underscore variant via the environment variables
+        # on the target.
+        list(APPEND corrosion_cc_rs_flags "CC_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_C_COMPILER}")
     endif()
-    if(CMAKE_CXX_COMPILER)
-        set(corrosion_cxx "CXX=${CMAKE_CXX_COMPILER}")
-    elseif(DEFINED ENV{CXX})
-        set(corrosion_cc "CXX=$ENV{CXX}")
+    if(DEFINED ENV{CC})
+        # HOST_CC has a lower priority then CC_<target_triple> for cc-rs.
+        list(APPEND corrosion_cc_rs_flags "HOST_CC=$ENV{CC}")
+    endif()
+    if(CMAKE_CXX_COMPILER AND _CORROSION_RUST_CARGO_TARGET_UNDERSCORE)
+        list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_CXX_COMPILER}")
+    endif()
+    if(DEFINED ENV{CXX})
+        list(APPEND corrosion_cc_rs_flags "HOST_CXX=$ENV{CXX}")
     endif()
 
     corrosion_add_target_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
@@ -311,8 +320,7 @@ function(_add_cargo_build)
             ${build_env_variable_genex}
             ${rustflags_genex_test}
             ${cargo_target_linker}
-            ${corrosion_cc}
-            ${corrosion_cxx}
+            ${corrosion_cc_rs_flags}
             CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
             CARGO_BUILD_RUSTC="${_CORROSION_RUSTC}"
         "${_CORROSION_CARGO}"
