@@ -226,6 +226,15 @@ function(_add_cargo_build)
     set(cargo_target_option "$<IF:${if_not_host_build_condition},--target=${_CORROSION_RUST_CARGO_TARGET},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
     set(target_artifact_dir "$<IF:${if_not_host_build_condition},${_CORROSION_RUST_CARGO_TARGET},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
 
+    # Rust will add `-lSystem` as a flag for the linker on macOS. Adding the -L flag via RUSTFLAGS only fixes the
+    # problem partially - buildscripts still break, since they won't receive the RUSTFLAGS. This seems to only be a
+    # problem if we specify the linker ourselves (which we do, since this is necessary for e.g. linking C++ code).
+    # We can however set `LIBRARY_PATH`, which is propagated to the build-script-build properly.
+    if(NOT CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        set(cargo_library_path "LIBRARY_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib")
+    elseif(CMAKE_CROSSCOMPILING AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+        set(cargo_library_path "$<IF:${if_not_host_build_condition},,LIBRARY_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib>")
+    endif()
 
     if(cargo_profile_name)
         set(cargo_profile "--profile=${cargo_profile_name}")
@@ -321,6 +330,7 @@ function(_add_cargo_build)
             ${rustflags_genex_test}
             ${cargo_target_linker}
             ${corrosion_cc_rs_flags}
+            ${cargo_library_path}
             CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
             CARGO_BUILD_RUSTC="${_CORROSION_RUSTC}"
         "${_CORROSION_CARGO}"
