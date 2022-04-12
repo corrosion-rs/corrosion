@@ -265,7 +265,8 @@ function(_add_cargo_build)
         set(cargo_profile $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>)
     endif()
 
-    set(cargo_build_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${target_artifact_dir}/${build_type_dir}")
+    set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build")
+    set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set(build_byproducts)
     set(byproducts)
     foreach(byproduct_file ${ACB_BYPRODUCTS})
@@ -369,6 +370,7 @@ function(_add_cargo_build)
             ${features_genex}
             --package ${package_name}
             --manifest-path "${path_to_toml}"
+            --target-dir "${cargo_target_dir}"
             ${cargo_profile}
             ${flag_args}
             ${flags_genex}

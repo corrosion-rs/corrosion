@@ -347,45 +347,9 @@ endforeach()
 find_package_handle_standard_args(
     Rust
     REQUIRED_VARS Rust_COMPILER Rust_VERSION Rust_CARGO Rust_CARGO_VERSION Rust_CARGO_TARGET Rust_CARGO_HOST_TARGET
-    VERSION_VAR Rust_VERSION)
+    VERSION_VAR Rust_VERSION
+)
 
-function(_gen_config config_type use_config_dir)
-    string(TOUPPER "${config_type}" _UPPER_CONFIG_TYPE)
-
-    if(use_config_dir)
-        set(_DESTINATION_DIR ${CMAKE_BINARY_DIR}/${CMAKE_VS_PLATFORM_NAME}/${config_type})
-    else()
-        set(_DESTINATION_DIR ${CMAKE_BINARY_DIR})
-    endif()
-
-    set(_CARGO_CONFIG ${_DESTINATION_DIR}/.cargo/config)
-
-    file(WRITE ${_CARGO_CONFIG}
-"\
-[build]
-target-dir=\"cargo/build\"
-")
-
-    string(REPLACE ";" "\", \"" _RUSTFLAGS "${CARGO_RUST_FLAGS}" "${CARGO_RUST_FLAGS_${_UPPER_CONFIG_TYPE}}")
-
-    if (_RUSTFLAGS)
-        file(APPEND ${_CARGO_CONFIG}
-            "rustflags = [\"${_RUSTFLAGS}\"]\n")
-    endif()
-
-    get_filename_component(_moddir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
-endfunction(_gen_config)
-
-if (CMAKE_CONFIGURATION_TYPES)
-    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
-        _gen_config(${config_type} ON)
-    endforeach()
-elseif(CMAKE_BUILD_TYPE)
-    _gen_config(${CMAKE_BUILD_TYPE} OFF)
-else()
-    message(STATUS "Defaulting Cargo to build debug")
-    _gen_config(Debug OFF)
-endif()
 
 if(NOT TARGET Rust::Rustc)
     add_executable(Rust::Rustc IMPORTED GLOBAL)
