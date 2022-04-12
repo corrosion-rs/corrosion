@@ -150,21 +150,11 @@ cmake_minimum_required(VERSION 3.15)
     if let Some(config_types) = matches.values_of(CONFIGURATION_TYPES) {
         for config_type in config_types {
             let config_folder = config_root.join(config_type);
-            assert!(
-                config_folder.join(".cargo/config").exists(),
-                "Target config_folder '{}' must contain a '.cargo/config'.",
-                config_folder.display()
-            );
             config_folders.push((Some(config_type), config_folder));
         }
     } else {
         let config_type = matches.value_of(CONFIGURATION_TYPE);
         let config_folder = config_root;
-        assert!(
-            config_folder.join(".cargo/config").exists(),
-            "Target config_folder '{}' must contain a '.cargo/config'.",
-            config_folder.display()
-        );
         config_folders.push((config_type, config_folder.to_path_buf()));
     }
 

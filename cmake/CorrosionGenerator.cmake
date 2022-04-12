@@ -422,8 +422,8 @@ function(_generator_add_cargo_targets)
     endif()
 
     foreach(folder ${config_folders})
-        if(NOT EXISTS "${folder}/.cargo/config")
-            message(FATAL_ERROR "Target config_folder '${folder}' must contain a '.cargo/config'.")
+        if(NOT EXISTS "${folder}")
+            file(MAKE_DIRECTORY ${folder})
         endif()
     endforeach()
 
