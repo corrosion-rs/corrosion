@@ -10,25 +10,39 @@
 
 - Direct usage of the following target properties has been deprecated. The names of the custom properties are
   no longer considered part of the public API and may change in the future. Instead, please use the functions
-  provided by corrosion.
+  provided by corrosion. Internally different property names are used depending on the CMake version.
   - `CORROSION_FEATURES`, `CORROSION_ALL_FEATURES`, `CORROSION_NO_DEFAULT_FEATURES`. Instead please use
     `corrosion_set_features()`. See the updated Readme for details.
   - `CORROSION_ENVIRONMENT_VARIABLES`. Please use `corrosion_set_env_vars()` instead.
   - `CORROSION_USE_HOST_BUILD`. Please use `corrosion_set_hostbuild()` instead.
+- The Minimum CMake version will likely be increased for the next major release. At the very least we want to drop 
+  support for CMake 3.12, but requiring CMake 3.16 or even 3.18 is also on the table. If you are using a CMake version
+  that would be no longer supported by corrosion, please comment on issue
+  [#168](https://github.com/corrosion-rs/corrosion/issues/168), so that we can gauge the number of  affected users.
 
 ## New features
 
 - Add `NO_STD` option to `corrosion_import_crate` ([#154](https://github.com/corrosion-rs/corrosion/pull/154)).
+- Remove the requirement of building the Rust based generator crate for CMake >= 3.19. This makes using corrosion as
+  a subdirectory as fast as the installed version (since everything is done in CMake). 
+  ([#131](https://github.com/corrosion-rs/corrosion/pull/131), [#161](https://github.com/corrosion-rs/corrosion/pull/161))
+  If you do choose to install Corrosion, then by default the old Generator is still compiled and installed, so you can
+  fall back to using it in case you use multiple cmake versions on the same machine for different projects.
 
 ## Fixes
 
+- Fix Corrosion on MacOS 11 and 12 ([#167](https://github.com/corrosion-rs/corrosion/pull/167) and
+  [#164](https://github.com/corrosion-rs/corrosion/pull/164)).
 - Improve robustness of parsing the LLVM version (exported in `Rust_LLVM_VERSION`). It now also works for
   Rust versions, where the LLVM version is reported as `MAJOR.MINOR`. ([#148](https://github.com/corrosion-rs/corrosion/pull/148))
 - Fix a bug which occurred when Corrosion was added multiple times via `add_subdirectory()` 
   ([#143](https://github.com/corrosion-rs/corrosion/pull/143)).
-- Set `CC` and `CXX` environment variables for the invocation of `cargo build` to the compilers selected by CMake
-  (if any) ([#138](https://github.com/corrosion-rs/corrosion/pull/138)). This should ensure that C dependencies built
-  in cargo buildscripts use the same compiler as CMake built dependencies.
+- Set `CC_<target_triple_undercore>` and `CXX_<target_triple_undercore>` environment variables for the invocation of 
+  `cargo build` to the compilers selected by CMake  (if any) 
+  ([#138](https://github.com/corrosion-rs/corrosion/pull/138) and [#161](https://github.com/corrosion-rs/corrosion/pull/161)).
+  This should ensure that C dependencies built in cargo buildscripts via [cc-rs](https://github.com/alexcrichton/cc-rs)
+  use the same compiler as CMake built dependencies. Users can override the compiler by specifying the higher 
+  priority environment variable variants with dashes instead of underscores (See cc-rs documentation for details).
 - Fix Ninja-Multiconfig Generator support for CMake versions >= 3.20. Previous CMake versions are missing a feature,
   which prevents us from supporting the Ninja-Multiconfig generator. ([#137](https://github.com/corrosion-rs/corrosion/pull/137))
 
