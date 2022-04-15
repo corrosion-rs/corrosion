@@ -278,6 +278,13 @@ function(_add_cargo_build)
     if(DEFINED ENV{CXX})
         list(APPEND corrosion_cc_rs_flags "HOST_CXX=$ENV{CXX}")
     endif()
+    # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
+    # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
+    # CMAKE_OSX_SYSROOT. Fortunately the compilers Apple ships also respect the SDKROOT environment
+    # variable, which we can set for use when cc-rs invokes the compiler.
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_OSX_SYSROOT)
+        list(APPEND corrosion_cc_rs_flags "SDKROOT=${CMAKE_OSX_SYSROOT}")
+    endif()
 
     corrosion_add_target_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
 
