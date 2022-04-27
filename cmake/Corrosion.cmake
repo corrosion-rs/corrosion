@@ -597,10 +597,9 @@ function(corrosion_link_libraries target_name)
             PROPERTY CARGO_DEPS_LINKER_LANGUAGES
             $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
         )
-        corrosion_add_target_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
 
-        # TODO: The output name of the library can be overridden - find a way to support that.
-        corrosion_add_target_rustflags(${target_name} "-l${library}")
+        corrosion_add_target_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
+        corrosion_add_target_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>")
     endforeach()
 endfunction(corrosion_link_libraries)
 
