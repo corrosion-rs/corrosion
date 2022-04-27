@@ -1,5 +1,4 @@
 corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
-corrosion_link_libraries(rust-exe cpp-lib cpp-lib2 cpp-lib3)
 
 add_library(cpp-lib lib.cpp)
 target_compile_features(cpp-lib PRIVATE cxx_std_14)
@@ -15,6 +14,7 @@ set_target_properties(
         cpp-lib2
         PROPERTIES
         POSITION_INDEPENDENT_CODE ON
+        OUTPUT_NAME cpp-lib-renamed
 )
 
 add_library(cpp-lib3 "path with space/lib3.cpp" )
@@ -24,3 +24,5 @@ set_target_properties(
         PROPERTIES
         POSITION_INDEPENDENT_CODE ON
 )
+
+corrosion_link_libraries(rust-exe cpp-lib cpp-lib2 cpp-lib3)
