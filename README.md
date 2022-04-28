@@ -12,10 +12,6 @@ from a crate.
 - Multi-Config Generator Support
 - Simple Cross-Compilation
 
-## Coming Soon
-- Automatic Generation of Rust Bindings (via bindgen) and C/C++ Bindings (via cbindgen)
-- Easy Install of Libraries
-
 ## Sample Usage
 ```cmake
 cmake_minimum_required(VERSION 3.12)
@@ -32,46 +28,52 @@ target_link_libraries(cpp-exe PUBLIC rust-lib)
 # Documentation
 
 ## Table of Contents
-- [Installation](#installation)
-  - [Package Manager](#package-manager)
-  - [CMake Install](#cmake-install)
-  - [Fetch Content](#fetch-content)
-  - [Subdirectory](#subdirectory)
-- [Usage](#usage)
-  - [Configuration Options](#configuration-options)
-  - [Information provided by Corrosion](#information-provided-by-corrosion)
-  - [Adding crate targets](#adding-crate-targets)
-  - [Per Target options](#per-target-options)
-  - [Importing C-Style Libraries Written in Rust](#importing-c-style-libraries-written-in-rust)
-    - [Generate Bindings to Rust Library Automatically](#generate-bindings-to-rust-library-automatically)
-  - [Importing Libraries Written in C and C++ Into Rust](#importing-libraries-written-in-c-and-c++-into-rust)
-  - [Cross Compiling](#cross-compiling)
-    - [Windows-to-Windows](#windows-to-windows)
-    - [Linux-to-Linux](#linux-to-linux)
-    - [Android](#android)
+- [Corrosion](#corrosion)
+  - [Features](#features)
+  - [Sample Usage](#sample-usage)
+- [Documentation](#documentation)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+    - [Package Manager](#package-manager)
+    - [CMake Install](#cmake-install)
+    - [FetchContent](#fetchcontent)
+    - [Subdirectory](#subdirectory)
+  - [Usage](#usage)
+    - [Corrosion Options](#corrosion-options)
+      - [Developer/Maintainer Options](#developermaintainer-options)
+    - [Information provided by Corrosion](#information-provided-by-corrosion)
+    - [Adding crate targets](#adding-crate-targets)
+    - [Per Target options](#per-target-options)
+    - [Selecting a custom cargo profile](#selecting-a-custom-cargo-profile)
+    - [Importing C-Style Libraries Written in Rust](#importing-c-style-libraries-written-in-rust)
+      - [Generate Bindings to Rust Library Automatically](#generate-bindings-to-rust-library-automatically)
+    - [Importing Libraries Written in C and C++ Into Rust](#importing-libraries-written-in-c-and-c-into-rust)
+    - [Cross Compiling](#cross-compiling)
+      - [Windows-to-Windows](#windows-to-windows)
+      - [Linux-to-Linux](#linux-to-linux)
+      - [Android](#android)
 
 ## Installation
 There are two fundamental installation methods that are supported by Corrosion - installation as a
-CMake package or using it as a subdirectory in an existing CMake project. Corrosion strongly
-recommends installing the package, either via a package manager or manually using cmake's
-installation facilities.
+CMake package or using it as a subdirectory in an existing CMake project. For CMake versions below
+3.19 Corrosion strongly recommends installing the package, either via a package manager or manually
+using CMake's installation facilities.
 
-Installation will pre-build all of Corrosion's native tooling, meaning that configuring any project
-which uses Corrosion is much faster. Using Corrosion as a subdirectory will result in the native
+Installation will pre-build all of Corrosion's native tooling (required only for CMake versions
+below 3.19).
+Using Corrosion as a subdirectory with CMake versions before 3.19 will result in the native
 tooling for Corrosion to be re-built every time you configure a new build directory, which could
 be a non-trivial cost for some projects. It also may result in issues with large, complex projects
 with many git submodules that each individually may use Corrosion. This can unnecessarily exacerbate
 diamond dependency problems that wouldn't otherwise occur using an externally installed Corrosion.
+On CMake >= 3.19 installing Corrosion does not offer any advantages, unless the native
+tooling option is explicitly enabled.
 
 ### Package Manager
 
 Coming soon...
 
 ### CMake Install
-After using a package manager, the next recommended way to use Corrosion is to install it as a
-package using CMake. This means you won't need to rebuild Corrosion's tooling every time you
-generate a new build directory. Installation also solves the diamond dependency problem that often
-comes with git submodules or other primitive dependency solutions.
 
 First, download and install Corrosion:
 ```bash
@@ -89,14 +91,15 @@ environment variable. This is likely to already be the case by default on a Unix
 Windows it will install to `C:\Program Files (x86)\Corrosion` by default, which will not be in your
 `PATH` or `CMAKE_PREFIX_PATH` by default.
 
-Once Corrosion is installed and you've ensured the package is avilable in your `PATH`, you
+Once Corrosion is installed and you've ensured the package is available in your `PATH`, you
 can use it from your own project like any other package from your CMakeLists.txt:
 ```cmake
 find_package(Corrosion REQUIRED)
 ```
 
 ### FetchContent
-If installation is difficult or not feasible in your environment, you can use the
+If you are using CMake >= 3.19 or installation is difficult or not feasible in
+your environment, you can use the
 [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) module to include
 Corrosion. This will download Corrosion and use it as if it were a subdirectory at configure time.
 
@@ -107,7 +110,7 @@ include(FetchContent)
 FetchContent_Declare(
     Corrosion
     GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-    GIT_TAG origin/master # Optionally specify a version tag or branch here
+    GIT_TAG v0.1.0 # Optionally specify a commit hash, version tag or branch here
 )
 
 FetchContent_MakeAvailable(Corrosion)
@@ -130,7 +133,7 @@ add_subdirectory(path/to/corrosion)
 ## Usage
 ### Corrosion Options
 All of the following variables are evaluated automatically in most cases. In typical cases you
-shouldn't need to alter any of these. If you do want to specify them manually, make sure to set 
+shouldn't need to alter any of these. If you do want to specify them manually, make sure to set
 them **before** `find_package(Corrosion REQUIRED)`.
 
 - `Rust_TOOLCHAIN:STRING` - Specify a named rustup toolchain to use. Changes to this variable
@@ -146,8 +149,12 @@ from `rustup`, or from a toolchain available in the user's `PATH`.
 - `Rust_CARGO_TARGET:STRING` - The default target triple to build for. Alter for cross-compiling.
 Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
 the default target triple reported by `${Rust_COMPILER} --version --verbose`.
-- `CORROSION_EXPERIMENTAL_PARSER:BOOL` - Use CMake to parse cargo metadata. In the future this will
-  remove the dependency on native tooling and make the subdirectory method as fast as the install method.
+TODO: Rename to CORROSION_NATIVE_TOOLING (inverse logic) and add warning if
+CORROSION_EXPERIMENTAL_PARSER is used anywhere. The option is not part of any release, so it is fine
+to change the name without adding it to release notes, but users should be notified.
+- `CORROSION_EXPERIMENTAL_PARSER:BOOL` - Use CMake to parse cargo metadata. This option requires
+  CMake 3.19 and removes the dependency on native tooling and makes the subdirectory method as fast
+  as the install method.
   Default: `ON` if CMake >= 3.19.0. Forced `OFF` for CMake < 3.19.
 
 #### Developer/Maintainer Options
@@ -167,29 +174,29 @@ Corrosion is built and installed. Only applies to Corrosion builds and subdirect
 
 ### Information provided by Corrosion
 
-For your convenience, Corrosion sets a number of variables which contain information about the version of the rust 
-toolchain. You can use the CMake version comparison operators 
+For your convenience, Corrosion sets a number of variables which contain information about the version of the rust
+toolchain. You can use the CMake version comparison operators
 (e.g. [`VERSION_GREATER_EQUAL`](https://cmake.org/cmake/help/latest/command/if.html#version-comparisons)) on the main
-variable (e.g. `if(Rust_VERSION VERSION_GREATER_EQUAL "1.57.0")`), or you can inspect the major, minor and patch 
+variable (e.g. `if(Rust_VERSION VERSION_GREATER_EQUAL "1.57.0")`), or you can inspect the major, minor and patch
 versions individually.
 - `Rust_VERSION<_MAJOR|_MINOR|_PATCH>` - The version of rustc.
 - `Rust_CARGO_VERSION<_MAJOR|_MINOR|_PATCH>` - The cargo version.
 - `Rust_LLVM_VERSION<_MAJOR|_MINOR|_PATCH>` - The LLVM version used by rustc.
-- `Rust_IS_NIGHTLY` - 1 if a nightly toolchain is used, otherwise 0. Useful for selecting an unstable feature for a 
+- `Rust_IS_NIGHTLY` - 1 if a nightly toolchain is used, otherwise 0. Useful for selecting an unstable feature for a
   crate, that is only available on nightly toolchains.
 
 ### Adding crate targets
 
 In order to integrate a Rust crate into CMake, you first need to import a crate or Workspace:
 ```cmake
-corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml> 
+corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
         # Equivalent to --all-features passed to cargo build
         [ALL_FEATURES]
         # Equivalent to --no-default-features passed to cargo build
-        [NO_DEFAULT_FEATURES] 
+        [NO_DEFAULT_FEATURES]
         # Disable linking of standard libraries (required for no_std crates).
         [NO_STD]
-        # Specify  cargo build profile (e.g. release or a custom profile) 
+        # Specify  cargo build profile (e.g. release or a custom profile)
         [PROFILE <cargo-profile>]
         # Only import the specified crates from a workspace
         [CRATES <crate1> ... <crateN>]
@@ -198,12 +205,12 @@ corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
 )
 ```
 
-This will add a cmake target for each imported crate. Many of the options can also be set per target, see TODO for 
-details.
+This will add a cmake target for each imported crate. Many of the options can also be set per
+target, see [Per Target options](#per-target-options) for details.
 
 ### Per Target options
 
-Some configuration options can be specified individually for each target. You can set them via the 
+Some configuration options can be specified individually for each target. You can set them via the
 `corrosion_set_xxx()` functions specified below:
 
 - `corrosion_set_env_vars(<target_name> <key1=value1> [... <keyN=valueN>])`: Define environment variables
@@ -215,16 +222,16 @@ Some configuration options can be specified individually for each target. You ca
   the `RUSTFLAGS` environment variable will contain the flags added via this function. Please note that any
   dependencies (built by cargo) will also see these flags. In the future corrosion may offer a second function
   to allow specifying flags only for the target in question, utilizing `cargo rustc` instead of `cargo build`.
-- `corrosion_set_hostbuild(<target_name>)`: The target should be compiled for the Host target and ignore any 
+- `corrosion_set_hostbuild(<target_name>)`: The target should be compiled for the Host target and ignore any
   cross-compile configuration.
 - `corrosion_set_features(<target_name> [ALL_FEATURES <Bool>] [NO_DEFAULT_FEATURES] [FEATURES <feature1> ... ])`:
   For a given target, enable specific features via `FEATURES`, toggle `ALL_FEATURES` on or off or disable all features
-  via `NO_DEFAULT_FEATURES`. For more information on features, please see also the 
+  via `NO_DEFAULT_FEATURES`. For more information on features, please see also the
   [cargo reference](https://doc.rust-lang.org/cargo/reference/features.html).
 
 ### Selecting a custom cargo profile
 
-[Rust 1.57](https://blog.rust-lang.org/2021/12/02/Rust-1.57.0.html) stabilized the support for custom 
+[Rust 1.57](https://blog.rust-lang.org/2021/12/02/Rust-1.57.0.html) stabilized the support for custom
 [profiles](https://doc.rust-lang.org/cargo/reference/profiles.html). If you are using a sufficiently new rust toolchain,
 you may select a custom profile by adding the optional argument `PROFILE <profile_name>` to
 `corrosion_import_crate()`. If you do not specify a profile, or you use an older toolchain, corrosion will select
@@ -302,7 +309,7 @@ In all cases, you will need to install the standard library for the Rust target 
 Rustup, you can use it to install the target standard library:
 
 ```bash
-rustc target add <target-rust-triple>
+rustup target add <target-rust-triple>
 ```
 
 If the target triple is automatically derived, Corrosion will print the target during configuration.
@@ -321,6 +328,10 @@ architecture flag:
 cmake -S. -Bbuild-arm64 -A ARM64
 cmake --build build-arm64
 ```
+
+Please note that for projects containing a build-script at least Rust 1.54 is required due to a bug
+in previous cargo versions, which causes the build-script to incorrectly be built for the target
+platform.
 
 #### Linux-to-Linux
 In order to cross-compile on Linux, you will need to install a cross-compiler. For example, on
