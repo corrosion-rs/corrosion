@@ -5,17 +5,37 @@ if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config" AND CMAKE_VERSION VERSION_LESS
        "generator. Please use a different generator or update to cmake >= 3.20.")
 endif()
 
-
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
 
+set(CORROSION_NATIVE_TOOLING_DESCRIPTION 
+    "Use native tooling - Required on CMake < 3.19 and available as a fallback option for recent versions"
+    )
+
+set(CORROSION_NATIVE_TOOLING_DEFAULT OFF)
+# `CORROSION_EXPERIMENTAL_PARSER` was not part of a tagged release, but we still provide a 
+# deprecation notice for users that directly use corrosion on the master branch and may have set
+# this option.
+if(DEFINED CORROSION_EXPERIMENTAL_PARSER)
+    message(DEPRECATION "The experimental option `CORROSION_EXPERIMENTAL_PARSER` is now deprecated."
+                " Please use `CORROSION_NATIVE_TOOLING` instead (with inverted semantics)."
+                " This warning will be removed in version 0.3 and the variable silently ignored."
+    )
+    if(CORROSION_EXPERIMENTAL_PARSER)
+        set(CORROSION_NATIVE_TOOLING_DEFAULT OFF)
+    else()
+        set(CORROSION_NATIVE_TOOLING_DEFAULT ON)
+    endif()
+endif()
+
 option(
-    CORROSION_EXPERIMENTAL_PARSER
-    "Enable Corrosion to parse cargo metadata by CMake string(JSON ...) command"
-    ON
+    CORROSION_NATIVE_TOOLING
+    "${CORROSION_NATIVE_TOOLING_DESCRIPTION}"
+    ${CORROSION_NATIVE_TOOLING_DEFAULT}
 )
 
+# The native tooling is required on CMAke < 3.19 so we override whatever the user may have set.
 if (CMAKE_VERSION VERSION_LESS 3.19.0)
-    set(CORROSION_EXPERIMENTAL_PARSER OFF CACHE INTERNAL "" FORCE)
+    set(CORROSION_NATIVE_TOOLING ON CACHE INTERNAL "${CORROSION_NATIVE_TOOLING_DESCRIPTION}" FORCE)
 endif()
 
 find_package(Rust REQUIRED)
@@ -34,7 +54,7 @@ get_property(
     TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
 )
 
-if (CORROSION_EXPERIMENTAL_PARSER)
+if (NOT CORROSION_NATIVE_TOOLING)
     include(CorrosionGenerator)
 endif()
 
@@ -42,7 +62,7 @@ if (CORROSION_VERBOSE_OUTPUT)
     set(_CORROSION_VERBOSE_OUTPUT_FLAG --verbose)
 endif()
 
-if(NOT CORROSION_EXPERIMENTAL_PARSER)
+if(CORROSION_NATIVE_TOOLING)
     if (NOT TARGET Corrosion::Generator )
         set(_CORROSION_GENERATOR_EXE
             ${CARGO_EXECUTABLE} run --quiet --manifest-path "${CMAKE_CURRENT_LIST_DIR}/../generator/Cargo.toml" --)
@@ -404,26 +424,7 @@ function(corrosion_import_crate)
         set(COR_MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${COR_MANIFEST_PATH})
     endif()
 
-    if (CORROSION_EXPERIMENTAL_PARSER)
-        _generator_add_cargo_targets(
-            MANIFEST_PATH
-                "${COR_MANIFEST_PATH}"
-            CONFIGURATION_ROOT
-                "${CMAKE_VS_PLATFORM_NAME}"
-            TARGET
-                "${_CORROSION_RUST_CARGO_TARGET}"
-            CARGO_VERSION
-                "${_CORROSION_CARGO_VERSION}"
-            CONFIGURATION_TYPE
-                "${CMAKE_BUILD_TYPE}"
-            CONFIGURATION_TYPES
-                "${CMAKE_CONFIGURATION_TYPES}"
-            CRATES
-                "${COR_CRATES}"
-            PROFILE
-                "${COR_PROFILE}"
-        )
-    else()
+    if (CORROSION_NATIVE_TOOLING)
         execute_process(
             COMMAND
                 ${_CORROSION_GENERATOR}
@@ -496,6 +497,25 @@ function(corrosion_import_crate)
         endif()
 
         include(${generated_cmake})
+    else()
+        _generator_add_cargo_targets(
+            MANIFEST_PATH
+                "${COR_MANIFEST_PATH}"
+            CONFIGURATION_ROOT
+                "${CMAKE_VS_PLATFORM_NAME}"
+            TARGET
+                "${_CORROSION_RUST_CARGO_TARGET}"
+            CARGO_VERSION
+                "${_CORROSION_CARGO_VERSION}"
+            CONFIGURATION_TYPE
+                "${CMAKE_BUILD_TYPE}"
+            CONFIGURATION_TYPES
+                "${CMAKE_CONFIGURATION_TYPES}"
+            CRATES
+                "${COR_CRATES}"
+            PROFILE
+                "${COR_PROFILE}"
+        )
     endif()
 endfunction(corrosion_import_crate)
 
