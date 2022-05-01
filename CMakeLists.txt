@@ -38,11 +38,14 @@ if (CORROSION_GENERATOR_EXECUTABLE)
     set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
 # If corrosion is used as a subdirectory, the CMake version is recent enough and the option is not
 # explicitly disabled, then we do not need to build the Rust based parser and use the CMake based
-# parser instead.
+# parser instead. `CORROSION_EXPERIMENTAL_PARSER` is a deprecated inverted version of 
+# `CORROSION_NATIVE_TOOLING` and will be removed in version 0.3
 elseif((NOT _CORROSION_TOP_LEVEL)
         AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0
-        AND ((NOT DEFINED CORROSION_EXPERIMENTAL_PARSER)
-            OR CORROSION_EXPERIMENTAL_PARSER)
+        AND (((NOT DEFINED CORROSION_EXPERIMENTAL_PARSER)
+                OR CORROSION_EXPERIMENTAL_PARSER)
+               OR NOT CORROSION_NATIVE_TOOLING)
+
         )
     set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
 else()

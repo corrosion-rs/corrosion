@@ -1,5 +1,5 @@
 # Create test install for Corrosion
-if(NOT CORROSION_EXPERIMENTAL_PARSER)
+if(CORROSION_NATIVE_TOOLING)
     set(generator_executable_define -DCORROSION_GENERATOR_EXECUTABLE=$<TARGET_FILE:corrosion-generator>)
 endif()
 add_custom_target(

@@ -149,13 +149,9 @@ from `rustup`, or from a toolchain available in the user's `PATH`.
 - `Rust_CARGO_TARGET:STRING` - The default target triple to build for. Alter for cross-compiling.
 Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
 the default target triple reported by `${Rust_COMPILER} --version --verbose`.
-TODO: Rename to CORROSION_NATIVE_TOOLING (inverse logic) and add warning if
-CORROSION_EXPERIMENTAL_PARSER is used anywhere. The option is not part of any release, so it is fine
-to change the name without adding it to release notes, but users should be notified.
-- `CORROSION_EXPERIMENTAL_PARSER:BOOL` - Use CMake to parse cargo metadata. This option requires
-  CMake 3.19 and removes the dependency on native tooling and makes the subdirectory method as fast
-  as the install method.
-  Default: `ON` if CMake >= 3.19.0. Forced `OFF` for CMake < 3.19.
+- `CORROSION_NATIVE_TOOLING:BOOL` - Use a native tool (written in Rust) as part of Corrosion. This
+  option increases the configure-time significantly unless Corrosion is installed.
+  Default: `OFF` if CMake >= 3.19.0. Forced `ON` for CMake < 3.19.
 
 #### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how
