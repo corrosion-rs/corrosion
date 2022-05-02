@@ -331,7 +331,7 @@ function(_add_cargo_build)
             corrosion_add_target_rustflags("${target_name}" "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
         endif()
     else()
-        message(WARNING "No linker preference for target ${target_name}")
+        message(STATUS "No linker preference for target ${target_name} could be detected.")
     endif()
 
     # Remove the target triple from the rust toolchain (which may or may not be present).
