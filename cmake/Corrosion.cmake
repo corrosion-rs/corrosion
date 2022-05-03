@@ -334,16 +334,6 @@ function(_add_cargo_build)
         message(STATUS "No linker preference for target ${target_name} could be detected.")
     endif()
 
-    # Remove the target triple from the rust toolchain (which may or may not be present).
-    # Note: This should match as expected for stable, beta, nightly, version specific stable toolchains,
-    # and specific nightly toolchains, but restricts the possible names of custom toolchains.
-    if("${Rust_TOOLCHAIN}" MATCHES "^([a-z0-9\.]+)(-[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9])?" )
-        set(rust_toolchain_override "+${CMAKE_MATCH_0}")
-    else()
-        message(WARNING "Regex didnt match on ${Rust_TOOLCHAIN}. If you are using a custom toolchain"
-                " consider renaming your toolchain to contain only lowercase letters, or open an issue.")
-    endif()
-
     add_custom_target(
     cargo-build_${target_name}
     ALL
