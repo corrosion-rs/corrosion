@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(Corrosion VERSION 0.1.0 LANGUAGES NONE)
+project(Corrosion VERSION 0.2.0 LANGUAGES NONE)
 
 # Default behavior:
 # - If the project is being used as a subdirectory, then don't build tests and

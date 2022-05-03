@@ -1,4 +1,4 @@
-# Unreleased
+# 0.2.0 (Todo: date)
 
 ## Breaking changes
 
@@ -18,7 +18,7 @@
 - The Minimum CMake version will likely be increased for the next major release. At the very least we want to drop 
   support for CMake 3.12, but requiring CMake 3.16 or even 3.18 is also on the table. If you are using a CMake version
   that would be no longer supported by corrosion, please comment on issue
-  [#168](https://github.com/corrosion-rs/corrosion/issues/168), so that we can gauge the number of  affected users.
+  [#168](https://github.com/corrosion-rs/corrosion/issues/168), so that we can gauge the number of affected users.
 
 ## New features
 
