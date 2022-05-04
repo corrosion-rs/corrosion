@@ -1,4 +1,4 @@
-# 0.2.0 (Todo: date)
+# 0.2.0 (2022-05-05)
 
 ## Breaking changes
 
