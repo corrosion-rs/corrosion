@@ -204,16 +204,16 @@ execute_process(
     OUTPUT_VARIABLE _CARGO_VERSION_RAW)
 
 if (_CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
-    set(Rust_CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}")
-    set(Rust_CARGO_VERSION_MINOR "${CMAKE_MATCH_2}")
-    set(Rust_CARGO_VERSION_PATCH "${CMAKE_MATCH_3}")
-    set(Rust_CARGO_VERSION "${Rust_CARGO_VERSION_MAJOR}.${Rust_CARGO_VERSION_MINOR}.${Rust_CARGO_VERSION_PATCH}")
+    set(Rust_CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}" CACHE INTERNAL "" FORCE)
+    set(Rust_CARGO_VERSION_MINOR "${CMAKE_MATCH_2}" CACHE INTERNAL "" FORCE)
+    set(Rust_CARGO_VERSION_PATCH "${CMAKE_MATCH_3}" CACHE INTERNAL "" FORCE)
+    set(Rust_CARGO_VERSION "${Rust_CARGO_VERSION_MAJOR}.${Rust_CARGO_VERSION_MINOR}.${Rust_CARGO_VERSION_PATCH}" CACHE INTERNAL "" FORCE)
 # Workaround for the version strings where the `cargo ` prefix is missing.
 elseif(_CARGO_VERSION_RAW MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
-    set(Rust_CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}")
-    set(Rust_CARGO_VERSION_MINOR "${CMAKE_MATCH_2}")
-    set(Rust_CARGO_VERSION_PATCH "${CMAKE_MATCH_3}")
-    set(Rust_CARGO_VERSION "${Rust_CARGO_VERSION_MAJOR}.${Rust_CARGO_VERSION_MINOR}.${Rust_CARGO_VERSION_PATCH}")
+    set(Rust_CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}" CACHE INTERNAL "" FORCE)
+    set(Rust_CARGO_VERSION_MINOR "${CMAKE_MATCH_2}" CACHE INTERNAL "" FORCE)
+    set(Rust_CARGO_VERSION_PATCH "${CMAKE_MATCH_3}" CACHE INTERNAL "" FORCE)
+    set(Rust_CARGO_VERSION "${Rust_CARGO_VERSION_MAJOR}.${Rust_CARGO_VERSION_MINOR}.${Rust_CARGO_VERSION_PATCH}" CACHE INTERNAL "" FORCE)
 else()
     message(
         FATAL_ERROR
@@ -225,14 +225,14 @@ execute_process(
     OUTPUT_VARIABLE _RUSTC_VERSION_RAW)
 
 if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?")
-    set(Rust_VERSION_MAJOR "${CMAKE_MATCH_1}")
-    set(Rust_VERSION_MINOR "${CMAKE_MATCH_2}")
-    set(Rust_VERSION_PATCH "${CMAKE_MATCH_3}")
-    set(Rust_VERSION "${Rust_VERSION_MAJOR}.${Rust_VERSION_MINOR}.${Rust_VERSION_PATCH}")
+    set(Rust_VERSION_MAJOR "${CMAKE_MATCH_1}" CACHE INTERNAL "" FORCE)
+    set(Rust_VERSION_MINOR "${CMAKE_MATCH_2}" CACHE INTERNAL "" FORCE)
+    set(Rust_VERSION_PATCH "${CMAKE_MATCH_3}" CACHE INTERNAL "" FORCE)
+    set(Rust_VERSION "${Rust_VERSION_MAJOR}.${Rust_VERSION_MINOR}.${Rust_VERSION_PATCH}" CACHE INTERNAL "" FORCE)
     if(CMAKE_MATCH_4)
-        set(Rust_IS_NIGHTLY 1)
+        set(Rust_IS_NIGHTLY 1 CACHE INTERNAL "" FORCE)
     else()
-        set(Rust_IS_NIGHTLY 0)
+        set(Rust_IS_NIGHTLY 0 CACHE INTERNAL "" FORCE)
     endif()
 else()
     message(
@@ -251,12 +251,12 @@ else()
 endif()
 
 if (_RUSTC_VERSION_RAW MATCHES "LLVM version: ([0-9]+)\\.([0-9]+)(\\.([0-9]+))?")
-    set(Rust_LLVM_VERSION_MAJOR "${CMAKE_MATCH_1}")
-    set(Rust_LLVM_VERSION_MINOR "${CMAKE_MATCH_2}")
+    set(Rust_LLVM_VERSION_MAJOR "${CMAKE_MATCH_1}" CACHE INTERNAL "" FORCE)
+    set(Rust_LLVM_VERSION_MINOR "${CMAKE_MATCH_2}" CACHE INTERNAL "" FORCE)
     # With the Rust toolchain 1.44.1 the reported LLVM version is 9.0, i.e. without a patch version.
     # Since cmake regex does not support non-capturing groups, just ignore Match 3.
-    set(Rust_LLVM_VERSION_PATCH "${CMAKE_MATCH_4}") 
-    set(Rust_LLVM_VERSION "${Rust_LLVM_VERSION_MAJOR}.${Rust_LLVM_VERSION_MINOR}.${Rust_LLVM_VERSION_PATCH}")
+    set(Rust_LLVM_VERSION_PATCH "${CMAKE_MATCH_4}" CACHE INTERNAL "" FORCE)
+    set(Rust_LLVM_VERSION "${Rust_LLVM_VERSION_MAJOR}.${Rust_LLVM_VERSION_MINOR}.${Rust_LLVM_VERSION_PATCH}" CACHE INTERNAL "" FORCE)
 else()
     message(
             WARNING
