@@ -1,3 +1,12 @@
+# 0.2.1 (2022-05-07)
+
+## Fixes
+
+- Fix missing variables provided by corrosion, when corrosion is used as a subdirectory ([181](https://github.com/corrosion-rs/corrosion/pull/181)):
+  Public [Variables](https://github.com/corrosion-rs/corrosion#information-provided-by-corrosion) set
+  by Corrosion were not visible when using Corrosion as a subdirectory, due to the wrong scope of 
+  the variables. This was fixed by promoting the respective variables to Cache variables.
+
 # 0.2.0 (2022-05-05)
 
 ## Breaking changes
