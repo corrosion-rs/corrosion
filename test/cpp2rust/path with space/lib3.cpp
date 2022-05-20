@@ -3,6 +3,6 @@
 #include <iostream>
 
 extern "C" void cpp_function3(char const *name) {
-    std::cout << "Hello, " << "my name is lib3.cpp" << "! I'm C++ library Number 3!\n";
+    std::cout << "Hello, " << name << "! I'm C++ library Number 3!\n";
 }
 
