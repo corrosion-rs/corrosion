@@ -31,8 +31,7 @@ jobs:
           - darwin
           - msvc
         cmake:
-          - 3.12.4
-          - 3.18.0
+          - 3.15.7
           - 3.19.0
         rust:
           - 1.44.1 # Earliest targeted version
@@ -56,11 +55,6 @@ jobs:
             rust: stable
             generator: ninja
         exclude:
-          # Something's busted when building with Visual Studio with CMake 3.12 - perhaps should
-          # look into this at some point
-          - os: windows-2019
-            cmake: 3.12.4
-            generator: default # Default generator is Visual Studio
 
           # You cannot build with GNU using Visual Studio on Windows
           - os: windows-2019
@@ -160,11 +154,7 @@ jobs:
       - name: CMake Build Flags
         id: cmake_build_flags
         run: |
-          if [ "${{ matrix.cmake }}" != "3.12.4" ]; then
-            echo "::set-output name=cmake_build_flags::--verbose"
-          else
-            echo "::set-output name=cmake_build_flags::"
-          fi
+          echo "::set-output name=cmake_build_flags::--verbose"
       - name: Arch Flags
         id: arch_flags
         run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
@@ -212,19 +202,6 @@ jobs:
         run: cmake --version
       - name: Rust Version
         run: rustc +${{matrix.rust}} --version
-      - name: Configure (3.12 only)
-        run: >
-          cmake
-          -H.
-          -Bbuild
-          -DCORROSION_VERBOSE_OUTPUT=ON
-          ${{ steps.arch_flags.outputs.cmake }}
-          ${{ steps.pick_compiler.outputs.c_compiler }}
-          ${{ steps.pick_compiler.outputs.cxx_compiler }}
-          ${{ steps.pick_compiler.outputs.system_name }}
-          ${{ steps.pick_generator.outputs.generator }}
-          -DRust_TOOLCHAIN="${{matrix.rust}}"
-        if: ${{ matrix.cmake == '3.12.4' }}
       - name: Configure
         run: >
           cmake
@@ -237,7 +214,6 @@ jobs:
           ${{ steps.pick_compiler.outputs.system_name }}
           ${{ steps.pick_generator.outputs.generator }}
           -DRust_TOOLCHAIN="${{matrix.rust}}"
-        if: ${{ matrix.cmake != '3.12.4' }}
       - name: Run Config Tests (x86_64 Only)
         run: |
           cd build
@@ -245,7 +221,7 @@ jobs:
             --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target test-install
           ctest --verbose --build-config Debug
-        if: ${{ 'x86_64' == matrix.arch && !('windows-2019' == matrix.os && 'gnu' == matrix.abi) && '3.12.4' != matrix.cmake }}
+        if: ${{ 'x86_64' == matrix.arch && !('windows-2019' == matrix.os && 'gnu' == matrix.abi) }}
       - name: Build C++ program linking Rust
         run: |
           cmake \
