@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 find_package(Corrosion REQUIRED CMAKE_FIND_ROOT_PATH_BOTH)
 
 add_custom_command(

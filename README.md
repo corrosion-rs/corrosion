@@ -14,7 +14,7 @@ from a crate.
 
 ## Sample Usage
 ```cmake
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 project(MyCoolProject LANGUAGES CXX)
 
 find_package(Corrosion REQUIRED)
@@ -360,6 +360,6 @@ cmake -S. -Bbuild-android-arm64 -GNinja -DCMAKE_SYSTEM_NAME=Android \
 
 **Important note:** The Android SDK ships with CMake 3.10 at newest, which Android Studio will
 prefer over any CMake you've installed locally. CMake 3.10 is insufficient for using Corrosion,
-which requires a minimum of CMake 3.12. If you're using Android Studio to build your project,
+which requires a minimum of CMake 3.15. If you're using Android Studio to build your project,
 follow the instructions in the Android Studio documentation for
 [using a specific version of CMake](https://developer.android.com/studio/projects/install-ndk#vanilla_cmake).
