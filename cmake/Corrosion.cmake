@@ -7,12 +7,12 @@ endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
 
-set(CORROSION_NATIVE_TOOLING_DESCRIPTION 
+set(CORROSION_NATIVE_TOOLING_DESCRIPTION
     "Use native tooling - Required on CMake < 3.19 and available as a fallback option for recent versions"
     )
 
 set(CORROSION_NATIVE_TOOLING_DEFAULT OFF)
-# `CORROSION_EXPERIMENTAL_PARSER` was not part of a tagged release, but we still provide a 
+# `CORROSION_EXPERIMENTAL_PARSER` was not part of a tagged release, but we still provide a
 # deprecation notice for users that directly use corrosion on the master branch and may have set
 # this option.
 if(DEFINED CORROSION_EXPERIMENTAL_PARSER)
@@ -130,7 +130,7 @@ endif()
 
 function(_add_cargo_build)
     set(options "")
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE LINKER_LANGUAGE)
     set(multi_value_args BYPRODUCTS)
     cmake_parse_arguments(
         ACB
@@ -160,8 +160,11 @@ function(_add_cargo_build)
     # For MSVC targets, don't mess with linker preferences.
     # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
     if (NOT MSVC)
-        set(languages C CXX Fortran)
-
+        if (ACB_LINKER_LANGUAGE)
+            set(languages ${ACB_LINKER_LANGUAGE})
+        else()
+            set(languages C CXX Fortran)
+        endif()
         set(has_compiler OFF)
         foreach(language ${languages})
             if (CMAKE_${language}_COMPILER)
@@ -392,12 +395,17 @@ endfunction(_add_cargo_build)
 
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD)
-    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE LINKER_LANGUAGE)
     set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)
         message(FATAL_ERROR "MANIFEST_PATH is a required keyword to corrosion_add_crate")
+    endif()
+
+    set(valid_languages C CXX Fortran)
+    if ((DEFINED COR_LINKER_LANGUAGE) AND (NOT COR_LINKER_LANGUAGE IN_LIST valid_languages))
+        message(FATAL_ERROR "LINKER_LANGUAGE may only be set to one of ${valid_languages}.")
     endif()
 
     if(COR_PROFILE)
@@ -466,6 +474,10 @@ function(corrosion_import_crate)
             list(APPEND crates_args --crates ${crate})
         endforeach()
 
+        if (COR_LINKER_LANGUAGE)
+            set(linker_language "--linker-language=${COR_LINKER_LANGUAGE}")
+        endif()
+
         execute_process(
             COMMAND
                 ${_CORROSION_GENERATOR}
@@ -476,6 +488,7 @@ function(corrosion_import_crate)
                         ${_CORROSION_CONFIGURATION_TYPES}
                         ${crates_args}
                         ${cargo_profile}
+                        ${linker_language}
                         ${no_default_libs_arg}
                         --cargo-version ${_CORROSION_CARGO_VERSION}
                         -o ${generated_cmake}
@@ -505,6 +518,8 @@ function(corrosion_import_crate)
                 "${COR_CRATES}"
             PROFILE
                 "${COR_PROFILE}"
+            LINKER_LANGUAGE
+                "${COR_LINKER_LANGUAGE}"
         )
     endif()
 endfunction(corrosion_import_crate)

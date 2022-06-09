@@ -104,6 +104,7 @@ impl CargoTarget {
         platform: &super::platform::Platform,
         cargo_version: &semver::Version,
         cargo_profile: Option<&str>,
+        linker_language: Option<&str>,
         include_platform_libs: bool,
     ) -> Result<(), Box<dyn Error>> {
         // This bit aggregates the byproducts of "cargo build", which is needed for generators like Ninja.
@@ -157,6 +158,13 @@ impl CargoTarget {
         let cargo_build_profile_option = if let Some(profile) = cargo_profile {
             format!("PROFILE {}", profile)
         } else {
+            String::default()
+        };
+
+        let linker_language_option = if let Some(linker_language) = linker_language {
+            format!("LINKER_LANGUAGE {}", linker_language)
+        }
+        else {
             String::default()
         };
 
@@ -270,13 +278,15 @@ _add_cargo_build(
     MANIFEST_PATH \"{2}\"
     BYPRODUCTS {3}
     {4}
+    {5}
 )
 ",
             self.cargo_package.name,
             self.cargo_target.name,
             self.cargo_package.manifest_path.as_str().replace("\\", "/"),
             byproducts.join(" "),
-            cargo_build_profile_option
+            cargo_build_profile_option,
+            linker_language_option
         )?;
 
         writeln!(out_file)?;
