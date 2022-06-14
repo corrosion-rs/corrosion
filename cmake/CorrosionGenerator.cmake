@@ -198,7 +198,7 @@ function(_generator_parse_target manifest package target)
     )
 endfunction()
 
-function(_generator_add_target manifest ix cargo_version profile linker_language)
+function(_generator_add_target manifest ix cargo_version profile link_as)
     get_source_file_property(package_name ${manifest} CORROSION_TARGET${ix}_PACKAGE_NAME)
     get_source_file_property(manifest_path ${manifest} CORROSION_TARGET${ix}_MANIFEST_PATH)
     get_source_file_property(target_name ${manifest} CORROSION_TARGET${ix}_TARGET_NAME)
@@ -332,7 +332,7 @@ function(_generator_add_target manifest ix cargo_version profile linker_language
             MANIFEST_PATH "${manifest_path}"
             BYPRODUCTS ${byproducts}
             PROFILE "${profile}"
-            LINKER_LANGUAGE ${linker_language}
+            LINK_AS ${link_as}
     )
 endfunction()
 
@@ -399,7 +399,7 @@ endfunction()
 
 function(_generator_add_cargo_targets)
     set(options "")
-    set(one_value_args MANIFEST_PATH CONFIGURATION_ROOT CONFIGURATION_TYPE TARGET CARGO_VERSION PROFILE LINKER_LANGUAGE)
+    set(one_value_args MANIFEST_PATH CONFIGURATION_ROOT CONFIGURATION_TYPE TARGET CARGO_VERSION PROFILE LINK_AS)
     set(multi_value_args CONFIGURATION_TYPES CRATES)
     cmake_parse_arguments(
         GGC
@@ -482,7 +482,7 @@ function(_generator_add_cargo_targets)
             ${ix}
             ${GGC_CARGO_VERSION}
             "${GGC_PROFILE}"
-            "${GGC_LINKER_LANGUAGE}"
+            "${GGC_LINK_AS}"
         )
     endforeach()
 

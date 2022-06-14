@@ -23,7 +23,7 @@ const CONFIGURATION_ROOT: &str = "configuration-root";
 const TARGET: &str = "target";
 const CARGO_VERSION: &str = "cargo-version";
 const PROFILE: &str = "profile";
-const LINKER_LANGUAGE: &str = "linker-language";
+const LINK_AS: &str = "linker-language";
 const CRATES: &str = "crates";
 const NO_DEFAULT_LIBRARIES: &str = "no-default-libraries";
 
@@ -94,9 +94,9 @@ pub fn subcommand() -> App<'static, 'static> {
                 .help("Custom cargo profile to select."),
         )
         .arg(
-            Arg::with_name(LINKER_LANGUAGE)
-                .long(LINKER_LANGUAGE)
-                .value_name("LINKER_LANGUAGE")
+            Arg::with_name(LINK_AS)
+                .long(LINK_AS)
+                .value_name("LINK_AS")
                 .required(false)
                 .possible_values(&["C", "CXX", "Fortran"])
                 .help("Language to select a linker by: C, CXX or Fortran.")
@@ -201,7 +201,7 @@ cmake_minimum_required(VERSION 3.15)
         .collect();
 
     let cargo_profile = matches.value_of(PROFILE);
-    let linker_language = matches.value_of(LINKER_LANGUAGE);
+    let link_as = matches.value_of(LINK_AS);
 
     for target in &targets {
         target
@@ -210,7 +210,7 @@ cmake_minimum_required(VERSION 3.15)
                 &cargo_platform,
                 &cargo_version,
                 cargo_profile,
-                linker_language,
+                link_as,
                 !matches.is_present(NO_DEFAULT_LIBRARIES),
             )
             .unwrap();

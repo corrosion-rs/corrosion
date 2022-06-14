@@ -130,7 +130,7 @@ endif()
 
 function(_add_cargo_build)
     set(options "")
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE LINKER_LANGUAGE)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE LINK_AS)
     set(multi_value_args BYPRODUCTS)
     cmake_parse_arguments(
         ACB
@@ -160,8 +160,8 @@ function(_add_cargo_build)
     # For MSVC targets, don't mess with linker preferences.
     # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
     if (NOT MSVC)
-        if (ACB_LINKER_LANGUAGE)
-            set(languages ${ACB_LINKER_LANGUAGE})
+        if (ACB_LINK_AS)
+            set(languages ${ACB_LINK_AS})
         else()
             set(languages C CXX Fortran)
         endif()
@@ -395,7 +395,7 @@ endfunction(_add_cargo_build)
 
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD)
-    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE LINKER_LANGUAGE)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE LINK_AS)
     set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
@@ -404,8 +404,8 @@ function(corrosion_import_crate)
     endif()
 
     set(valid_languages C CXX Fortran)
-    if ((DEFINED COR_LINKER_LANGUAGE) AND (NOT COR_LINKER_LANGUAGE IN_LIST valid_languages))
-        message(FATAL_ERROR "LINKER_LANGUAGE may only be set to one of ${valid_languages}.")
+    if ((DEFINED COR_LINK_AS) AND (NOT COR_LINK_AS IN_LIST valid_languages))
+        message(FATAL_ERROR "LINK_AS may only be set to one of ${valid_languages}.")
     endif()
 
     if(COR_PROFILE)
@@ -474,8 +474,8 @@ function(corrosion_import_crate)
             list(APPEND crates_args --crates ${crate})
         endforeach()
 
-        if (COR_LINKER_LANGUAGE)
-            set(linker_language "--linker-language=${COR_LINKER_LANGUAGE}")
+        if (COR_LINK_AS)
+            set(link_as "--linker-language=${COR_LINK_AS}")
         endif()
 
         execute_process(
@@ -488,7 +488,7 @@ function(corrosion_import_crate)
                         ${_CORROSION_CONFIGURATION_TYPES}
                         ${crates_args}
                         ${cargo_profile}
-                        ${linker_language}
+                        ${link_as}
                         ${no_default_libs_arg}
                         --cargo-version ${_CORROSION_CARGO_VERSION}
                         -o ${generated_cmake}
@@ -518,8 +518,8 @@ function(corrosion_import_crate)
                 "${COR_CRATES}"
             PROFILE
                 "${COR_PROFILE}"
-            LINKER_LANGUAGE
-                "${COR_LINKER_LANGUAGE}"
+            LINK_AS
+                "${COR_LINK_AS}"
         )
     endif()
 endfunction(corrosion_import_crate)
