@@ -253,6 +253,7 @@ function(_add_cargo_build)
     endif()
 
     set(global_rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTFLAGS>>")
+    set(local_rustflags_target_property  "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_LOCAL_RUSTFLAGS>>")
 
     set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_FEATURES}>>")
     set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
@@ -357,6 +358,9 @@ function(_add_cargo_build)
 
     set(global_joined_rustflags "$<JOIN:${global_rustflags_target_property}, >")
     set(global_rustflags_genex "$<$<BOOL:${global_rustflags_target_property}>:RUSTFLAGS=${global_joined_rustflags}>")
+    set(local_rustflags_delimiter "$<$<BOOL:${local_rustflags_target_property}>:-->")
+    set(local_rustflags_genex "$<$<BOOL:${local_rustflags_target_property}>:${local_rustflags_target_property}>")
+
 
     # Used to set a linker for a specific target-triple.
     set(cargo_target_linker_var "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER")
@@ -401,7 +405,7 @@ function(_add_cargo_build)
             "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
             "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
         "${_CORROSION_CARGO}"
-            build
+            rustc
             ${cargo_target_option}
             ${_CORROSION_VERBOSE_OUTPUT_FLAG}
             # Global --features arguments added via corrosion_import_crate()
@@ -416,6 +420,9 @@ function(_add_cargo_build)
             ${cargo_profile}
             ${flag_args}
             ${flags_genex}
+            # Any arguments to cargo must be placed before this line
+            ${local_rustflags_delimiter}
+            ${local_rustflags_genex}
 
     # Copy crate artifacts to the binary dir
     COMMAND
@@ -601,12 +608,30 @@ function(corrosion_set_hostbuild target_name)
     )
 endfunction()
 
+# Add flags for rustc (RUSTFLAGS) which affect the target and all of it's Rust dependencies
+#
+# Additional rustflags may be passed as optional parameters after rustflag.
+# Please note, that if you import multiple targets from a package or workspace, but set different
+# Rustflags via this function, the Rust dependencies will have to be rebuilt when changing targets.
+# Consider `corrosion_add_target_local_rustflags()` as an alternative to avoid this.
 function(corrosion_add_target_rustflags target_name rustflag)
     # Additional rustflags may be passed as optional parameters after rustflag.
     set_property(
             TARGET ${target_name}
             APPEND
             PROPERTY INTERFACE_CORROSION_RUSTFLAGS ${rustflag} ${ARGN}
+    )
+endfunction()
+
+# Add flags for rustc (RUSTFLAGS) which only affect the target, but none of it's (Rust) dependencies
+#
+# Additional rustflags may be passed as optional parameters after rustc_flag.
+function(corrosion_add_target_local_rustflags target_name rustc_flag)
+    # Set Rustflags via `cargo rustc` which only affect the current crate, but not dependencies.
+    set_property(
+            TARGET ${target_name}
+            APPEND
+            PROPERTY INTERFACE_CORROSION_LOCAL_RUSTFLAGS ${rustc_flag} ${ARGN}
     )
 endfunction()
 

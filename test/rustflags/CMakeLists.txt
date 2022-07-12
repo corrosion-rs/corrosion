@@ -11,3 +11,6 @@ corrosion_add_target_rustflags(rustflag-test-lib
         --cfg=test_rustflag_cfg2="$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>"
         "--cfg=test_rustflag_cfg3"
 )
+
+corrosion_add_target_local_rustflags(rustflag-test-lib "--cfg=test_local_rustflag1")
+corrosion_add_target_local_rustflags(rustflag-test-lib --cfg=test_local_rustflag2="value")

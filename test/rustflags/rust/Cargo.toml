@@ -5,6 +5,7 @@ license = "MIT"
 edition = "2018"
 
 [dependencies]
+some_dependency = { path = "some_dependency" }
 
 [lib]
 crate-type=["staticlib"]

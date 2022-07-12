@@ -27,7 +27,14 @@ pub extern "C" fn rust_second_function(name: *const c_char) {
 pub extern "C" fn rust_third_function(name: *const c_char) {
     let name = unsafe { std::ffi::CStr::from_ptr(name).to_str().unwrap() };
     println!("Hello, {}! I'm Rust again, third time the charm!", name);
+    assert_eq!(some_dependency::some_function(), 42);
 }
 
 #[cfg(not(test_rustflag_cfg3))]
+const _: [(); 1] = [(); 2];
+
+#[cfg(not(test_local_rustflag1))]
+const _: [(); 1] = [(); 2];
+
+#[cfg(not(test_local_rustflag2 = "value"))]
 const _: [(); 1] = [(); 2];
