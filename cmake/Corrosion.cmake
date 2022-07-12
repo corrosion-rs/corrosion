@@ -347,13 +347,13 @@ function(_add_cargo_build)
         list(APPEND corrosion_cc_rs_flags "SDKROOT=${CMAKE_OSX_SYSROOT}")
     endif()
 
-    corrosion_add_target_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
+    corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
 
     # todo: this should probably also be guarded by if_not_host_build_condition.
     if(COR_NO_STD)
-        corrosion_add_target_rustflags("${target_name}" "-Cdefault-linker-libraries=no")
+        corrosion_add_target_local_rustflags("${target_name}" "-Cdefault-linker-libraries=no")
     else()
-        corrosion_add_target_rustflags("${target_name}" "-Cdefault-linker-libraries=yes")
+        corrosion_add_target_local_rustflags("${target_name}" "-Cdefault-linker-libraries=yes")
     endif()
 
     set(global_joined_rustflags "$<JOIN:${global_rustflags_target_property}, >")
@@ -379,7 +379,7 @@ function(_add_cargo_build)
             # Skip adding the linker argument, if the linker is explicitly set, since the
             # explicit_linker_property will not be set when this function runs.
             # Passing this rustflag is necessary for clang.
-            corrosion_add_target_rustflags("${target_name}" "$<$<NOT:$<BOOL:${explicit_linker_property}>>:${rustflag_linker_arg}>")
+            corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:$<BOOL:${explicit_linker_property}>>:${rustflag_linker_arg}>")
         endif()
     else()
         message(DEBUG "No linker preference for target ${target_name} could be detected.")
@@ -704,8 +704,8 @@ function(corrosion_link_libraries target_name)
             $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
         )
 
-        corrosion_add_target_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
-        corrosion_add_target_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>")
+        corrosion_add_target_local_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
+        corrosion_add_target_local_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>")
     endforeach()
 endfunction(corrosion_link_libraries)
 
