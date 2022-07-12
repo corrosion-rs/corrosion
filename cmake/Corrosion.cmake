@@ -252,10 +252,7 @@ function(_add_cargo_build)
         set(no_default_libraries_arg --no-default-libraries)
     endif()
 
-    set(rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTFLAGS>>")
-    # `rustflags_target_property` may contain multiple arguments and double quotes, so we _should_ single quote it to
-    # preserve any double quotes and keep it as one argument value. However single quotes don't work on windows, so we
-    # can only add double quotes here. Any double quotes _in_ the rustflags must be escaped like `\\\"`.
+    set(global_rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTFLAGS>>")
 
     set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_FEATURES}>>")
     set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
@@ -358,8 +355,8 @@ function(_add_cargo_build)
         corrosion_add_target_rustflags("${target_name}" "-Cdefault-linker-libraries=yes")
     endif()
 
-    set(joined_rustflags "$<JOIN:${rustflags_target_property}, >")
-    set(rustflags_genex "$<$<BOOL:${rustflags_target_property}>:RUSTFLAGS=${joined_rustflags}>")
+    set(global_joined_rustflags "$<JOIN:${global_rustflags_target_property}, >")
+    set(global_rustflags_genex "$<$<BOOL:${global_rustflags_target_property}>:RUSTFLAGS=${global_joined_rustflags}>")
 
     # Used to set a linker for a specific target-triple.
     set(cargo_target_linker_var "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER")
@@ -397,7 +394,7 @@ function(_add_cargo_build)
     COMMAND
         ${CMAKE_COMMAND} -E env
             "${build_env_variable_genex}"
-            "${rustflags_genex}"
+            "${global_rustflags_genex}"
             "${cargo_target_linker}"
             "${corrosion_cc_rs_flags}"
             "${cargo_library_path}"
