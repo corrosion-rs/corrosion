@@ -332,7 +332,8 @@ function(_generator_add_target manifest ix cargo_version profile)
     )
 endfunction()
 
-function(_generator_add_config_info manifest ix is_multi_config config_type)
+
+function(_generator_add_config_info manifest ix is_multi_config config_types)
     get_source_file_property(target_name ${manifest} CORROSION_TARGET${ix}_TARGET_NAME)
 
     get_source_file_property(is_library ${manifest} CORROSION_TARGET${ix}_IS_LIBRARY)
@@ -347,47 +348,28 @@ function(_generator_add_config_info manifest ix is_multi_config config_type)
 
     get_source_file_property(is_windows ${manifest} CORROSION_PLATFORM_IS_WINDOWS)
 
-    if(config_type)
-        string(TOUPPER "${config_type}" config_type_upper)
-        set(imported_location "IMPORTED_LOCATION_${config_type_upper}")
-        set(imported_implib "IMPORTED_IMPLIB_${config_type_upper}")
-    else()
-        set(imported_location "IMPORTED_LOCATION")
-        set(imported_implib "IMPORTED_IMPLIB")
-    endif()
-
     if(is_multi_config)
-        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
-    else()
-        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}")
+        set(multi_config_config_types "${config_types}")
     endif()
 
     if(is_library)
         if(has_staticlib)
-            set_property(
-                TARGET ${target_name}-static
-                PROPERTY ${imported_location} "${binary_root}/${static_lib_name}"
-            )
+            corrosion_internal_set_imported_location("${target_name}-static" "IMPORTED_LOCATION"
+                "${static_lib_name}" ${multi_config_config_types})
         endif()
 
         if(has_cdylib)
-            set_property(
-                TARGET ${target_name}-shared
-                PROPERTY ${imported_location} "${binary_root}/${dynamic_lib_name}"
-            )
+            corrosion_internal_set_imported_location("${target_name}-shared" "IMPORTED_LOCATION"
+                "${dynamic_lib_name}" ${multi_config_config_types})
 
             if(is_windows)
-                set_property(
-                    TARGET ${target_name}-shared
-                    PROPERTY ${imported_implib} "${binary_root}/${implib_name}"
-                )
+                corrosion_internal_set_imported_location("${target_name}-shared" "IMPORTED_IMPLIB"
+                    "${implib_name}" ${multi_config_config_types})
             endif()
         endif()
     elseif(is_executable)
-        set_property(
-            TARGET ${target_name}
-            PROPERTY ${imported_location} "${binary_root}/${exe_name}"
-        )
+        corrosion_internal_set_imported_location("${target_name}" "IMPORTED_LOCATION"
+            "${exe_name}" ${multi_config_config_types})
     else()
         message(FATAL_ERROR "unknown target type")
     endif()
@@ -481,14 +463,12 @@ function(_generator_add_cargo_targets)
         )
     endforeach()
 
-    foreach(config_type config_folder IN ZIP_LISTS config_types config_folders)
-        foreach(ix RANGE ${num_targets-1})
-            _generator_add_config_info(
-                ${GGC_MANIFEST_PATH}
-                ${ix}
-                ${is_multi_config}
-                "${config_type}"
-            )
-        endforeach()
+    foreach(ix RANGE ${num_targets-1})
+        _generator_add_config_info(
+            ${GGC_MANIFEST_PATH}
+            ${ix}
+            ${is_multi_config}
+            "${config_types}"
+        )
     endforeach()
 endfunction()

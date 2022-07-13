@@ -17,6 +17,11 @@ pub struct CargoTarget {
     target_type: CargoTargetType,
 }
 
+pub(crate) enum ConfigType {
+    SingleConfig(Option<String>),
+    MultiConfig(Vec<String>),
+}
+
 impl CargoTarget {
     pub fn from_metadata(
         cargo_package: Rc<cargo_metadata::Package>,
@@ -276,21 +281,15 @@ _add_cargo_build(
         Ok(())
     }
 
-    pub fn emit_cmake_config_info(
+    pub(crate) fn emit_cmake_config_info(
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
-        is_multi_config: bool,
-        config_type: &Option<&str>,
+        config_type: &ConfigType,
     ) -> Result<(), Box<dyn Error>> {
-        let imported_location = config_type.map_or("IMPORTED_LOCATION".to_owned(), |config_type| {
-            format!("IMPORTED_LOCATION_{}", config_type.to_uppercase())
-        });
-
-        let binary_root = if is_multi_config {
-            format!("${{CMAKE_CURRENT_BINARY_DIR}}/{}", config_type.unwrap())
-        } else {
-            "${CMAKE_CURRENT_BINARY_DIR}".to_string()
+        let multi_config_args = match config_type {
+            ConfigType::SingleConfig(_) => "".into(),
+            ConfigType::MultiConfig(configs) => configs.join(" "),
         };
 
         match self.target_type {
@@ -301,37 +300,32 @@ _add_cargo_build(
                 if has_staticlib {
                     writeln!(
                         out_file,
-                        "set_property(TARGET {0}-static PROPERTY {1} \"{2}/{3}\")",
+                        "corrosion_internal_set_imported_location({0}-static {1} {2} {3})",
                         self.cargo_target.name,
-                        imported_location,
-                        binary_root,
-                        self.static_lib_name(platform)
+                        "IMPORTED_LOCATION",
+                        self.static_lib_name(platform),
+                        multi_config_args
                     )?;
                 }
 
                 if has_cdylib {
                     writeln!(
                         out_file,
-                        "set_property(TARGET {0}-shared PROPERTY {1} \"{2}/{3}\")",
+                        "corrosion_internal_set_imported_location({0}-shared {1} {2} {3})",
                         self.cargo_target.name,
-                        imported_location,
-                        binary_root,
-                        self.dynamic_lib_name(platform)
+                        "IMPORTED_LOCATION",
+                        self.dynamic_lib_name(platform),
+                        multi_config_args
                     )?;
 
                     if platform.is_windows() {
-                        let imported_implib = config_type
-                            .map_or("IMPORTED_IMPLIB".to_owned(), |config_type| {
-                                format!("IMPORTED_IMPLIB_{}", config_type.to_uppercase())
-                            });
-
                         writeln!(
                             out_file,
-                            "set_property(TARGET {0}-shared PROPERTY {1} \"{2}/{3}\")",
+                            "corrosion_internal_set_imported_location({0}-shared {1} {2} {3})",
                             self.cargo_target.name,
-                            imported_implib,
-                            binary_root,
-                            self.implib_name(platform)
+                            "IMPORTED_IMPLIB",
+                            self.implib_name(platform),
+                            multi_config_args
                         )?;
                     }
                 }
@@ -345,8 +339,8 @@ _add_cargo_build(
 
                 writeln!(
                     out_file,
-                    "set_property(TARGET {0} PROPERTY {1} \"{2}/{3}\")",
-                    self.cargo_target.name, imported_location, binary_root, exe_file
+                    "corrosion_internal_set_imported_location({0} {1} {2} {3})",
+                    self.cargo_target.name, "IMPORTED_LOCATION", exe_file, multi_config_args
                 )?;
             }
         }

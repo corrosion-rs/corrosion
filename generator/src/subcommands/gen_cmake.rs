@@ -9,6 +9,8 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use platforms::Platform;
 use semver::Version;
 
+use self::target::ConfigType;
+
 mod platform;
 mod target;
 
@@ -146,18 +148,18 @@ cmake_minimum_required(VERSION 3.15)
 
     let config_root = Path::new(matches.value_of(CONFIGURATION_ROOT).unwrap_or("."));
 
-    let mut config_folders = Vec::new();
-    if let Some(config_types) = matches.values_of(CONFIGURATION_TYPES) {
+    let config_type = if let Some(config_types) = matches.values_of(CONFIGURATION_TYPES) {
+        let mut configuration_types = Vec::new();
         for config_type in config_types {
             let config_folder = config_root.join(config_type);
             std::fs::create_dir_all(&config_folder).expect("Could not create config folder");
-            config_folders.push((Some(config_type), config_folder));
+            configuration_types.push(config_type.into());
         }
+        ConfigType::MultiConfig(configuration_types)
     } else {
         let config_type = matches.value_of(CONFIGURATION_TYPE);
-        let config_folder = config_root;
-        config_folders.push((config_type, config_folder.to_path_buf()));
-    }
+        ConfigType::SingleConfig(config_type.map(|s| s.into()))
+    };
 
     let crates = matches
         .values_of(CRATES)
@@ -198,15 +200,8 @@ cmake_minimum_required(VERSION 3.15)
 
     writeln!(out_file)?;
 
-    for (config_type, _config_folder) in config_folders {
-        for target in &targets {
-            target.emit_cmake_config_info(
-                &mut out_file,
-                &cargo_platform,
-                matches.is_present(CONFIGURATION_TYPES),
-                &config_type,
-            )?;
-        }
+    for target in &targets {
+        target.emit_cmake_config_info(&mut out_file, &cargo_platform, &config_type)?;
     }
 
     std::process::exit(0);
