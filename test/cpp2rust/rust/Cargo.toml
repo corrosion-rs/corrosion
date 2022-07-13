@@ -6,4 +6,4 @@ license = "MIT"
 edition = "2018"
 
 [dependencies]
-
+rust-dependency = { path = "rust_dependency"}
