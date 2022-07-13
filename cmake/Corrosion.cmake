@@ -54,6 +54,38 @@ get_property(
     TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
 )
 
+# Internal function used by both the Rust CMake Generator and CorrosionGenerator.cmake
+#
+# base_property: Name of the base property - i.e. `IMPORTED_LOCATION` or `IMPORTED_IMPLIB`.
+# Optional parameters: Multi-Config configuration types.
+function(corrosion_internal_set_imported_location target_name base_property filename)
+    foreach(config_type ${ARGN})
+        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+        string(TOUPPER "${config_type}" config_type_upper)
+        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
+                " to `${binary_root}/${filename}`.")
+        # For Multiconfig we want to specify the correct location for each configuration
+        set_property(
+            TARGET ${target_name}
+            PROPERTY "${base_property}_${config_type_upper}"
+                "${binary_root}/${filename}"
+        )
+    endforeach()
+    if(NOT ARGN)
+        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+
+    message(DEBUG "Setting ${base_property} for target ${target_name}"
+                " to `${binary_root}/${filename}`.")
+
+    # IMPORTED_LOCATION must be set regardless of possible overrides. In the multiconfig case,
+    # the last configuration "wins".
+    set_property(
+            TARGET ${target_name}
+            PROPERTY "${base_property}" "${binary_root}/${filename}"
+        )
+endfunction()
+
 if (NOT CORROSION_NATIVE_TOOLING)
     include(CorrosionGenerator)
 endif()
