@@ -23,4 +23,5 @@ fn main() {
     } else {
         greeting("Rust");
     }
+    rust_dependency::calls_ffi();
 }

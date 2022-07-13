@@ -3,5 +3,12 @@
 version = 3
 
 [[package]]
+name = "rust-dependency"
+version = "0.1.0"
+
+[[package]]
 name = "rust-exe"
 version = "0.1.0"
+dependencies = [
+ "rust-dependency",
+]
