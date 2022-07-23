@@ -181,13 +181,25 @@ if (NOT Rust_COMPILER_CACHED)
     return()
 endif()
 
-# Look for Cargo next to rustc.
-# If you want to use a different cargo, explicitly set `Rust_CARGO` variable
-find_program(
-    Rust_CARGO_CACHED
-    cargo
-        HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
-        REQUIRED NO_DEFAULT_PATH)
+if (_RESOLVE_RUSTUP_TOOLCHAINS)
+    # If not already explicitly set by the `Rust_CARGO` variable, search for cargo next to rustc,
+    # since the toolchain is managed by rustup.
+    # Note: Not all toolchains managed by rustup have `cargo` installed. Specifically, a custom
+    # toolchain may not have had cargo built. In this case the user should manually specify
+    # `Rust_CARGO`.
+    find_program(
+        Rust_CARGO_CACHED
+        cargo
+            HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
+            REQUIRED NO_DEFAULT_PATH)
+else()
+    # On some systems (e.g. NixOS) cargo is not managed by rustup and also not next to rustc.
+    find_program(
+            Rust_CARGO_CACHED
+            cargo
+                HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
+                REQUIRED)
+endif()
 
 set(CARGO_RUST_FLAGS "" CACHE STRING "Flags to pass to rustc")
 set(CARGO_RUST_FLAGS_DEBUG "" CACHE STRING
