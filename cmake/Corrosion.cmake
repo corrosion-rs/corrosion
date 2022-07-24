@@ -248,6 +248,9 @@ function(_add_cargo_build)
 
     set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
 
+    set(explicit_linker_property "$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_LINKER>")
+
+
     # Rust will add `-lSystem` as a flag for the linker on macOS. Adding the -L flag via RUSTFLAGS only fixes the
     # problem partially - buildscripts still break, since they won't receive the RUSTFLAGS. This seems to only be a
     # problem if we specify the linker ourselves (which we do, since this is necessary for e.g. linking C++ code).
@@ -326,21 +329,30 @@ function(_add_cargo_build)
     set(joined_rustflags "$<JOIN:${rustflags_target_property}, >")
     set(rustflags_genex "$<$<BOOL:${rustflags_target_property}>:RUSTFLAGS=${joined_rustflags}>")
 
+    # Used to set a linker for a specific target-triple.
+    set(cargo_target_linker_var "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER")
     if(CORROSION_LINKER_PREFERENCE)
+        set(cargo_target_linker_arg "$<IF:$<BOOL:${explicit_linker_property}>,${explicit_linker_property},${CORROSION_LINKER_PREFERENCE}>")
+        set(cargo_target_linker "${cargo_target_linker_var}=${cargo_target_linker_arg}")
         if(CMAKE_CROSSCOMPILING)
             # CMake does not offer a host compiler we could select when configured for cross-compiling. This
             # effectively means that by default cc will be selected for builds targeting host. The user can still
             # override this by manually adding the appropriate rustflags to select the compiler for the target!
-            set(cargo_target_linker "$<${if_not_host_build_condition}:CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER=${CORROSION_LINKER_PREFERENCE}>")
-        else()
-            set(cargo_target_linker "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER=${CORROSION_LINKER_PREFERENCE}")
+            set(cargo_target_linker "$<${if_not_host_build_condition}:${cargo_target_linker}>")
         endif()
         # Will be only set for cross-compilers like clang, c.f. `CMAKE_<LANG>_COMPILER_TARGET`.
+        # Todo: is this block even necessary? I think rust/cargo already adds the flag.
         if(CORROSION_LINKER_PREFERENCE_TARGET)
-            corrosion_add_target_rustflags("${target_name}" "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
+            set(rustflag_linker_arg "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
+            # Skip adding the linker argument, if the linker is explicitely set, since the
+            # explicit_linker_property will not be set when this function runs.
+            corrosion_add_target_rustflags("${target_name}" "$<$<NOT:${explicit_linker_property}>:${rustflag_linker_arg}>")
         endif()
     else()
-        message(STATUS "No linker preference for target ${target_name} could be detected.")
+        message(DEBUG "No linker preference for target ${target_name} could be detected.")
+        # Note: Adding quotes here introduces wierd errors when using MSVC. Since there are no spaces here at
+        # configure time, we can omit the quotes without problems
+        set(cargo_target_linker $<$<BOOL:${explicit_linker_property}>:${cargo_target_linker_var}=${explicit_linker_property}>)
     endif()
 
     add_custom_target(
@@ -529,9 +541,26 @@ function(add_crate path_to_toml)
 endfunction(add_crate)
 
 function(corrosion_set_linker_language target_name language)
+    message(DEPRECATION "corrosion_set_linker_language is deprecated."
+            "Please use corrosion_set_linker and set a specific linker.")
     set_property(
         TARGET cargo-build_${target_name}
         PROPERTY LINKER_LANGUAGE ${language}
+    )
+endfunction()
+
+function(corrosion_set_linker target_name linker)
+    if(NOT linker)
+        message(FATAL_ERROR "The linker passed to `corrosion_set_linker` may not be empty")
+    endif()
+    if(MSVC)
+        message(WARNING "Explicitly setting the linker with the MSVC toolchain is currently not supported and ignored")
+    endif()
+    # Todo: This function may need to be extended once we support multiple bin targets
+    # per crate.
+    set_property(
+        TARGET ${target_name}
+        PROPERTY INTERFACE_CORROSION_LINKER "${linker}"
     )
 endfunction()
 
