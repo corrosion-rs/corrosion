@@ -340,14 +340,6 @@ function(_add_cargo_build)
             # override this by manually adding the appropriate rustflags to select the compiler for the target!
             set(cargo_target_linker "$<${if_not_host_build_condition}:${cargo_target_linker}>")
         endif()
-        # Will be only set for cross-compilers like clang, c.f. `CMAKE_<LANG>_COMPILER_TARGET`.
-        # Todo: is this block even necessary? I think rust/cargo already adds the flag.
-        if(CORROSION_LINKER_PREFERENCE_TARGET)
-            set(rustflag_linker_arg "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
-            # Skip adding the linker argument, if the linker is explicitely set, since the
-            # explicit_linker_property will not be set when this function runs.
-            corrosion_add_target_rustflags("${target_name}" "$<$<NOT:${explicit_linker_property}>:${rustflag_linker_arg}>")
-        endif()
     else()
         message(DEBUG "No linker preference for target ${target_name} could be detected.")
         # Note: Adding quotes here introduces wierd errors when using MSVC. Since there are no spaces here at
