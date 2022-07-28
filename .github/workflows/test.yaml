@@ -20,7 +20,7 @@ jobs:
         os:
           - windows-2019 # windows-latest is currently not having a supported MSVC compiler
           - ubuntu-latest
-          - macos-10.15
+          - macos-12
         arch:
           - x86_64
           - i686
@@ -41,19 +41,6 @@ jobs:
         generator:
           - default # This is just whatever the platform default is
           - ninja
-        include:
-          - os: macos-latest
-            arch: x86_64
-            abi: darwin
-            cmake: 3.19.0
-            rust: 1.44.1
-            generator: default
-          - os: macos-latest
-            arch: x86_64
-            abi: darwin
-            cmake: 3.19.0
-            rust: stable
-            generator: ninja
         exclude:
 
           # You cannot build with GNU using Visual Studio on Windows
@@ -76,11 +63,11 @@ jobs:
             generator: ninja
           - os: windows-2019
             arch: powerpc64le
-          - os: macos-10.15
+          - os: macos-12
             arch: i686
-          - os: macos-10.15
+          - os: macos-12
             arch: aarch64
-          - os: macos-10.15
+          - os: macos-12
             arch: powerpc64le
 
           # ABI
@@ -90,14 +77,14 @@ jobs:
             abi: darwin
           - os: windows-2019
             abi: darwin
-          - os: macos-10.15
+          - os: macos-12
             abi: msvc
-          - os: macos-10.15
+          - os: macos-12
             abi: gnu
 
           # Rust
           # Build each set only with the earliest compatible versioned Rust
-          - os: macos-10.15
+          - os: macos-12
             rust: 1.45.0
           - os: ubuntu-latest
             rust: 1.45.0
@@ -257,7 +244,7 @@ jobs:
         os:
           - windows-2019
           - ubuntu-latest
-          - macos-10.15
+          - macos-12
         method:
           - subdirectory
           - install
