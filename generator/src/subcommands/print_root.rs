@@ -1,9 +1,9 @@
-use clap::{App, SubCommand};
+use clap::{SubCommand, Command};
 
 // Subcommand Name
 pub const PRINT_ROOT: &str = "print-root";
 
-pub fn subcommand() -> App<'static, 'static> {
+pub fn subcommand() -> Command<'static> {
     SubCommand::with_name(PRINT_ROOT)
 }
 

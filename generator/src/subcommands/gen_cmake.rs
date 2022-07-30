@@ -5,7 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{Command, Arg, ArgMatches, SubCommand};
 use platforms::Platform;
 use semver::Version;
 
@@ -26,7 +26,7 @@ const PROFILE: &str = "profile";
 const CRATES: &str = "crates";
 const NO_DEFAULT_LIBRARIES: &str = "no-default-libraries";
 
-pub fn subcommand() -> App<'static, 'static> {
+pub fn subcommand() -> Command<'static> {
     SubCommand::with_name(GEN_CMAKE)
         .arg(
             Arg::with_name(CONFIGURATION_ROOT)
@@ -94,7 +94,7 @@ pub fn subcommand() -> App<'static, 'static> {
         )
         .arg(
             Arg::with_name(OUT_FILE)
-                .short("o")
+                .short('o')
                 .long("out-file")
                 .value_name("FILE")
                 .help("Output CMake file name. Defaults to stdout."),

@@ -6,13 +6,14 @@ license = "MIT"
 edition = "2018"
 
 [dependencies]
-cargo_metadata = "0.14"
+cargo_metadata = "0.15"
 semver = "1.0"
-platforms = "2.0"
+platforms = "3.0"
 
 [dependencies.clap]
-version = "2.34"
+version = "3.2"
 default-features = false
+features = ["std"]
 
 # Make sure this crate still compiles while it is checked out
 # in a sub-directory of a repository that has a Cargo.toml.

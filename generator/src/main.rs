@@ -69,8 +69,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     match matches.subcommand() {
-        (print_root::PRINT_ROOT, _) => print_root::invoke(&shared_args)?,
-        (gen_cmake::GEN_CMAKE, Some(matches)) => gen_cmake::invoke(&shared_args, matches)?,
+        Some((print_root::PRINT_ROOT, _)) => print_root::invoke(&shared_args)?,
+        Some((gen_cmake::GEN_CMAKE, matches)) => gen_cmake::invoke(&shared_args, matches)?,
         _ => unreachable!(),
     };
 
