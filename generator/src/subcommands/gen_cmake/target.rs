@@ -130,14 +130,6 @@ impl CargoTarget {
             }
         }
 
-        // Cargo didn't place PDBs in the target output directory before 1.45, so copy them out
-        // of the deps/ folder instead
-        let prefix = if cargo_version < &semver::Version::new(1, 45, 0) {
-            "deps/"
-        } else {
-            ""
-        };
-
         // Only shared libraries and executables have PDBs on Windows
         // I don't know why PDBs aren't generated for staticlibs...
         let has_pdb = platform.is_windows()
@@ -151,7 +143,7 @@ impl CargoTarget {
             };
 
         if has_pdb {
-            byproducts.push(prefix.to_string() + &self.pdb_name());
+            byproducts.push(self.pdb_name());
         }
 
         let cargo_build_profile_option = if let Some(profile) = cargo_profile {
