@@ -34,8 +34,7 @@ jobs:
           - 3.15.7
           - 3.19.0
         rust:
-          - 1.44.1 # Earliest targeted version
-          - 1.45.0 # Earliest version compatible with Windows GNU
+          - 1.46.0 # MSRV Minimum supported rust version
           - stable
           - nightly
         generator:
@@ -81,21 +80,6 @@ jobs:
             abi: msvc
           - os: macos-12
             abi: gnu
-
-          # Rust
-          # Build each set only with the earliest compatible versioned Rust
-          - os: macos-12
-            rust: 1.45.0
-          - os: ubuntu-latest
-            rust: 1.45.0
-          - os: windows-2019
-            abi: msvc
-            rust: 1.45.0
-          # Prior to 1.45.0, -nostdlib is erroneously passed to g++ when for the *-pc-windows-gnu
-          # target. See: https://github.com/rust-lang/rust/pull/71769
-          - os: windows-2019
-            abi: gnu
-            rust: 1.44.1
 
     steps:
       - name: Determine Rust OS
@@ -266,7 +250,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.44.1
+          toolchain: 1.46.0
           default: true
       - name: CMake Version
         run: cmake --version

@@ -247,10 +247,7 @@ function(_generator_add_target manifest ix cargo_version profile)
     # Only shared libraries and executables have PDBs on Windows
     # We don't know why PDBs aren't generated for staticlibs...
     if(is_windows_msvc AND (has_cdylib OR is_executable))
-        if(cargo_version VERSION_LESS "1.45.0")
-            set(prefix "deps/")
-        endif()
-        list(APPEND byproducts "${prefix}${pdb_name}")
+        list(APPEND byproducts "${pdb_name}")
     endif()
 
     if(is_library)
