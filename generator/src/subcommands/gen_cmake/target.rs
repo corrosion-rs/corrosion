@@ -102,7 +102,7 @@ impl CargoTarget {
         &self,
         out_file: &mut dyn std::io::Write,
         platform: &super::platform::Platform,
-        cargo_version: &semver::Version,
+        _cargo_version: &semver::Version,
         cargo_profile: Option<&str>,
         include_platform_libs: bool,
     ) -> Result<(), Box<dyn Error>> {
