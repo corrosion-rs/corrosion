@@ -150,6 +150,7 @@ cmake_minimum_required(VERSION 3.15)
     if let Some(config_types) = matches.values_of(CONFIGURATION_TYPES) {
         for config_type in config_types {
             let config_folder = config_root.join(config_type);
+            std::fs::create_dir_all(&config_folder).expect("Could not create config folder");
             config_folders.push((Some(config_type), config_folder));
         }
     } else {
@@ -197,16 +198,7 @@ cmake_minimum_required(VERSION 3.15)
 
     writeln!(out_file)?;
 
-    let metadata_manifest_path = Path::new(&args.metadata.workspace_root).join("Cargo.toml");
-
-    for (config_type, config_folder) in config_folders {
-        let current_dir = std::env::current_dir().expect("Could not get current directory!");
-        std::env::set_current_dir(config_folder)
-            .expect("Could not change directory to the Config directory!");
-
-        let mut local_metadata_cmd = cargo_metadata::MetadataCommand::new();
-        local_metadata_cmd.manifest_path(Path::new(&metadata_manifest_path));
-
+    for (config_type, _config_folder) in config_folders {
         for target in &targets {
             target.emit_cmake_config_info(
                 &mut out_file,
@@ -215,9 +207,6 @@ cmake_minimum_required(VERSION 3.15)
                 &config_type,
             )?;
         }
-
-        std::env::set_current_dir(current_dir)
-            .expect("Could not return to the build root directory!")
     }
 
     std::process::exit(0);
