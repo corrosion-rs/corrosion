@@ -120,6 +120,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
     set(_CORR_PROP_NO_DEFAULT_FEATURES CORROSION_NO_DEFAULT_FEATURES CACHE INTERNAL "")
     set(_CORR_PROP_ENV_VARS CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
     set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
+    set(_CORR_PROP_FLAGS CORROSION_CARGO_FLAGS CACHE INTERNAL "")
 else()
     set(_CORR_PROP_FEATURES INTERFACE_CORROSION_FEATURES CACHE INTERNAL "")
     set(_CORR_PROP_ALL_FEATURES INTERFACE_CORROSION_ALL_FEATURES CACHE INTERNAL "")
@@ -246,6 +247,8 @@ function(_add_cargo_build)
     set(cargo_target_option "$<IF:${if_not_host_build_condition},--target=${_CORROSION_RUST_CARGO_TARGET},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
     set(target_artifact_dir "$<IF:${if_not_host_build_condition},${_CORROSION_RUST_CARGO_TARGET},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
 
+    set(flags_genex "$<TARGET_PROPERTY:${target_name},${_CORR_PROP_FLAGS}>")
+
     # Rust will add `-lSystem` as a flag for the linker on macOS. Adding the -L flag via RUSTFLAGS only fixes the
     # problem partially - buildscripts still break, since they won't receive the RUSTFLAGS. This seems to only be a
     # problem if we specify the linker ourselves (which we do, since this is necessary for e.g. linking C++ code).
@@ -278,6 +281,11 @@ function(_add_cargo_build)
     set(features_args)
     foreach(feature ${COR_FEATURES})
         list(APPEND features_args --features ${feature})
+    endforeach()
+
+    set(flag_args)
+    foreach(flag ${COR_FLAGS})
+        list(APPEND flag_args ${flag})
     endforeach()
 
     set(corrosion_cc_rs_flags)
@@ -363,6 +371,8 @@ function(_add_cargo_build)
             --package ${package_name}
             --manifest-path "${path_to_toml}"
             ${cargo_profile}
+            ${flag_args}
+            ${flags_genex}
 
     # Copy crate artifacts to the binary dir
     COMMAND
@@ -393,7 +403,7 @@ endfunction(_add_cargo_build)
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE)
-    set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
+    set(MULTI_VALUE_KEYWORDS CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)
@@ -545,6 +555,26 @@ function(corrosion_set_env_vars target_name env_var)
         TARGET ${target_name}
         APPEND
         PROPERTY ${_CORR_PROP_ENV_VARS} ${env_var} ${ARGN}
+    )
+endfunction()
+
+function(corrosion_set_cargo_flags target_name)
+    # corrosion_set_cargo_flags(<target_name> [FLAGS <flag1> ... ])
+    set(options)
+    set(one_value_args)
+    set(multi_value_args FLAGS)
+    cmake_parse_arguments(
+            SET
+            "${options}"
+            "${one_value_args}"
+            "${multi_value_args}"
+            "${ARGN}"
+    )
+
+    set_property(
+            TARGET ${target_name}
+            APPEND
+            PROPERTY ${_CORR_PROP_FLAGS} ${SET_FLAGS}
     )
 endfunction()
 

@@ -198,6 +198,8 @@ corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
         [CRATES <crate1> ... <crateN>]
         # Enable the specified features
         [FEATURES <feature1> ... <featureN>]
+        # Pass additional arguments to `cargo build`
+        [FLAGS <flag1> ... <flagN>]
 )
 ```
 
@@ -224,6 +226,9 @@ Some configuration options can be specified individually for each target. You ca
   For a given target, enable specific features via `FEATURES`, toggle `ALL_FEATURES` on or off or disable all features
   via `NO_DEFAULT_FEATURES`. For more information on features, please see also the
   [cargo reference](https://doc.rust-lang.org/cargo/reference/features.html).
+- `corrosion_set_flags(<target_name> FLAGS <flag1> ...])`:
+  For a given target, add options and flags at the end of `cargo build` invocation. This will be appended after any
+  arguments passed through the `FLAGS` during the crate import.
 
 ### Selecting a custom cargo profile
 
