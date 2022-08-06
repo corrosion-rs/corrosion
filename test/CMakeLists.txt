@@ -22,6 +22,7 @@ add_subdirectory(nostd)
 add_subdirectory(hostbuild)
 add_subdirectory(envvar)
 add_subdirectory(features)
+add_subdirectory(cbindgen)
 
 
 if(Rust_VERSION VERSION_GREATER_EQUAL 1.57.0)
