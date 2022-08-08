@@ -9,6 +9,12 @@
 
 - The working directory when invoking `cargo build` was changed to the directory of the Manifest
   file. This now allows cargo to pick up `.cargo/config.toml` files located in the source tree.
+- Corrosion internally invokes `cargo build`. When passing arguments to `cargo build`, Corrosion
+  now uses the CMake `VERBATIM` option. In rare cases this may require you to change how you quote
+  parameters passed to corrosion (e.g. via `corrosion_add_target_rustflags()`).
+  For example setting a `cfg` option previously required double escaping the rustflag like this
+  `"--cfg=something=\\\"value\\\""`, but now it can be passed to corrosion without any escapes:
+  `--cfg=something="value"`.
 
 # 0.2.1 (2022-05-07)
 

@@ -7,12 +7,12 @@ endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
 
-set(CORROSION_NATIVE_TOOLING_DESCRIPTION 
+set(CORROSION_NATIVE_TOOLING_DESCRIPTION
     "Use native tooling - Required on CMake < 3.19 and available as a fallback option for recent versions"
     )
 
 set(CORROSION_NATIVE_TOOLING_DEFAULT OFF)
-# `CORROSION_EXPERIMENTAL_PARSER` was not part of a tagged release, but we still provide a 
+# `CORROSION_EXPERIMENTAL_PARSER` was not part of a tagged release, but we still provide a
 # deprecation notice for users that directly use corrosion on the master branch and may have set
 # this option.
 if(DEFINED CORROSION_EXPERIMENTAL_PARSER)
@@ -224,7 +224,6 @@ function(_add_cargo_build)
     # `rustflags_target_property` may contain multiple arguments and double quotes, so we _should_ single quote it to
     # preserve any double quotes and keep it as one argument value. However single quotes don't work on windows, so we
     # can only add double quotes here. Any double quotes _in_ the rustflags must be escaped like `\\\"`.
-    set(rustflags_genex "$<$<BOOL:${rustflags_target_property}>:--rustflags=\"${rustflags_target_property}\">")
 
     set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_FEATURES}>>")
     set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
@@ -324,7 +323,8 @@ function(_add_cargo_build)
         corrosion_add_target_rustflags("${target_name}" "-Cdefault-linker-libraries=yes")
     endif()
 
-    set(rustflags_genex_test "$<$<BOOL:${rustflags_target_property}>:RUSTFLAGS=\"${rustflags_target_property}\">")
+    set(joined_rustflags "$<JOIN:${rustflags_target_property}, >")
+    set(rustflags_genex "$<$<BOOL:${rustflags_target_property}>:RUSTFLAGS=${joined_rustflags}>")
 
     if(CORROSION_LINKER_PREFERENCE)
         if(CMAKE_CROSSCOMPILING)
@@ -352,13 +352,13 @@ function(_add_cargo_build)
     # Build crate
     COMMAND
         ${CMAKE_COMMAND} -E env
-            ${build_env_variable_genex}
-            ${rustflags_genex_test}
-            ${cargo_target_linker}
-            ${corrosion_cc_rs_flags}
-            ${cargo_library_path}
-            CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
-            CARGO_BUILD_RUSTC="${_CORROSION_RUSTC}"
+            "${build_env_variable_genex}"
+            "${rustflags_genex}"
+            "${cargo_target_linker}"
+            "${corrosion_cc_rs_flags}"
+            "${cargo_library_path}"
+            "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+            "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
         "${_CORROSION_CARGO}"
             build
             ${cargo_target_option}
@@ -385,6 +385,7 @@ function(_add_cargo_build)
     WORKING_DIRECTORY "${workspace_toml_dir}"
     USES_TERMINAL
     COMMAND_EXPAND_LISTS
+    VERBATIM
     )
 
     add_custom_target(
