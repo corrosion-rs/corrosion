@@ -120,7 +120,6 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
     set(_CORR_PROP_NO_DEFAULT_FEATURES CORROSION_NO_DEFAULT_FEATURES CACHE INTERNAL "")
     set(_CORR_PROP_ENV_VARS CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
     set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
-    set(_CORR_PROP_FLAGS CORROSION_CARGO_FLAGS CACHE INTERNAL "")
 else()
     set(_CORR_PROP_FEATURES INTERFACE_CORROSION_FEATURES CACHE INTERNAL "")
     set(_CORR_PROP_ALL_FEATURES INTERFACE_CORROSION_ALL_FEATURES CACHE INTERNAL "")
@@ -247,7 +246,7 @@ function(_add_cargo_build)
     set(cargo_target_option "$<IF:${if_not_host_build_condition},--target=${_CORROSION_RUST_CARGO_TARGET},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
     set(target_artifact_dir "$<IF:${if_not_host_build_condition},${_CORROSION_RUST_CARGO_TARGET},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
 
-    set(flags_genex "$<TARGET_PROPERTY:${target_name},${_CORR_PROP_FLAGS}>")
+    set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
 
     # Rust will add `-lSystem` as a flag for the linker on macOS. Adding the -L flag via RUSTFLAGS only fixes the
     # problem partially - buildscripts still break, since they won't receive the RUSTFLAGS. This seems to only be a
@@ -559,22 +558,12 @@ function(corrosion_set_env_vars target_name env_var)
 endfunction()
 
 function(corrosion_set_cargo_flags target_name)
-    # corrosion_set_cargo_flags(<target_name> [FLAGS <flag1> ... ])
-    set(options)
-    set(one_value_args)
-    set(multi_value_args FLAGS)
-    cmake_parse_arguments(
-            SET
-            "${options}"
-            "${one_value_args}"
-            "${multi_value_args}"
-            "${ARGN}"
-    )
+    # corrosion_set_cargo_flags(<target_name> [<flag1> ... ])
 
     set_property(
             TARGET ${target_name}
             APPEND
-            PROPERTY ${_CORR_PROP_FLAGS} ${SET_FLAGS}
+            PROPERTY INTERFACE_CORROSION_CARGO_FLAGS ${ARGN}
     )
 endfunction()
 
