@@ -38,7 +38,7 @@ if (CORROSION_GENERATOR_EXECUTABLE)
     set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
 # If corrosion is used as a subdirectory, the CMake version is recent enough and the option is not
 # explicitly disabled, then we do not need to build the Rust based parser and use the CMake based
-# parser instead. `CORROSION_EXPERIMENTAL_PARSER` is a deprecated inverted version of 
+# parser instead. `CORROSION_EXPERIMENTAL_PARSER` is a deprecated inverted version of
 # `CORROSION_NATIVE_TOOLING` and will be removed in version 0.3
 elseif((NOT _CORROSION_TOP_LEVEL)
         AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0
@@ -93,10 +93,7 @@ if(CORROSION_INSTALL_EXECUTABLE)
     # Builds the generator executable
     corrosion_import_crate(MANIFEST_PATH generator/Cargo.toml)
 
-    # Set the link language to CXX since it's already enabled
-    corrosion_set_linker_language(corrosion-generator CXX)
-
-set(_CORROSION_GENERATOR_DESTINATION "${CMAKE_INSTALL_FULL_LIBEXECDIR}")
+    set(_CORROSION_GENERATOR_DESTINATION "${CMAKE_INSTALL_FULL_LIBEXECDIR}")
 
     corrosion_install(
         TARGETS corrosion-generator
