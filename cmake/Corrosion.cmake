@@ -246,6 +246,8 @@ function(_add_cargo_build)
     set(cargo_target_option "$<IF:${if_not_host_build_condition},--target=${_CORROSION_RUST_CARGO_TARGET},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
     set(target_artifact_dir "$<IF:${if_not_host_build_condition},${_CORROSION_RUST_CARGO_TARGET},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
 
+    set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
+
     # Rust will add `-lSystem` as a flag for the linker on macOS. Adding the -L flag via RUSTFLAGS only fixes the
     # problem partially - buildscripts still break, since they won't receive the RUSTFLAGS. This seems to only be a
     # problem if we specify the linker ourselves (which we do, since this is necessary for e.g. linking C++ code).
@@ -278,6 +280,11 @@ function(_add_cargo_build)
     set(features_args)
     foreach(feature ${COR_FEATURES})
         list(APPEND features_args --features ${feature})
+    endforeach()
+
+    set(flag_args)
+    foreach(flag ${COR_FLAGS})
+        list(APPEND flag_args ${flag})
     endforeach()
 
     set(corrosion_cc_rs_flags)
@@ -363,6 +370,8 @@ function(_add_cargo_build)
             --package ${package_name}
             --manifest-path "${path_to_toml}"
             ${cargo_profile}
+            ${flag_args}
+            ${flags_genex}
 
     # Copy crate artifacts to the binary dir
     COMMAND
@@ -393,7 +402,7 @@ endfunction(_add_cargo_build)
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE)
-    set(MULTI_VALUE_KEYWORDS CRATES FEATURES)
+    set(MULTI_VALUE_KEYWORDS CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)
@@ -545,6 +554,16 @@ function(corrosion_set_env_vars target_name env_var)
         TARGET ${target_name}
         APPEND
         PROPERTY ${_CORR_PROP_ENV_VARS} ${env_var} ${ARGN}
+    )
+endfunction()
+
+function(corrosion_set_cargo_flags target_name)
+    # corrosion_set_cargo_flags(<target_name> [<flag1> ... ])
+
+    set_property(
+            TARGET ${target_name}
+            APPEND
+            PROPERTY INTERFACE_CORROSION_CARGO_FLAGS ${ARGN}
     )
 endfunction()
 
