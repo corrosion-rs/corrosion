@@ -8,6 +8,6 @@ corrosion_add_target_rustflags(rustflag-test-lib "--cfg=test_rustflag_cfg1=\\\"t
 
 # Test using a generator expression to produce a rustflag and passing multiple rustflags.
 corrosion_add_target_rustflags(rustflag-test-lib
-        "--cfg=test_rustflag_cfg2=\\\"$<IF:$<CONFIG:Release>,release,debug>\\\""
+        "--cfg=test_rustflag_cfg2=\\\"$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>\\\""
         "--cfg=test_rustflag_cfg3"
 )
