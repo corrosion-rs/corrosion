@@ -5,6 +5,11 @@
 - The minimum supported rust version was increased to 1.46, due to a cargo issue that recently
   surfaced on CI when using crates.io.
 
+# Potentially breaking
+
+- The working directory when invoking `cargo build` was changed to the directory of the Manifest
+  file. This now allows cargo to pick up `.cargo/config.toml` files located in the source tree.
+
 # 0.2.1 (2022-05-07)
 
 ## Fixes
