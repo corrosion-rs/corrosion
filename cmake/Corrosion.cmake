@@ -148,6 +148,7 @@ function(_add_cargo_build)
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
     endif()
+    get_filename_component(workspace_toml_dir ${path_to_toml} DIRECTORY )
 
     if (CMAKE_VS_PLATFORM_NAME)
         set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
@@ -379,9 +380,9 @@ function(_add_cargo_build)
     COMMAND
         ${CMAKE_COMMAND} -E copy_if_different ${build_byproducts} ${target_dir}
     BYPRODUCTS ${byproducts}
-    # The build is conducted in root build directory so that cargo
-    # dependencies are shared
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
+    # The build is conducted in the directory of the Manifest, so that configuration files such as
+    # `.cargo/config.toml` or `toolchain.toml` are applied as expected.
+    WORKING_DIRECTORY "${workspace_toml_dir}"
     USES_TERMINAL
     COMMAND_EXPAND_LISTS
     )
