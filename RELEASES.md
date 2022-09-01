@@ -15,6 +15,14 @@
   For example setting a `cfg` option previously required double escaping the rustflag like this
   `"--cfg=something=\\\"value\\\""`, but now it can be passed to corrosion without any escapes:
   `--cfg=something="value"`.
+  
+# 0.2.2 (2022-09-01)
+
+## Fixes
+
+- Do not use C++17 in the tests (makes tests work with older C++ compilers) ([184](https://github.com/corrosion-rs/corrosion/pull/184))
+- Fix finding cargo on NixOS ([192](https://github.com/corrosion-rs/corrosion/pull/192))
+- Fix issue with Rustflags test when using a Build type other than Debug and Release ([203](https://github.com/corrosion-rs/corrosion/pull/203)).
 
 # 0.2.1 (2022-05-07)
 
