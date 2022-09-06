@@ -258,6 +258,11 @@ endif()",
             }
         }
 
+        let target_kind = match self.target_type {
+            CargoTargetType::Executable => "bin",
+            CargoTargetType::Library{ has_staticlib: _, has_cdylib: _ }  => "lib",
+        };
+
         writeln!(
             out_file,
             "\
@@ -267,13 +272,15 @@ _add_cargo_build(
     MANIFEST_PATH \"{2}\"
     BYPRODUCTS {3}
     {4}
+    TARGET_KIND {5}
 )
 ",
             self.cargo_package.name,
             self.cargo_target.name,
             self.cargo_package.manifest_path.as_str().replace("\\", "/"),
             byproducts.join(" "),
-            cargo_build_profile_option
+            cargo_build_profile_option,
+            target_kind
         )?;
 
         writeln!(out_file)?;
