@@ -160,9 +160,12 @@ else()
     set(_CORR_PROP_HOST_BUILD INTERFACE_CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
 endif()
 
+# Add custom command to build one target in a package (crate)
+#
+# A target may be either a specific bin
 function(_add_cargo_build)
     set(options "")
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE TARGET_KIND)
     set(multi_value_args BYPRODUCTS)
     cmake_parse_arguments(
         ACB
@@ -176,6 +179,17 @@ function(_add_cargo_build)
     set(target_name "${ACB_TARGET}")
     set(path_to_toml "${ACB_MANIFEST_PATH}")
     set(cargo_profile_name "${ACB_PROFILE}")
+    set(target_kind "${ACB_TARGET_KIND}")
+
+    if(NOT target_kind)
+        message(FATAL_ERROR "TARGET_KIND not specified")
+    elseif(target_kind STREQUAL "lib")
+        set(cargo_rustc_filter "--lib")
+    elseif(target_kind STREQUAL "bin")
+        set(cargo_rustc_filter "--bin=${target_name}")
+    else()
+        message(FATAL_ERROR "TARGET_KIND must be `lib` or `bin`, but was `${target_kind}`")
+    endif()
 
     if (NOT IS_ABSOLUTE "${path_to_toml}")
         set(path_to_toml "${CMAKE_SOURCE_DIR}/${path_to_toml}")
@@ -300,16 +314,6 @@ function(_add_cargo_build)
 
     set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build")
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
-    set(build_byproducts)
-    set(byproducts)
-    foreach(byproduct_file ${ACB_BYPRODUCTS})
-        list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
-        if (CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
-            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${byproduct_file}")
-        else()
-            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
-        endif()
-    endforeach()
 
     set(features_args)
     foreach(feature ${COR_FEATURES})
@@ -388,52 +392,67 @@ function(_add_cargo_build)
         set(cargo_target_linker $<$<BOOL:${explicit_linker_property}>:${cargo_target_linker_var}=${explicit_linker_property}>)
     endif()
 
-    add_custom_target(
-    cargo-build_${target_name}
-    ALL
-    # Ensure the target directory exists
-    COMMAND
-        ${CMAKE_COMMAND} -E make_directory ${target_dir}
-    # Build crate
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-            "${build_env_variable_genex}"
-            "${global_rustflags_genex}"
-            "${cargo_target_linker}"
-            "${corrosion_cc_rs_flags}"
-            "${cargo_library_path}"
-            "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
-            "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
-        "${_CORROSION_CARGO}"
-            rustc
-            ${cargo_target_option}
-            ${_CORROSION_VERBOSE_OUTPUT_FLAG}
-            # Global --features arguments added via corrosion_import_crate()
-            ${features_args}
-            ${all_features_arg}
-            ${no_default_features_arg}
-            # Target specific features added via corrosion_set_features().
-            ${features_genex}
-            --package ${package_name}
-            --manifest-path "${path_to_toml}"
-            --target-dir "${cargo_target_dir}"
-            ${cargo_profile}
-            ${flag_args}
-            ${flags_genex}
-            # Any arguments to cargo must be placed before this line
-            ${local_rustflags_delimiter}
-            ${local_rustflags_genex}
 
-    # Copy crate artifacts to the binary dir
-    COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different ${build_byproducts} ${target_dir}
-    BYPRODUCTS ${byproducts}
-    # The build is conducted in the directory of the Manifest, so that configuration files such as
-    # `.cargo/config.toml` or `toolchain.toml` are applied as expected.
-    WORKING_DIRECTORY "${workspace_toml_dir}"
-    USES_TERMINAL
-    COMMAND_EXPAND_LISTS
-    VERBATIM
+    set(build_byproducts)
+    set(byproducts)
+    foreach(byproduct_file ${ACB_BYPRODUCTS})
+        list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
+        if (CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
+            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${byproduct_file}")
+        else()
+            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
+        endif()
+    endforeach()
+
+    message(DEBUG "TARGET ${target_name} produces byproducts ${byproducts}")
+
+    add_custom_target(
+        cargo-build_${target_name}
+        ALL
+        # Ensure the target directory exists
+        COMMAND
+            ${CMAKE_COMMAND} -E make_directory ${target_dir}
+        # Build crate
+        COMMAND
+            ${CMAKE_COMMAND} -E env
+                "${build_env_variable_genex}"
+                "${global_rustflags_genex}"
+                "${cargo_target_linker}"
+                "${corrosion_cc_rs_flags}"
+                "${cargo_library_path}"
+                "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+                "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
+            "${_CORROSION_CARGO}"
+                rustc
+                ${cargo_rustc_filter}
+                ${cargo_target_option}
+                ${_CORROSION_VERBOSE_OUTPUT_FLAG}
+                # Global --features arguments added via corrosion_import_crate()
+                ${features_args}
+                ${all_features_arg}
+                ${no_default_features_arg}
+                # Target specific features added via corrosion_set_features().
+                ${features_genex}
+                --package ${package_name}
+                --manifest-path "${path_to_toml}"
+                --target-dir "${cargo_target_dir}"
+                ${cargo_profile}
+                ${flag_args}
+                ${flags_genex}
+                # Any arguments to cargo must be placed before this line
+                ${local_rustflags_delimiter}
+                ${local_rustflags_genex}
+
+        # Copy crate artifacts to the binary dir
+        COMMAND
+            ${CMAKE_COMMAND} -E copy_if_different ${build_byproducts} ${target_dir}
+        BYPRODUCTS ${byproducts}
+        # The build is conducted in the directory of the Manifest, so that configuration files such as
+        # `.cargo/config.toml` or `toolchain.toml` are applied as expected.
+        WORKING_DIRECTORY "${workspace_toml_dir}"
+        USES_TERMINAL
+        COMMAND_EXPAND_LISTS
+        VERBATIM
     )
 
     add_custom_target(
@@ -449,7 +468,7 @@ function(_add_cargo_build)
         add_custom_target(cargo-clean)
     endif()
     add_dependencies(cargo-clean cargo-clean_${target_name})
-endfunction(_add_cargo_build)
+endfunction()
 
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD)
@@ -592,8 +611,7 @@ function(corrosion_set_linker target_name linker)
     if(MSVC)
         message(WARNING "Explicitly setting the linker with the MSVC toolchain is currently not supported and ignored")
     endif()
-    # Todo: This function may need to be extended once we support multiple bin targets
-    # per crate.
+
     set_property(
         TARGET ${target_name}
         PROPERTY INTERFACE_CORROSION_LINKER "${linker}"
