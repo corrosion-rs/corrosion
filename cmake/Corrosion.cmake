@@ -573,8 +573,8 @@ function(corrosion_import_crate)
                 "${COR_MANIFEST_PATH}"
             TARGET
                 "${_CORROSION_RUST_CARGO_TARGET}"
-            CARGO_VERSION
-                "${_CORROSION_CARGO_VERSION}"
+            RUST_VERSION
+                "${Rust_VERSION}"
             CRATES
                 "${COR_CRATES}"
             PROFILE
