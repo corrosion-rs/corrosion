@@ -571,16 +571,10 @@ function(corrosion_import_crate)
         _generator_add_cargo_targets(
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
-            CONFIGURATION_ROOT
-                "${CMAKE_VS_PLATFORM_NAME}"
             TARGET
                 "${_CORROSION_RUST_CARGO_TARGET}"
             CARGO_VERSION
                 "${_CORROSION_CARGO_VERSION}"
-            CONFIGURATION_TYPE
-                "${CMAKE_BUILD_TYPE}"
-            CONFIGURATION_TYPES
-                "${CMAKE_CONFIGURATION_TYPES}"
             CRATES
                 "${COR_CRATES}"
             PROFILE
