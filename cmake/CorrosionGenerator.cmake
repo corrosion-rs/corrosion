@@ -238,7 +238,7 @@ function(_corrosion_add_library_target manifest target_name has_staticlib has_cd
 endfunction()
 
 # todo: this also does not use JSON and could be shared...
-function(_corrosion_add_bin_target bin_name out_byproducts)
+function(_corrosion_add_bin_target workspace_manifest_path bin_name out_byproducts)
     if(NOT bin_name)
         message(FATAL_ERROR "No bin_name in _corrosion_add_bin_target for target ${target_name}")
     endif()
@@ -248,9 +248,9 @@ function(_corrosion_add_bin_target bin_name out_byproducts)
 
     set(pdb_name "${bin_name_underscore}.pdb")
 
-    get_source_file_property(is_windows ${manifest} CORROSION_PLATFORM_IS_WINDOWS)
-    get_source_file_property(is_windows_msvc ${manifest} CORROSION_PLATFORM_IS_WINDOWS_MSVC)
-    get_source_file_property(is_macos ${manifest} CORROSION_PLATFORM_IS_MACOS)
+    get_source_file_property(is_windows ${workspace_manifest_path} CORROSION_PLATFORM_IS_WINDOWS)
+    get_source_file_property(is_windows_msvc ${workspace_manifest_path} CORROSION_PLATFORM_IS_WINDOWS_MSVC)
+    get_source_file_property(is_macos ${workspace_manifest_path} CORROSION_PLATFORM_IS_MACOS)
 
     if(is_windows_msvc)
         list(APPEND byproducts "${pdb_name}")
@@ -282,24 +282,20 @@ function(_corrosion_add_bin_target bin_name out_byproducts)
 endfunction()
 
 
-# Parse targets (crates) of a package
-# todo: rename this function...
-function(_generator_parse_target manifest package targets profile)
-    string(JSON package_name GET "${package}" "name")
-    string(JSON manifest_path GET "${package}" "manifest_path")
-
+# Add targets (crates) of one package
+function(_generator_add_package_targets workspace_manifest_path package_manifest_path package_name targets profile out_created_targets)
     # target types
-    set(has_library FALSE)
     set(has_staticlib FALSE)
     set(has_cdylib FALSE)
-    set(has_bin FALSE)
+    set(corrosion_targets "")
+
 
     # Add a custom target with the package (crate) name, as a convenience to build everything in a
     # crate.
     # Note: may cause problems if package_name == bin_name...
     #add_custom_target("${package_name}")
     # todo: verify on windows if this actually needs to be done...
-    string(REPLACE "\\" "/" manifest_path "${manifest_path}")
+    string(REPLACE "\\" "/" manifest_path "${package_manifest_path}")
 
     string(JSON targets_len LENGTH "${targets}")
     math(EXPR targets_len-1 "${targets_len} - 1")
@@ -320,8 +316,6 @@ function(_generator_parse_target manifest package targets profile)
         endforeach()
 
         if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds)
-            set(has_library TRUE)
-
             if("staticlib" IN_LIST kinds)
                 set(has_staticlib TRUE)
             endif()
@@ -339,11 +333,12 @@ function(_generator_parse_target manifest package targets profile)
                 PROFILE "${profile}"
                 TARGET_KIND "lib"
                 BYPRODUCTS "${lib_byproducts}"
-        )
+            )
+            list(APPEND corrosion_targets ${target_name})
+
         elseif("bin" IN_LIST kinds)
-            set(has_bin TRUE)
             set(bin_byproducts "")
-            _corrosion_add_bin_target("${target_name}" "bin_byproducts")
+            _corrosion_add_bin_target("${workspace_manifest_path}" "${target_name}" "bin_byproducts")
 
             _add_cargo_build(
                 PACKAGE "${package_name}"
@@ -352,37 +347,25 @@ function(_generator_parse_target manifest package targets profile)
                 PROFILE "${profile}"
                 TARGET_KIND "bin"
                 BYPRODUCTS "${bin_byproducts}"
-        )
+            )
+            list(APPEND corrosion_targets ${target_name})
         else()
             # ignore other kinds (like examples, tests, build scripts, ...)
         endif()
     endforeach()
 
-
-
-    if(NOT (has_library OR has_bin))
+    if(NOT corrosion_targets)
         message(DEBUG "No relevant targets found in package ${package_name} - Ignoring")
-        return()
     endif()
-
-    # set properties
-    get_source_file_property(ix ${manifest} CORROSION_NUM_TARGETS)
-
-    math(EXPR ix "${ix} + 1")
-    set_source_files_properties(
-        ${manifest}
-        PROPERTIES
-            CORROSION_NUM_TARGETS ${ix}
-    )
-    # end of original parser function
+    set(${out_created_targets} "${corrosion_targets}" PARENT_SCOPE)
 
 endfunction()
 
 
 function(_generator_add_cargo_targets)
     set(options "")
-    set(one_value_args MANIFEST_PATH CONFIGURATION_ROOT CONFIGURATION_TYPE TARGET CARGO_VERSION PROFILE)
-    set(multi_value_args CONFIGURATION_TYPES CRATES)
+    set(one_value_args MANIFEST_PATH TARGET CARGO_VERSION PROFILE)
+    set(multi_value_args CRATES)
     cmake_parse_arguments(
         GGC
         "${options}"
@@ -390,28 +373,6 @@ function(_generator_add_cargo_targets)
         "${multi_value_args}"
         ${ARGN}
     )
-
-    set(config_root "${CMAKE_BINARY_DIR}/${GGC_CONFIGURATION_ROOT}")
-
-    set(config_types)
-    set(config_folders)
-    if(GGC_CONFIGURATION_TYPES)
-        set(is_multi_config TRUE)
-        foreach(config_type ${GGC_CONFIGURATION_TYPES})
-            list(APPEND config_types ${config_type})
-            list(APPEND config_folders "${config_root}/${config_type}")
-        endforeach()
-    else()
-        set(is_multi_config FALSE)
-        list(APPEND config_types "${GGC_CONFIGURATION_TYPE}")
-        list(APPEND config_folders ${config_root})
-    endif()
-
-    foreach(folder ${config_folders})
-        if(NOT EXISTS "${folder}")
-            file(MAKE_DIRECTORY ${folder})
-        endif()
-    endforeach()
 
     _cargo_metadata(json ${GGC_MANIFEST_PATH})
     string(JSON packages GET "${json}" "packages")
@@ -423,36 +384,32 @@ function(_generator_add_cargo_targets)
     string(JSON ws_mems_len LENGTH ${workspace_members})
     math(EXPR ws_mems_len-1 "${ws_mems_len} - 1")
 
-    set_source_files_properties(
-        ${GGC_MANIFEST_PATH}
-        PROPERTIES
-            CORROSION_NUM_TARGETS 0
-    )
-
     _generator_parse_platform(${GGC_MANIFEST_PATH} ${GGC_CARGO_VERSION} ${GGC_TARGET})
 
+    set(created_targets "")
     foreach(ix RANGE ${pkgs_len-1})
         string(JSON pkg GET "${packages}" ${ix})
         string(JSON pkg_id GET "${pkg}" "id")
         string(JSON pkg_name GET "${pkg}" "name")
+        string(JSON pkg_manifest_path GET "${pkg}" "manifest_path")
         string(JSON targets GET "${pkg}" "targets")
 
         string(JSON targets_len LENGTH "${targets}")
         math(EXPR targets_len-1 "${targets_len} - 1")
-
         foreach(ix RANGE ${ws_mems_len-1})
             string(JSON ws_mem GET "${workspace_members}" ${ix})
             if(ws_mem STREQUAL pkg_id AND ((NOT GGC_CRATES) OR (pkg_name IN_LIST GGC_CRATES)))
                 message(DEBUG "Found ${targets_len} targets in package ${pkg_name}")
 
-                _generator_parse_target(${GGC_MANIFEST_PATH} "${pkg}" "${targets}" "${GGC_PROFILE}")
+                _generator_add_package_targets("${GGC_MANIFEST_PATH}" "${pkg_manifest_path}" "${pkg_name}" "${targets}" "${GGC_PROFILE}" curr_created_targets)
+                list(APPEND created_targets "${curr_created_targets}")
             endif()
         endforeach()
     endforeach()
 
-    # todo: how about reporting back via an output variable?
-    get_source_file_property(num_targets ${GGC_MANIFEST_PATH} CORROSION_NUM_TARGETS)
-    if(NOT num_targets)
-        message(FATAL_ERROR "found no target")
+    if(NOT created_targets)
+        message(FATAL_ERROR "found no targets in ${pkgs_len} packages")
+    else()
+        message(DEBUG "Corrosion created the following CMake targets: ${curr_created_targets}")
     endif()
 endfunction()
