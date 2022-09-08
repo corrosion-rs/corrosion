@@ -6,12 +6,7 @@ use std::{
 };
 
 use clap::{App, Arg, ArgMatches, SubCommand};
-use platforms::Platform;
-use semver::Version;
 
-use self::target::ConfigType;
-
-mod platform;
 mod target;
 
 // Command name
@@ -19,14 +14,9 @@ pub const GEN_CMAKE: &str = "gen-cmake";
 
 // Options
 const OUT_FILE: &str = "out-file";
-const CONFIGURATION_TYPE: &str = "configuration-type";
-const CONFIGURATION_TYPES: &str = "configuration-types";
 const CONFIGURATION_ROOT: &str = "configuration-root";
-const TARGET: &str = "target";
-const CARGO_VERSION: &str = "cargo-version";
 const PROFILE: &str = "profile";
 const CRATES: &str = "crates";
-const NO_DEFAULT_LIBRARIES: &str = "no-default-libraries";
 
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(GEN_CMAKE)
@@ -41,30 +31,6 @@ pub fn subcommand() -> App<'static, 'static> {
                 ),
         )
         .arg(
-            Arg::with_name(CONFIGURATION_TYPE)
-                .long("configuration-type")
-                .value_name("type")
-                .takes_value(true)
-                .conflicts_with(CONFIGURATION_TYPES)
-                .help(
-                    "Specifies the configuration type to use in a single configuration \
-                 environment.",
-                ),
-        )
-        .arg(
-            Arg::with_name(CONFIGURATION_TYPES)
-                .long("configuration-types")
-                .value_name("types")
-                .takes_value(true)
-                .multiple(true)
-                .require_delimiter(true)
-                .conflicts_with(CONFIGURATION_TYPE)
-                .help(
-                    "Specifies the configuration types to use in a multi-configuration \
-                 environment.",
-                ),
-        )
-        .arg(
             Arg::with_name(CRATES)
                 .long("crates")
                 .value_name("crates")
@@ -72,20 +38,6 @@ pub fn subcommand() -> App<'static, 'static> {
                 .multiple(true)
                 .require_delimiter(true)
                 .help("Specifies which crates of the workspace to import"),
-        )
-        .arg(
-            Arg::with_name(TARGET)
-                .long("target")
-                .value_name("TRIPLE")
-                .required(true)
-                .help("The build target being used."),
-        )
-        .arg(
-            Arg::with_name(CARGO_VERSION)
-                .long(CARGO_VERSION)
-                .value_name("VERSION")
-                .required(true)
-                .help("Version of target cargo"),
         )
         .arg(
             Arg::with_name(PROFILE)
@@ -101,32 +53,12 @@ pub fn subcommand() -> App<'static, 'static> {
                 .value_name("FILE")
                 .help("Output CMake file name. Defaults to stdout."),
         )
-        .arg(
-            Arg::with_name(NO_DEFAULT_LIBRARIES)
-                .long(NO_DEFAULT_LIBRARIES)
-                .help(
-                    "Do not include libraries usually included by default. Use for no-std crates",
-                ),
-        )
 }
 
 pub fn invoke(
     args: &crate::GeneratorSharedArgs,
     matches: &ArgMatches,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cargo_version = Version::parse(matches.value_of(CARGO_VERSION).unwrap())
-        .expect("cargo-version must be a semver-compatible version!");
-
-    let cargo_target = matches.value_of(TARGET).and_then(Platform::find).cloned();
-
-    if cargo_target.is_none() {
-        println!("WARNING: The target was not recognized.");
-    }
-    if matches.value_of(PROFILE).is_some() && cargo_version < Version::new(1, 57, 0) {
-        panic!("Selecting a custom cargo profile requires rust/cargo >= 1.57.0");
-    }
-
-    let cargo_platform = platform::Platform::from_rust_version_target(&cargo_version, cargo_target);
 
     let mut out_file: Box<dyn Write> = if let Some(path) = matches.value_of(OUT_FILE) {
         let path = Path::new(path);
@@ -146,24 +78,10 @@ cmake_minimum_required(VERSION 3.15)
 "
     )?;
 
-    let config_root = Path::new(matches.value_of(CONFIGURATION_ROOT).unwrap_or("."));
-
-    let config_type = if let Some(config_types) = matches.values_of(CONFIGURATION_TYPES) {
-        let mut configuration_types = Vec::new();
-        for config_type in config_types {
-            let config_folder = config_root.join(config_type);
-            std::fs::create_dir_all(&config_folder).expect("Could not create config folder");
-            configuration_types.push(config_type.into());
-        }
-        ConfigType::MultiConfig(configuration_types)
-    } else {
-        let config_type = matches.value_of(CONFIGURATION_TYPE);
-        ConfigType::SingleConfig(config_type.map(|s| s.into()))
-    };
-
     let crates = matches
         .values_of(CRATES)
         .map_or(Vec::new(), |c| c.collect());
+    let workspace_manifest_path = Rc::new(args.manifest_path.clone());
     let targets: Vec<_> = args
         .metadata
         .packages
@@ -176,11 +94,12 @@ cmake_minimum_required(VERSION 3.15)
         .map(Rc::new)
         .flat_map(|package| {
             let package2 = package.clone();
+            let ws_manifest_path = workspace_manifest_path.clone();
             package
                 .targets
                 .clone()
                 .into_iter()
-                .filter_map(move |t| target::CargoTarget::from_metadata(package2.clone(), t))
+                .filter_map(move |t| target::CargoTarget::from_metadata(package2.clone(), t, ws_manifest_path.clone()))
         })
         .collect();
 
@@ -190,19 +109,12 @@ cmake_minimum_required(VERSION 3.15)
         target
             .emit_cmake_target(
                 &mut out_file,
-                &cargo_platform,
-                &cargo_version,
                 cargo_profile,
-                !matches.is_present(NO_DEFAULT_LIBRARIES),
             )
             .unwrap();
     }
 
     writeln!(out_file)?;
-
-    for target in &targets {
-        target.emit_cmake_config_info(&mut out_file, &cargo_platform, &config_type)?;
-    }
 
     std::process::exit(0);
 }

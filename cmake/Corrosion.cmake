@@ -793,6 +793,8 @@ function(corrosion_import_crate)
         set(COR_MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${COR_MANIFEST_PATH})
     endif()
 
+    _corrosion_parse_platform(${COR_MANIFEST_PATH} ${Rust_VERSION} ${_CORROSION_RUST_CARGO_TARGET})
+
     if (CORROSION_NATIVE_TOOLING)
         execute_process(
             COMMAND
@@ -819,27 +821,6 @@ function(corrosion_import_crate)
             set (_CORROSION_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
         endif()
 
-        if (_CORROSION_RUST_CARGO_TARGET)
-            set(_CORROSION_TARGET --target ${_CORROSION_RUST_CARGO_TARGET})
-        endif()
-
-        if(CMAKE_CONFIGURATION_TYPES)
-            string (REPLACE ";" "," _CONFIGURATION_TYPES
-                "${CMAKE_CONFIGURATION_TYPES}")
-            set (_CORROSION_CONFIGURATION_TYPES --configuration-types
-                ${_CONFIGURATION_TYPES})
-        elseif(CMAKE_BUILD_TYPE)
-            set (_CORROSION_CONFIGURATION_TYPES --configuration-type
-                ${CMAKE_BUILD_TYPE})
-        else()
-            # uses default build type
-        endif()
-
-        set(no_default_libs_arg)
-        if(COR_NO_STD)
-            set(no_default_libs_arg "--no-default-libraries")
-        endif()
-
         set(crates_args)
         foreach(crate ${COR_CRATES})
             list(APPEND crates_args --crates ${crate})
@@ -851,12 +832,8 @@ function(corrosion_import_crate)
                     --manifest-path ${COR_MANIFEST_PATH}
                     gen-cmake
                         ${_CORROSION_CONFIGURATION_ROOT}
-                        ${_CORROSION_TARGET}
-                        ${_CORROSION_CONFIGURATION_TYPES}
                         ${crates_args}
                         ${cargo_profile}
-                        ${no_default_libs_arg}
-                        --cargo-version ${_CORROSION_CARGO_VERSION}
                         -o ${generated_cmake}
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             RESULT_VARIABLE ret)
@@ -870,10 +847,6 @@ function(corrosion_import_crate)
         _generator_add_cargo_targets(
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
-            TARGET
-                "${_CORROSION_RUST_CARGO_TARGET}"
-            RUST_VERSION
-                "${Rust_VERSION}"
             CRATES
                 "${COR_CRATES}"
             PROFILE
