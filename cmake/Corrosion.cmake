@@ -33,6 +33,12 @@ option(
     ${CORROSION_NATIVE_TOOLING_DEFAULT}
 )
 
+option(
+    CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED
+    "Surpresses a warning if the parsing the target triple failed."
+    OFF
+)
+
 # The native tooling is required on CMAke < 3.19 so we override whatever the user may have set.
 if (CMAKE_VERSION VERSION_LESS 3.19.0)
     set(CORROSION_NATIVE_TOOLING ON CACHE INTERNAL "${CORROSION_NATIVE_TOOLING_DESCRIPTION}" FORCE)

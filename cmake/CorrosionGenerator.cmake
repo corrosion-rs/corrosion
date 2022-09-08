@@ -22,15 +22,73 @@ function(_cargo_metadata out manifest)
     set(${out} ${json} PARENT_SCOPE)
 endfunction()
 
-# FXIME: version here should explicitly be rust_version. This happens to be == cargo version
-# most of the time, but the dependency is on the rust side.
 # Todo: this function could also probably be eliminated or reduced in size...
 # Potentially this could also be moved to the corrosion side for code reuse with the other
 # generator
+# The Rust target triple and C target may mismatch (slightly) in some rare usecases.
+# So instead of relying on CMake to provide System information, we parse the Rust target triple,
+# since that is relevant for determining which libraries the Rust code requires for linking.
 function(_generator_parse_platform manifest rust_version target_triple)
-    string(REGEX MATCH ".+-([^-]+)-([^-]+)$" os_env ${target_triple})
-    set(os ${CMAKE_MATCH_1})
-    set(env ${CMAKE_MATCH_2})
+
+    # If the target_triple is a path to a custom target specification file, then strip everything
+    # except the filename from `target_triple`.
+    get_filename_component(target_triple_ext "${target_triple}" EXT)
+    if(target_triple_ext)
+        if(NOT (target_triple_ext STREQUAL ".json"))
+            message(FATAL_ERROR "Failed to parse target triple `${target_triple}`. "
+                "Invalid file extension `${target_triple_ext}` found."
+                "Help: Custom Rust target-triples must be a path to a `.json` file. "
+                "Other file extensions are not supported. Built-in target names may not contain a "
+                "dot."
+            )
+        endif()
+        get_filename_component(target_triple "${target_triple}"  NAME_WE)
+    endif()
+
+    # The vendor part may be left out from the target triple, and since `env` is also optional,
+    # we determine if vendor is present by matching against a list of known vendors.
+    set(known_vendors "apple"
+        "esp" # riscv32imc-esp-espidf
+        "fortanix"
+        "kmc"
+        "pc"
+        "nintendo"
+        "nvidia"
+        "openwrt"
+        "unknown"
+        "uwp" # aarch64-uwp-windows-msvc
+        "wrs" # e.g. aarch64-wrs-vxworks
+        "sony"
+        "sun"
+    )
+    # todo: allow users to add additional vendors to the list via a cmake variable.
+    list(JOIN known_vendors "|" known_vendors_joined)
+    # vendor is optional - We detect if vendor is present by matching against a known list of
+    # vendors. The next field is the OS, which we assume to always be present, while the last field
+    # is again optional and contains the environment.
+    string(REGEX MATCH
+            "^([a-z0-9_]+)-((${known_vendors_joined})-)?([a-z0-9_]+)(-([a-z0-9_]+))?$"
+            whole_match
+            "${target_triple}"
+    )
+    if((NOT whole_match) AND (NOT CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED))
+        message(WARNING "Failed to parse target-triple `${target_triple}`."
+                        "Corrosion attempts to link required C libraries depending on the OS "
+                        "specified in the Rust target-triple for Linux, MacOS and windows.\n"
+                        "Note: If you are targeting a different OS you can surpress this warning by"
+                        " setting the CMake cache variable "
+                        "`CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED`."
+                        "Please consider opening an issue on github if you encounter this warning."
+        )
+    endif()
+
+    set(target_arch "${CMAKE_MATCH_1}")
+    set(target_vendor "${CMAKE_MATCH_3}")
+    set(os "${CMAKE_MATCH_4}")
+    set(env "${CMAKE_MATCH_6}")
+
+    message(DEBUG "Parsed Target triple: arch: ${target_arch}, vendor: ${target_vendor}, "
+            "OS: ${os}, env: ${env}")
 
     set(libs "")
     set(libs_debug "")
@@ -72,7 +130,7 @@ function(_generator_parse_platform manifest rust_version target_triple)
               list(APPEND libs "bcrypt")
           endif()
         endif()
-    elseif(os STREQUAL "apple" AND env STREQUAL "darwin")
+    elseif(target_vendor STREQUAL "apple" AND os STREQUAL "darwin")
         set(is_macos TRUE)
 
         if(NOT COR_NO_STD)
