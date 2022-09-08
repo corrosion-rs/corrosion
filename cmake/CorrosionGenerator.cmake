@@ -104,7 +104,7 @@ endfunction()
 
 function(_generator_add_cargo_targets)
     set(options "")
-    set(one_value_args MANIFEST_PATH TARGET RUST_VERSION PROFILE)
+    set(one_value_args MANIFEST_PATH PROFILE)
     set(multi_value_args CRATES)
     cmake_parse_arguments(
         GGC
@@ -123,8 +123,6 @@ function(_generator_add_cargo_targets)
 
     string(JSON ws_mems_len LENGTH ${workspace_members})
     math(EXPR ws_mems_len-1 "${ws_mems_len} - 1")
-
-    _corrosion_parse_platform(${GGC_MANIFEST_PATH} ${GGC_RUST_VERSION} ${GGC_TARGET})
 
     set(created_targets "")
     foreach(ix RANGE ${pkgs_len-1})
