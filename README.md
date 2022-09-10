@@ -220,6 +220,11 @@ Some configuration options can be specified individually for each target. You ca
   the `RUSTFLAGS` environment variable will contain the flags added via this function. Please note that any
   dependencies (built by cargo) will also see these flags. In the future corrosion may offer a second function
   to allow specifying flags only for the target in question, utilizing `cargo rustc` instead of `cargo build`.
+- `corrosion_add_target_local_rustflags(target_name rustc_flag [more_flags ...])`: Support setting
+  rustflags for only the main target (crate ) and none of it's dependencies.
+  This is useful in cases where you only need rustflags on the main-crate, but need to set different
+  flags for different targets. Without "local" Rustflags this would require rebuilds of the
+  dependencies when switching targets.
 - `corrosion_set_hostbuild(<target_name>)`: The target should be compiled for the Host target and ignore any
   cross-compile configuration.
 - `corrosion_set_features(<target_name> [ALL_FEATURES <Bool>] [NO_DEFAULT_FEATURES] [FEATURES <feature1> ... ])`:
@@ -229,6 +234,12 @@ Some configuration options can be specified individually for each target. You ca
 - `corrosion_set_flags(<target_name> <flag1> ...])`:
   For a given target, add options and flags at the end of `cargo build` invocation. This will be appended after any
   arguments passed through the `FLAGS` during the crate import.
+- `corrosion_set_linker(target_name linker)`: Use `linker` to link the target.
+  Please note that this only has an effect for targets where the final linker invocation is done
+  by cargo, i.e. targets where foreign code is linked into rust code and not the other way around.
+  Please also note that if you are cross-compiling and specify a linker such as `clang`, you are
+  responsible for also adding a rustflag which adds the necessary `--target=` argument for the
+  linker.
 
 ### Selecting a custom cargo profile
 

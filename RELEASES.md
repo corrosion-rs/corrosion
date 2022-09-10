@@ -1,21 +1,41 @@
 # Unreleased
 
-# Breaking
+## Breaking
 
 - The minimum supported rust version was increased to 1.46, due to a cargo issue that recently
   surfaced on CI when using crates.io.
+- Increase the minimum required CMake version to 3.15 (may be bumped to 3.16 before the next release).
 
-# Potentially breaking
+## Potentially breaking
 
 - The working directory when invoking `cargo build` was changed to the directory of the Manifest
   file. This now allows cargo to pick up `.cargo/config.toml` files located in the source tree.
+  ([205](https://github.com/corrosion-rs/corrosion/pull/205))
 - Corrosion internally invokes `cargo build`. When passing arguments to `cargo build`, Corrosion
   now uses the CMake `VERBATIM` option. In rare cases this may require you to change how you quote
   parameters passed to corrosion (e.g. via `corrosion_add_target_rustflags()`).
   For example setting a `cfg` option previously required double escaping the rustflag like this
   `"--cfg=something=\\\"value\\\""`, but now it can be passed to corrosion without any escapes:
   `--cfg=something="value"`.
-  
+
+## New features
+
+- Support setting rustflags for only the main target and none of it's dependencies ([215](https://github.com/corrosion-rs/corrosion/pull/215)).
+  A new function `corrosion_add_target_local_rustflags(target_name rustc_flag [more_flags ...])`
+  is added for this purpose.
+  This is useful in cases where you only need rustflags on the main-crate, but need to set different
+  flags for different targets. Without "local" Rustflags this would require rebuilds of the
+  dependencies when switching targets.
+- Support explicitly selecting a linker ([208](https://github.com/corrosion-rs/corrosion/pull/208)).
+  The linker can be selected via `corrosion_set_linker(target_name linker)`.
+  Please note that this only has an effect for targets, where the final linker invocation is done
+  by cargo, i.e. targets where foreign code is linked into rust code and not the other way around.
+
+## Fixes
+
+- Fix a CMake developer Warning when a Multi-Config Generator and Rust executable targets
+  ([#213](https://github.com/corrosion-rs/corrosion/pull/213)).
+
 # 0.2.2 (2022-09-01)
 
 ## Fixes
