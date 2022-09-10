@@ -23,10 +23,7 @@ add_subdirectory(hostbuild)
 add_subdirectory(envvar)
 add_subdirectory(features)
 add_subdirectory(cargo_flags)
-
-if(NOT CORROSION_NATIVE_TOOLING)
-    add_subdirectory(multitarget)
-endif()
+add_subdirectory(multitarget)
 
 if(Rust_VERSION VERSION_GREATER_EQUAL 1.57.0)
     add_subdirectory(custom_profiles)
