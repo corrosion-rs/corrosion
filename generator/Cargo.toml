@@ -6,7 +6,7 @@ license = "MIT"
 edition = "2018"
 
 [dependencies]
-cargo_metadata = "0.14"
+cargo_metadata = "0.15"
 
 [dependencies.clap]
 version = "2.34"
