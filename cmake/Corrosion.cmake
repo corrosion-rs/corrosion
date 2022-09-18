@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 3.15)
 if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config" AND CMAKE_VERSION VERSION_LESS 3.20.0)
     message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with the \"Ninja Multi-Config\" "
        "generator. Please use a different generator or update to cmake >= 3.20.")
+elseif(CMAKE_VERSION VERSION_LESS 3.20.0 AND CMAKE_CONFIGURATION_TYPES)
+    message(DEPRECATION "Corrosion will require at least CMake 3.20 for use with all Multi-Config"
+            "Generators starting with Corrosion 0.4. Please consider upgrading your CMake version"
+            " or using a different Generator."
+    )
 endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
@@ -76,19 +81,20 @@ get_property(
 # Note: Legacy function, used when respecting the `XYZ_OUTPUT_DIRECTORY` target properties is not
 # possible.
 function(_corrosion_set_imported_location_legacy target_name base_property filename)
-    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
-        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
-        string(TOUPPER "${config_type}" config_type_upper)
-        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
-                " to `${binary_root}/${filename}`.")
-        # For Multiconfig we want to specify the correct location for each configuration
-        set_property(
-            TARGET ${target_name}
-            PROPERTY "${base_property}_${config_type_upper}"
-                "${binary_root}/${filename}"
-        )
-    endforeach()
-    if(NOT ARGN)
+    if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
+        foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+            set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+            string(TOUPPER "${config_type}" config_type_upper)
+            message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
+                    " to `${binary_root}/${filename}`.")
+            # For Multiconfig we want to specify the correct location for each configuration
+            set_property(
+                TARGET ${target_name}
+                PROPERTY "${base_property}_${config_type_upper}"
+                    "${binary_root}/${filename}"
+            )
+        endforeach()
+    else()
         set(binary_root "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
 
@@ -112,30 +118,45 @@ endfunction()
 function(_corrosion_set_imported_location_deferred target_name base_property output_directory_property filename)
     get_target_property(output_directory ${target_name} "${output_directory_property}")
 
-    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
-        string(TOUPPER "${config_type}" config_type_upper)
-        get_target_property(output_dir_curr_config ${target_name}
-            "${output_directory_property}_${config_type_upper}"
-        )
-        if(output_dir_curr_config)
-            set(curr_out_dir "${output_dir_curr_config}")
-        elseif(output_directory)
-            set(curr_out_dir "${output_directory}")
+    if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
+        foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+            string(TOUPPER "${config_type}" config_type_upper)
+            get_target_property(output_dir_curr_config ${target_name}
+                "${output_directory_property}_${config_type_upper}"
+            )
+            if(output_dir_curr_config)
+                set(curr_out_dir "${output_dir_curr_config}")
+            elseif(output_directory)
+                set(curr_out_dir "${output_directory}")
+            else()
+                set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+            endif()
+            message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
+                    " to `${curr_out_dir}/${filename}`.")
+            # For Multiconfig we want to specify the correct location for each configuration
+            set_property(
+                TARGET ${target_name}
+                PROPERTY "${base_property}_${config_type_upper}"
+                    "${curr_out_dir}/${filename}"
+            )
+            set(base_output_directory "${curr_out_dir}")
+        endforeach()
+    elseif(CMAKE_CONFIGURATION_TYPES)
+        # Fallback path needed for MSVC + CMake < 3.20
+        if(output_directory)
+            string(GENEX_STRIP "${output_directory}" stripped_output_dir)
+            if("${stripped_output_dir}" STREQUAL "${output_directory}")
+                # Output directory does not contain a genex and can be respected.
+                set(base_output_directory "${output_directory}")
+            else()
+                # Fallback to default directory if output_dir contains a genex.
+                set(base_output_directory "${CMAKE_CURRENT_BINARY_DIR}")
+            endif()
         else()
-            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+            # Fallback to default directory.
+            set(base_output_directory "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
-        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
-                " to `${curr_out_dir}/${filename}`.")
-        # For Multiconfig we want to specify the correct location for each configuration
-        set_property(
-            TARGET ${target_name}
-            PROPERTY "${base_property}_${config_type_upper}"
-                "${curr_out_dir}/${filename}"
-        )
-        set(base_output_directory "${curr_out_dir}")
-    endforeach()
-
-    if(NOT CMAKE_CONFIGURATION_TYPES)
+    else()
         if(output_directory)
             set(base_output_directory "${output_directory}")
         else()
@@ -197,7 +218,7 @@ function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names
         message(FATAL_ERROR "Unexpected additional arguments")
     endif()
 
-    if(CMAKE_CONFIGURATION_TYPES)
+    if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>")
     else()
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
@@ -208,6 +229,7 @@ function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
     add_custom_command(TARGET cargo-build_${target_name}
                         POST_BUILD
+                        COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
                         COMMAND
                         ${CMAKE_COMMAND} -E copy_if_different
                             # todo: test if this works with both multiple files and paths with spaces
@@ -244,16 +266,25 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
             # Fallback to default directory.
             set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
         endif()
-        file(MAKE_DIRECTORY "${curr_out_dir}")
         set(multiconfig_out_dir_genex "${multiconfig_out_dir_genex}$<$<CONFIG:${config_type}>:${curr_out_dir}>")
     endforeach()
 
-    if(CMAKE_CONFIGURATION_TYPES)
+    if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
         set(output_dir "${multiconfig_out_dir_genex}")
-    else()
+    elseif(CMAKE_CONFIGURATION_TYPES)
+        # Fallback support for MSVC with CMake < 3.20.0 (byproducts may not contain genexes)
         if(output_dir)
-            file(MAKE_DIRECTORY ${output_dir})
+            string(GENEX_STRIP "${output_dir}" stripped_output_dir)
+            if(NOT ("${stripped_output_dir}" STREQUAL "${output_dir}"))
+                 # Fallback to default directory if output_dir contains a genex.
+                set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
+            endif()
         else()
+            # Fallback to default directory.
+            set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
+        endif()
+    else()
+        if(NOT output_dir)
             # Fallback to default directory.
             set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
@@ -264,6 +295,8 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
     add_custom_command(TARGET cargo-build_${target_name}
                         POST_BUILD
+                        # output_dir may contain a Generator expression.
+                        COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
                         COMMAND
                         ${CMAKE_COMMAND} -E copy_if_different
                             # todo: test if this works with both multiple files and paths with spaces
