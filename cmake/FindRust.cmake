@@ -11,7 +11,7 @@ endif()
 # This block checks to see if we're prioritizing a rustup-managed toolchain.
 if (DEFINED Rust_TOOLCHAIN)
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
-    find_program(Rust_RUSTUP rustup PATHS $ENV{HOME}/.cargo/bin)
+    find_program(Rust_RUSTUP rustup PATHS "$ENV{HOME}/.cargo/bin")
     if (NOT Rust_RUSTUP)
         message(
             WARNING "CMake variable `Rust_TOOLCHAIN` specified, but `rustup` was not found. "
@@ -30,10 +30,10 @@ else()
     # backup if a toolchain cannot be found in the user's PATH.
 
     if (DEFINED Rust_COMPILER)
-        set(_Rust_COMPILER_TEST ${Rust_COMPILER})
+        set(_Rust_COMPILER_TEST "${Rust_COMPILER}")
         set(_USER_SPECIFIED_RUSTC ON)
     else()
-        find_program(_Rust_COMPILER_TEST rustc PATHS $ENV{HOME}/.cargo/bin)
+        find_program(_Rust_COMPILER_TEST rustc PATHS "$ENV{HOME}/.cargo/bin")
     endif()
 
     # Check if the discovered rustc is actually a "rustup" proxy.
@@ -41,7 +41,7 @@ else()
         COMMAND
             ${CMAKE_COMMAND} -E env
                 RUSTUP_FORCE_ARG0=rustup
-            ${_Rust_COMPILER_TEST} --version
+            "${_Rust_COMPILER_TEST}" --version
         OUTPUT_VARIABLE _RUSTC_VERSION_RAW
     )
 
@@ -61,8 +61,8 @@ else()
         set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
 
         # Get `rustup` next to the `rustc` proxy
-        get_filename_component(_RUST_PROXIES_PATH ${_Rust_COMPILER_TEST} DIRECTORY)
-        find_program(Rust_RUSTUP rustup HINTS ${_RUST_PROXIES_PATH} NO_DEFAULT_PATH)
+        get_filename_component(_RUST_PROXIES_PATH "${_Rust_COMPILER_TEST}" DIRECTORY)
+        find_program(Rust_RUSTUP rustup HINTS "${_RUST_PROXIES_PATH}" NO_DEFAULT_PATH)
     endif()
 
     unset(_Rust_COMPILER_TEST CACHE)
@@ -74,8 +74,8 @@ endif()
 # List of user variables that will override any toolchain-provided setting
 set(_Rust_USER_VARS Rust_COMPILER Rust_CARGO Rust_CARGO_TARGET Rust_CARGO_HOST_TARGET)
 foreach(_VAR ${_Rust_USER_VARS})
-    if (DEFINED ${_VAR})
-        set(${_VAR}_CACHED ${${_VAR}} CACHE INTERNAL "Internal cache of ${_VAR}")
+    if (DEFINED "${_VAR}")
+        set(${_VAR}_CACHED "${${_VAR}}" CACHE INTERNAL "Internal cache of ${_VAR}")
     else()
         unset(${_VAR}_CACHED CACHE)
     endif()
@@ -86,7 +86,7 @@ endforeach()
 if (_RESOLVE_RUSTUP_TOOLCHAINS)
     execute_process(
         COMMAND
-            ${Rust_RUSTUP} toolchain list --verbose
+            "${Rust_RUSTUP}" toolchain list --verbose
         OUTPUT_VARIABLE _TOOLCHAINS_RAW
     )
 
@@ -96,16 +96,16 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
         if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t\r\n]?(\\(default\\) \\(override\\)|\\(default\\)|\\(override\\))?[ \t\r\n]+(.+)")
             set(_TOOLCHAIN "${CMAKE_MATCH_1}")
             set(_TOOLCHAIN_TYPE ${CMAKE_MATCH_2})
-            list(APPEND _DISCOVERED_TOOLCHAINS ${_TOOLCHAIN})
+            list(APPEND _DISCOVERED_TOOLCHAINS "${_TOOLCHAIN}")
 
             set(${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
 
             if (_TOOLCHAIN_TYPE MATCHES ".*\\(default\\).*")
-                set(_TOOLCHAIN_DEFAULT ${_TOOLCHAIN})
+                set(_TOOLCHAIN_DEFAULT "${_TOOLCHAIN}")
             endif()
 
             if (_TOOLCHAIN_TYPE MATCHES ".*\\(override\\).*")
-                set(_TOOLCHAIN_OVERRIDE ${_TOOLCHAIN})
+                set(_TOOLCHAIN_OVERRIDE "${_TOOLCHAIN}")
             endif()
         else()
             message(WARNING "Didn't recognize toolchain: ${_TOOLCHAIN_RAW}")
@@ -114,19 +114,19 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
 
     if (NOT DEFINED Rust_TOOLCHAIN)
         if (NOT DEFINED _TOOLCHAIN_OVERRIDE)
-            set(_TOOLCHAIN_SELECTED ${_TOOLCHAIN_DEFAULT})
+            set(_TOOLCHAIN_SELECTED "${_TOOLCHAIN_DEFAULT}")
         else()
-            set(_TOOLCHAIN_SELECTED ${_TOOLCHAIN_OVERRIDE})
+            set(_TOOLCHAIN_SELECTED "${_TOOLCHAIN_OVERRIDE}")
         endif()
     endif()
-    set(Rust_TOOLCHAIN ${_TOOLCHAIN_SELECTED} CACHE STRING "The rustup toolchain to use")
+    set(Rust_TOOLCHAIN "${_TOOLCHAIN_SELECTED}" CACHE STRING "The rustup toolchain to use")
     message(STATUS "Rust Toolchain: ${Rust_TOOLCHAIN}")
 
     if (NOT Rust_TOOLCHAIN IN_LIST _DISCOVERED_TOOLCHAINS)
         # If the precise toolchain wasn't found, try appending the default host
         execute_process(
             COMMAND
-                ${Rust_RUSTUP} show
+                "${Rust_RUSTUP}" show
             OUTPUT_VARIABLE _SHOW_RAW
         )
 
@@ -167,8 +167,8 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
 else()
     find_program(Rust_COMPILER_CACHED rustc)
     if (Rust_COMPILER_CACHED)
-        get_filename_component(_RUST_TOOLCHAIN_PATH ${Rust_COMPILER_CACHED} DIRECTORY)
-        get_filename_component(_RUST_TOOLCHAIN_PATH ${_RUST_TOOLCHAIN_PATH} DIRECTORY)
+        get_filename_component(_RUST_TOOLCHAIN_PATH "${Rust_COMPILER_CACHED}" DIRECTORY)
+        get_filename_component(_RUST_TOOLCHAIN_PATH "${_RUST_TOOLCHAIN_PATH}" DIRECTORY)
     endif()
 endif()
 
@@ -212,7 +212,7 @@ set(CARGO_RUST_FLAGS_RELWITHDEBINFO -g CACHE STRING
     "Flags to pass to rustc in RelWithDebInfo Configuration")
 
 execute_process(
-    COMMAND ${Rust_CARGO_CACHED} --version --verbose
+    COMMAND "${Rust_CARGO_CACHED}" --version --verbose
     OUTPUT_VARIABLE _CARGO_VERSION_RAW)
 
 if (_CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
@@ -233,7 +233,7 @@ else()
 endif()
 
 execute_process(
-    COMMAND ${Rust_COMPILER_CACHED} --version --verbose
+    COMMAND "${Rust_COMPILER_CACHED}" --version --verbose
     OUTPUT_VARIABLE _RUSTC_VERSION_RAW)
 
 if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?")
@@ -327,7 +327,7 @@ if (NOT Rust_CARGO_TARGET_CACHED)
         endif()
 
         if (_Rust_ANDROID_TARGET)
-            set(Rust_CARGO_TARGET_CACHED ${_Rust_ANDROID_TARGET} CACHE STRING "Target triple")
+            set(Rust_CARGO_TARGET_CACHED "${_Rust_ANDROID_TARGET}" CACHE STRING "Target triple")
         endif()
     else()
         set(Rust_CARGO_TARGET_CACHED "${Rust_DEFAULT_HOST_TARGET}" CACHE STRING "Target triple")
@@ -339,9 +339,9 @@ endif()
 # Set the input variables as non-cache variables so that the variables are available after
 # `find_package`, even if the values were evaluated to defaults.
 foreach(_VAR ${_Rust_USER_VARS})
-    set(${_VAR} ${${_VAR}_CACHED})
+    set(${_VAR} "${${_VAR}_CACHED}")
     # Ensure cached variables have type INTERNAL
-    set(${_VAR}_CACHED ${${_VAR}_CACHED} CACHE INTERNAL "Internal cache of ${_VAR}")
+    set(${_VAR}_CACHED "${${_VAR}_CACHED}" CACHE INTERNAL "Internal cache of ${_VAR}")
 endforeach()
 
 find_package_handle_standard_args(
@@ -355,13 +355,13 @@ if(NOT TARGET Rust::Rustc)
     add_executable(Rust::Rustc IMPORTED GLOBAL)
     set_property(
         TARGET Rust::Rustc
-        PROPERTY IMPORTED_LOCATION ${Rust_COMPILER_CACHED}
+        PROPERTY IMPORTED_LOCATION "${Rust_COMPILER_CACHED}"
     )
 
     add_executable(Rust::Cargo IMPORTED GLOBAL)
     set_property(
         TARGET Rust::Cargo
-        PROPERTY IMPORTED_LOCATION ${Rust_CARGO_CACHED}
+        PROPERTY IMPORTED_LOCATION "${Rust_CARGO_CACHED}"
     )
     set(Rust_FOUND true)
 endif()
