@@ -60,6 +60,14 @@ impl CargoTarget {
             String::default()
         };
 
+        writeln!(out_file, "set(byproducts \"\")
+                            set(cargo_build_out_dir \"\")
+                            set(archive_byproducts \"\")
+                            set(shared_lib_byproduct \"\")
+                            set(pdb_byproduct \"\")
+                            set(bin_byproduct \"\")
+        ")?;
+
         let target_kind = match self.target_type {
             CargoTargetType::Library {
                 has_staticlib,
@@ -75,12 +83,18 @@ impl CargoTarget {
                 writeln!(
                     out_file,
                     "
-                    set(byproducts \"\")
                     _corrosion_add_library_target(\"{workspace_manifest_path}\"
                             \"{target_name}\"
                             \"{has_staticlib}\"
                             \"{has_cdylib}\"
-                            byproducts
+                            archive_byproducts
+                            shared_lib_byproduct
+                            pdb_byproduct
+                    )
+                    list(APPEND byproducts
+                            \"${{archive_byproducts}}\"
+                            \"${{shared_lib_byproduct}}\"
+                            \"${{pdb_byproduct}}\"
                     )
                     ",
                     // todo: check if this should be the workspace manifest (probably yes)
@@ -100,8 +114,11 @@ impl CargoTarget {
                 writeln!(
                     out_file,
                     "
+                    _corrosion_add_bin_target(\"{workspace_manifest_path}\" \"{target_name}\"
+                        bin_byproduct pdb_byproduct
+                    )
                     set(byproducts \"\")
-                    _corrosion_add_bin_target(\"{workspace_manifest_path}\" \"{target_name}\" byproducts)
+                    list(APPEND byproducts \"${{bin_byproduct}}\" \"${{pdb_byproduct}}\")
                     ",
                     workspace_manifest_path = ws_manifest,
                     target_name = self.cargo_target.name,
@@ -111,7 +128,9 @@ impl CargoTarget {
         };
         writeln!(out_file,
             "
+            set(cargo_build_out_dir \"\")
             _add_cargo_build(
+                cargo_build_out_dir
                 PACKAGE \"{package_name}\"
                 TARGET \"{target_name}\"
                 MANIFEST_PATH \"{manifest_path}\"
@@ -119,6 +138,27 @@ impl CargoTarget {
                 TARGET_KIND \"{target_kind}\"
                 BYPRODUCTS \"${{byproducts}}\"
             )
+
+            if(archive_byproducts)
+                _corrosion_copy_byproducts(
+                    {target_name} ARCHIVE_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{archive_byproducts}}\"
+                )
+            endif()
+            if(shared_lib_byproduct)
+                _corrosion_copy_byproducts(
+                    {target_name} LIBRARY_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{shared_lib_byproduct}}\"
+                )
+            endif()
+            if(pdb_byproduct)
+                _corrosion_copy_byproducts(
+                    {target_name} PDB_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{pdb_byproduct}}\"
+                )
+            endif()
+            if(bin_byproduct)
+                _corrosion_copy_byproducts(
+                    {target_name} RUNTIME_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{bin_byproduct}}\"
+                )
+            endif()
             ",
             package_name = self.cargo_package.name,
             target_name = self.cargo_target.name,

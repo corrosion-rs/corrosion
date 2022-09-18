@@ -11,6 +11,11 @@ set(CORROSION_NATIVE_TOOLING_DESCRIPTION
     "Use native tooling - Required on CMake < 3.19 and available as a fallback option for recent versions"
     )
 
+set(CORROSION_RESPECT_OUTPUT_DIRECTORY_DESCRIPTION
+    "Respect the CMake target properties specifying the output directory of a target, such as
+    `RUNTIME_OUTPUT_DIRECTORY`. This requires CMake >= 3.19, otherwise this option is forced off."
+)
+
 set(CORROSION_NATIVE_TOOLING_DEFAULT OFF)
 # `CORROSION_EXPERIMENTAL_PARSER` was not part of a tagged release, but we still provide a
 # deprecation notice for users that directly use corrosion on the master branch and may have set
@@ -33,6 +38,11 @@ option(
     ${CORROSION_NATIVE_TOOLING_DEFAULT}
 )
 
+option(CORROSION_RESPECT_OUTPUT_DIRECTORY
+    "${CORROSION_RESPECT_OUTPUT_DIRECTORY_DESCRIPTION}"
+    ON
+)
+
 option(
     CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED
     "Surpresses a warning if the parsing the target triple failed."
@@ -42,6 +52,9 @@ option(
 # The native tooling is required on CMAke < 3.19 so we override whatever the user may have set.
 if (CMAKE_VERSION VERSION_LESS 3.19.0)
     set(CORROSION_NATIVE_TOOLING ON CACHE INTERNAL "${CORROSION_NATIVE_TOOLING_DESCRIPTION}" FORCE)
+    set(CORROSION_RESPECT_OUTPUT_DIRECTORY OFF CACHE INTERNAL
+        "${CORROSION_RESPECT_OUTPUT_DIRECTORY_DESCRIPTION}" FORCE
+    )
 endif()
 
 find_package(Rust REQUIRED)
@@ -60,12 +73,10 @@ get_property(
     TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
 )
 
-# Internal function used by both the Rust CMake Generator and CorrosionGenerator.cmake
-#
-# base_property: Name of the base property - i.e. `IMPORTED_LOCATION` or `IMPORTED_IMPLIB`.
-# Optional parameters: Multi-Config configuration types.
-function(corrosion_internal_set_imported_location target_name base_property filename)
-    foreach(config_type ${ARGN})
+# Note: Legacy function, used when respecting the `XYZ_OUTPUT_DIRECTORY` target properties is not
+# possible.
+function(_corrosion_set_imported_location_legacy target_name base_property filename)
+    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
         set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
         string(TOUPPER "${config_type}" config_type_upper)
         message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
@@ -90,6 +101,208 @@ function(corrosion_internal_set_imported_location target_name base_property file
             TARGET ${target_name}
             PROPERTY "${base_property}" "${binary_root}/${filename}"
         )
+endfunction()
+
+# Do not call this function directly!
+#
+# This function should be called deferred to evaluate target properties late in the configure stage.
+# IMPORTED_LOCATION does not support Generator expressions, so we must evaluate the output
+# directory target property value at configure time. This function must be deferred to the end of
+# the configure stage, so we can be sure that the output directory is not modified afterwards.
+function(_corrosion_set_imported_location_deferred target_name base_property output_directory_property filename)
+    get_target_property(output_directory ${target_name} "${output_directory_property}")
+
+    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER "${config_type}" config_type_upper)
+        get_target_property(output_dir_curr_config ${target_name}
+            "${output_directory_property}_${config_type_upper}"
+        )
+        if(output_dir_curr_config)
+            set(curr_out_dir "${output_dir_curr_config}")
+        elseif(output_directory)
+            set(curr_out_dir "${output_directory}")
+        else()
+            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+        endif()
+        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
+                " to `${curr_out_dir}/${filename}`.")
+        # For Multiconfig we want to specify the correct location for each configuration
+        set_property(
+            TARGET ${target_name}
+            PROPERTY "${base_property}_${config_type_upper}"
+                "${curr_out_dir}/${filename}"
+        )
+        set(base_output_directory "${curr_out_dir}")
+    endforeach()
+
+    if(NOT CMAKE_CONFIGURATION_TYPES)
+        if(output_directory)
+            set(base_output_directory "${output_directory}")
+        else()
+            set(base_output_directory "${CMAKE_CURRENT_BINARY_DIR}")
+        endif()
+    endif()
+
+    message(DEBUG "Setting ${base_property} for target ${target_name}"
+                " to `${base_output_directory}/${filename}`.")
+
+    # IMPORTED_LOCATION must be set regardless of possible overrides. In the multiconfig case,
+    # the last configuration "wins" (IMPORTED_LOCATION is not documented to have Genex support).
+    set_property(
+            TARGET ${target_name}
+            PROPERTY "${base_property}" "${base_output_directory}/${filename}"
+        )
+endfunction()
+
+# Helper function to call _corrosion_set_imported_location_deferred while eagerly
+# evaluating arguments.
+# Refer to https://cmake.org/cmake/help/latest/command/cmake_language.html#deferred-call-examples
+function(_corrosion_call_set_imported_location_deferred target_name base_property output_directory_property filename)
+    cmake_language(EVAL CODE "
+        cmake_language(DEFER
+            CALL
+            _corrosion_set_imported_location_deferred
+            [[${target_name}]]
+            [[${base_property}]]
+            [[${output_directory_property}]]
+            [[${filename}]]
+        )
+    ")
+endfunction()
+
+# Set the imported location of a Rust target.
+#
+# Rust targets are built via custom targets / custom commands. The actual artifacts are exposed
+# to CMake as imported libraries / executables that depend on the cargo_build command. For CMake
+# to find the built artifact we need to set the IMPORTED location to the actual location on disk.
+# Corrosion tries to copy the artifacts built by cargo to standard locations. The IMPORTED_LOCATION
+# is set to point to the copy, and not the original from the cargo build directory.
+#
+# Parameters:
+# - target_name: Name of the Rust target
+# - base_property: Name of the base property - i.e. `IMPORTED_LOCATION` or `IMPORTED_IMPLIB`.
+# - output_directory_property: Target property name that determines the standard location for the
+#    artifact.
+# - filename of the artifact.
+function(_corrosion_set_imported_location target_name base_property output_directory_property filename)
+    if(CORROSION_RESPECT_OUTPUT_DIRECTORY)
+        _corrosion_call_set_imported_location_deferred("${target_name}" "${base_property}" "${output_directory_property}" "${filename}")
+    else()
+        _corrosion_set_imported_location_legacy("${target_name}" "${base_property}" "${filename}")
+    endif()
+endfunction()
+
+function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names)
+    if(ARGN)
+        message(FATAL_ERROR "Unexpected additional arguments")
+    endif()
+
+    if(CMAKE_CONFIGURATION_TYPES)
+        set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>")
+    else()
+        set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+
+    list(TRANSFORM file_names PREPEND "${cargo_build_dir}/" OUTPUT_VARIABLE src_file_names)
+    list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
+    message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
+    add_custom_command(TARGET cargo-build_${target_name}
+                        POST_BUILD
+                        COMMAND
+                        ${CMAKE_COMMAND} -E copy_if_different
+                            # todo: test if this works with both multiple files and paths with spaces
+                            ${src_file_names}
+                            "${output_dir}"
+                        BYPRODUCTS ${dst_file_names}
+                        COMMENT "Copying byproducts `${file_names}` to ${output_dir}"
+                        VERBATIM
+                        COMMAND_EXPAND_LISTS
+    )
+endfunction()
+
+function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names)
+    if(ARGN)
+        message(FATAL_ERROR "Unexpected additional arguments")
+    endif()
+    get_target_property(output_dir ${target_name} "${output_dir_prop_name}")
+
+    # A Genex expanding to the output directory depending on the configuration.
+    set(multiconfig_out_dir_genex "")
+
+    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER "${config_type}" config_type_upper)
+        get_target_property(output_dir_curr_config ${target_name} "${output_dir_prop_name}_${config_type_upper}")
+
+        if(output_dir_curr_config)
+            set(curr_out_dir "${output_dir_curr_config}")
+        elseif(output_dir)
+            # Fallback to `output_dir` if specified
+            # Note: Multi-configuration generators append a per-configuration subdirectory to the
+            # specified directory unless a generator expression is used (from CMake documentation).
+            set(curr_out_dir "${output_dir}")
+        else()
+            # Fallback to default directory.
+            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+        endif()
+        file(MAKE_DIRECTORY "${curr_out_dir}")
+        set(multiconfig_out_dir_genex "${multiconfig_out_dir_genex}$<$<CONFIG:${config_type}>:${curr_out_dir}>")
+    endforeach()
+
+    if(CMAKE_CONFIGURATION_TYPES)
+        set(output_dir "${multiconfig_out_dir_genex}")
+    else()
+        if(output_dir)
+            file(MAKE_DIRECTORY ${output_dir})
+        else()
+            # Fallback to default directory.
+            set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
+        endif()
+    endif()
+
+    list(TRANSFORM file_names PREPEND "${cargo_build_dir}/" OUTPUT_VARIABLE src_file_names)
+    list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
+    message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
+    add_custom_command(TARGET cargo-build_${target_name}
+                        POST_BUILD
+                        COMMAND
+                        ${CMAKE_COMMAND} -E copy_if_different
+                            # todo: test if this works with both multiple files and paths with spaces
+                            ${src_file_names}
+                            "${output_dir}"
+                        BYPRODUCTS ${dst_file_names}
+                        COMMENT "Copying byproducts `${file_names}` to ${output_dir}"
+                        VERBATIM
+                        COMMAND_EXPAND_LISTS
+    )
+endfunction()
+
+function(_corrosion_call_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names)
+    cmake_language(EVAL CODE "
+        cmake_language(DEFER
+            CALL
+            _corrosion_copy_byproduct_deferred
+            [[${target_name}]]
+            [[${output_dir_prop_name}]]
+            [[${cargo_build_dir}]]
+            [[${file_names}]]
+        )
+    ")
+endfunction()
+
+# Copy the artifacts generated by cargo to the appropriate destination.
+#
+# Parameters:
+# - target_name: The name of the Rust target
+# - output_dir_prop_name: The property name controlling the destination (e.g.
+#   `RUNTIME_OUTPUT_DIRECTORY`)
+# - cargo_build_dir: the directory cargo build places it's output artifacts in.
+# - filenames: the file names of any output artifacts as a list.
+function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir filenames)
+    if(CORROSION_RESPECT_OUTPUT_DIRECTORY)
+        _corrosion_call_copy_byproduct_deferred("${target_name}" "${output_dir_prop_name}" "${cargo_build_dir}" "${filenames}")
+    else()
+        _corrosion_copy_byproduct_legacy("${target_name}" "${cargo_build_dir}" "${filenames}")
+    endif()
 endfunction()
 
 # The Rust target triple and C target may mismatch (slightly) in some rare usecases.
@@ -218,7 +431,8 @@ endfunction()
 
 # Add targets for the static and/or shared libraries of the rust target.
 # The generated byproduct names are returned via the `out_lib_byproducts` variable name.
-function(_corrosion_add_library_target workspace_manifest_path target_name has_staticlib has_cdylib out_lib_byproducts)
+function(_corrosion_add_library_target workspace_manifest_path target_name has_staticlib has_cdylib
+        out_archive_output_byproducts out_shared_lib_byproduct out_pdb_byproduct)
 
     if(NOT (has_staticlib OR has_cdylib))
         message(FATAL_ERROR "Unknown library type")
@@ -257,30 +471,29 @@ function(_corrosion_add_library_target workspace_manifest_path target_name has_s
 
     set(pdb_name "${lib_name}.pdb")
 
-    set(byproducts)
+    set(archive_output_byproducts "")
     if(has_staticlib)
-        list(APPEND byproducts ${static_lib_name})
+        list(APPEND archive_output_byproducts ${static_lib_name})
     endif()
 
     if(has_cdylib)
-        list(APPEND byproducts ${dynamic_lib_name})
+        set(${out_shared_lib_byproduct} "${dynamic_lib_name}" PARENT_SCOPE)
         if(is_windows)
-            list(APPEND byproducts ${implib_name})
+            list(APPEND archive_output_byproducts ${implib_name})
+        endif()
+        if(is_windows_msvc)
+            set(${out_pdb_byproduct} "${pdb_name}" PARENT_SCOPE)
         endif()
     endif()
-
-    # Only shared libraries and executables have PDBs on Windows
-    # We don't know why PDBs aren't generated for staticlibs...
-    if(is_windows_msvc AND has_cdylib)
-        list(APPEND byproducts "${pdb_name}")
-    endif()
+    set(${out_archive_output_byproducts} "${archive_output_byproducts}" PARENT_SCOPE)
 
     if(has_staticlib)
         add_library(${target_name}-static STATIC IMPORTED GLOBAL)
         add_dependencies(${target_name}-static cargo-build_${target_name})
 
-        corrosion_internal_set_imported_location("${target_name}-static" "IMPORTED_LOCATION"
-                "${static_lib_name}" ${CMAKE_CONFIGURATION_TYPES})
+        _corrosion_set_imported_location("${target_name}-static" "IMPORTED_LOCATION"
+                "ARCHIVE_OUTPUT_DIRECTORY"
+                "${static_lib_name}")
 
         get_source_file_property(libs ${workspace_manifest_path} CORROSION_PLATFORM_LIBS)
 
@@ -302,12 +515,16 @@ function(_corrosion_add_library_target workspace_manifest_path target_name has_s
         add_dependencies(${target_name}-shared cargo-build_${target_name})
 
         # Todo: (Not new issue): What about IMPORTED_SONAME and IMPORTED_NO_SYSTEM?
-        corrosion_internal_set_imported_location("${target_name}-shared" "IMPORTED_LOCATION"
-                "${dynamic_lib_name}" ${CMAKE_CONFIGURATION_TYPES})
+        _corrosion_set_imported_location("${target_name}-shared" "IMPORTED_LOCATION"
+                "LIBRARY_OUTPUT_DIRECTORY"
+                "${dynamic_lib_name}"
+        )
 
         if(is_windows)
-            corrosion_internal_set_imported_location("${target_name}-shared" "IMPORTED_IMPLIB"
-                    "${implib_name}" ${CMAKE_CONFIGURATION_TYPES})
+            _corrosion_set_imported_location("${target_name}-shared" "IMPORTED_IMPLIB"
+                    "ARCHIVE_OUTPUT_DIRECTORY"
+                    "${implib_name}"
+            )
         endif()
 
         if(is_macos)
@@ -330,17 +547,13 @@ function(_corrosion_add_library_target workspace_manifest_path target_name has_s
     else()
         target_link_libraries(${target_name} INTERFACE ${target_name}-static)
     endif()
-
-    set(${out_lib_byproducts} "${byproducts}" PARENT_SCOPE)
-
 endfunction()
 
-function(_corrosion_add_bin_target workspace_manifest_path bin_name out_byproducts)
+function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_byproduct out_pdb_byproduct)
     if(NOT bin_name)
         message(FATAL_ERROR "No bin_name in _corrosion_add_bin_target for target ${target_name}")
     endif()
 
-    set(byproducts "")
     string(REPLACE "-" "_" bin_name_underscore "${bin_name}")
 
     set(pdb_name "${bin_name_underscore}.pdb")
@@ -350,7 +563,7 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_byproduc
     get_source_file_property(is_macos ${workspace_manifest_path} CORROSION_PLATFORM_IS_MACOS)
 
     if(is_windows_msvc)
-        list(APPEND byproducts "${pdb_name}")
+        set(${out_pdb_byproduct} "${pdb_name}" PARENT_SCOPE)
     endif()
 
     if(is_windows)
@@ -358,8 +571,8 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_byproduc
     else()
         set(bin_filename "${bin_name}")
     endif()
+    set(${out_bin_byproduct} "${bin_filename}" PARENT_SCOPE)
 
-    list(APPEND byproducts "${bin_filename}")
 
     # Todo: This is compatible with the way corrosion previously exposed the bin name,
     # but maybe we want to prefix the exposed name with the package name?
@@ -372,10 +585,11 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_byproduc
                 )
     endif()
 
-    corrosion_internal_set_imported_location("${bin_name}" "IMPORTED_LOCATION"
-                        "${bin_filename}" ${CMAKE_CONFIGURATION_TYPES})
+    _corrosion_set_imported_location("${bin_name}" "IMPORTED_LOCATION"
+                        "RUNTIME_OUTPUT_DIRECTORY"
+                        "${bin_filename}"
+    )
 
-    set(${out_byproducts} "${byproducts}" PARENT_SCOPE)
 endfunction()
 
 
@@ -456,7 +670,7 @@ endif()
 # Add custom command to build one target in a package (crate)
 #
 # A target may be either a specific bin
-function(_add_cargo_build)
+function(_add_cargo_build out_cargo_build_out_dir)
     set(options "")
     set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE TARGET_KIND)
     set(multi_value_args BYPRODUCTS)
@@ -607,6 +821,7 @@ function(_add_cargo_build)
 
     set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build")
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
+    set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 
     set(features_args)
     foreach(feature ${COR_FEATURES})
@@ -678,26 +893,11 @@ function(_add_cargo_build)
         set(cargo_target_linker $<$<BOOL:${explicit_linker_property}>:${cargo_target_linker_var}=${explicit_linker_property}>)
     endif()
 
-
-    set(build_byproducts)
-    set(byproducts)
-    foreach(byproduct_file ${ACB_BYPRODUCTS})
-        list(APPEND build_byproducts "${cargo_build_dir}/${byproduct_file}")
-        if (CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
-            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${byproduct_file}")
-        else()
-            list(APPEND byproducts "${CMAKE_CURRENT_BINARY_DIR}/${byproduct_file}")
-        endif()
-    endforeach()
-
     message(DEBUG "TARGET ${target_name} produces byproducts ${byproducts}")
 
     add_custom_target(
         cargo-build_${target_name}
         ALL
-        # Ensure the target directory exists
-        COMMAND
-            ${CMAKE_COMMAND} -E make_directory ${target_dir}
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
@@ -729,10 +929,12 @@ function(_add_cargo_build)
                 ${local_rustflags_delimiter}
                 ${local_rustflags_genex}
 
-        # Copy crate artifacts to the binary dir
-        COMMAND
-            ${CMAKE_COMMAND} -E copy_if_different ${build_byproducts} ${target_dir}
-        BYPRODUCTS ${byproducts}
+        # Note: Adding `build_byproducts` (the byproducts in the cargo target directory) here
+        # causes CMake to fail during the Generate stage, because the target `target_name` was not
+        # found. I don't know why this happens, so we just don't specify byproducts here and
+        # only specify the actual byproducts in the `POST_BUILD` custom command that copies the
+        # byproducts to the final destination.
+        # BYPRODUCTS  ${build_byproducts}
         # The build is conducted in the directory of the Manifest, so that configuration files such as
         # `.cargo/config.toml` or `toolchain.toml` are applied as expected.
         WORKING_DIRECTORY "${workspace_toml_dir}"
