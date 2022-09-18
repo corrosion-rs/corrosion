@@ -63,31 +63,70 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
             if("cdylib" IN_LIST kinds)
                 set(has_cdylib TRUE)
             endif()
-            set(lib_byproducts "")
-            _corrosion_add_library_target("${workspace_manifest_path}" "${target_name}" "${has_staticlib}" "${has_cdylib}" lib_byproducts)
+            set(archive_byproducts "")
+            set(shared_lib_byproduct "")
+            set(pdb_byproduct "")
 
+            _corrosion_add_library_target("${workspace_manifest_path}" "${target_name}" "${has_staticlib}" "${has_cdylib}"
+                archive_byproducts shared_lib_byproduct pdb_byproduct)
+
+            set(byproducts "")
+            list(APPEND byproducts "${archive_byproducts}" "${shared_lib_byproduct}" "${pdb_byproduct}")
+
+            set(cargo_build_out_dir "")
             _add_cargo_build(
+                cargo_build_out_dir
                 PACKAGE ${package_name}
                 TARGET ${target_name}
                 MANIFEST_PATH "${manifest_path}"
                 PROFILE "${profile}"
                 TARGET_KIND "lib"
-                BYPRODUCTS "${lib_byproducts}"
+                BYPRODUCTS "${byproducts}"
             )
+            if(archive_byproducts)
+                _corrosion_copy_byproducts(
+                    ${target_name} ARCHIVE_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${archive_byproducts}"
+                )
+            endif()
+            if(shared_lib_byproduct)
+                _corrosion_copy_byproducts(
+                    ${target_name} LIBRARY_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${shared_lib_byproduct}"
+                )
+            endif()
+            if(pdb_byproduct)
+                _corrosion_copy_byproducts(
+                    ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                )
+            endif()
             list(APPEND corrosion_targets ${target_name})
 
         elseif("bin" IN_LIST kinds)
-            set(bin_byproducts "")
-            _corrosion_add_bin_target("${workspace_manifest_path}" "${target_name}" "bin_byproducts")
+            set(pdb_byproduct "")
+            _corrosion_add_bin_target("${workspace_manifest_path}" "${target_name}"
+                "bin_byproduct" "pdb_byproduct"
+            )
 
+            set(byproducts "")
+            list(APPEND byproducts "${bin_byproduct}" "${pdb_byproduct}")
+
+            set(cargo_build_out_dir "")
             _add_cargo_build(
+                cargo_build_out_dir
                 PACKAGE "${package_name}"
                 TARGET "${target_name}"
                 MANIFEST_PATH "${manifest_path}"
                 PROFILE "${profile}"
                 TARGET_KIND "bin"
-                BYPRODUCTS "${bin_byproducts}"
+                BYPRODUCTS "${byproducts}"
             )
+            _corrosion_copy_byproducts(
+                    ${target_name} RUNTIME_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${bin_byproduct}"
+            )
+            if(pdb_byproduct)
+                _corrosion_copy_byproducts(
+                        ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                )
+            endif()
             list(APPEND corrosion_targets ${target_name})
         else()
             # ignore other kinds (like examples, tests, build scripts, ...)
