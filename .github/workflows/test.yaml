@@ -60,6 +60,12 @@ jobs:
             arch: x86_64
             abi: darwin
             os: macos-12
+          - os: ubuntu-latest
+            arch: x86_64
+            abi: gnu
+            cmake: 3.20.0
+            rust: stable
+            generator: ninja-multiconfig
 
         exclude:
 
@@ -148,6 +154,8 @@ jobs:
         run: |
           if [ "${{ matrix.generator }}" == "ninja" ]; then
             echo "::set-output name=generator::-GNinja"
+          elif [ "${{ matrix.generator }}" == "ninja-multiconfig" ];then
+            echo "::set-output name=generator::-G \"Ninja Multi-Config\""
           elif [ "${{ matrix.abi }}" == "default" ]; then
             echo "::set-output name=generator::"
           fi
