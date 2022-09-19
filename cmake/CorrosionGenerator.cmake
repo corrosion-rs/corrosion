@@ -64,7 +64,7 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
                 set(has_cdylib TRUE)
             endif()
             set(lib_byproducts "")
-            _corrosion_add_library_target("${manifest_path}" "${target_name}" "${has_staticlib}" "${has_cdylib}" lib_byproducts)
+            _corrosion_add_library_target("${workspace_manifest_path}" "${target_name}" "${has_staticlib}" "${has_cdylib}" lib_byproducts)
 
             _add_cargo_build(
                 PACKAGE ${package_name}
