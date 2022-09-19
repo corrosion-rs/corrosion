@@ -1,7 +1,31 @@
+#[=======================================================================[.rst:
+FindRust
+--------
+
+Find Rust
+
+This module finds an installed rustc compiler and the cargo build tool. If Rust
+is managed by rustup it determines the available toolchains and returns a
+concrete Rust version, not a rustup proxy.
+
+#]=======================================================================]
+
 cmake_minimum_required(VERSION 3.12)
 
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(FindPackageHandleStandardArgs)
+
+# Print error message and return.
+macro(_findrust_failed)
+    if("${Rust_FIND_REQUIRED}")
+        message(FATAL_ERROR ${ARGN})
+    elseif(NOT "${Rust_FIND_QUIETLY}")
+        message(WARNING ${ARGN})
+    endif()
+    # Note: PARENT_SCOPE is the scope of the caller of the caller of this macro.
+    set(Rust_FOUND "" PARENT_SCOPE)
+    return()
+endmacro()
 
 if (NOT "${Rust_TOOLCHAIN}" STREQUAL "$CACHE{Rust_TOOLCHAIN}")
     # Promote Rust_TOOLCHAIN to a cache variable if it is not already a cache variable
@@ -12,7 +36,7 @@ endif()
 if (DEFINED Rust_TOOLCHAIN)
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
     find_program(Rust_RUSTUP rustup PATHS "$ENV{HOME}/.cargo/bin")
-    if (NOT Rust_RUSTUP)
+    if (NOT Rust_RUSTUP AND NOT "${Rust_FIND_QUIETLY}")
         message(
             WARNING "CMake variable `Rust_TOOLCHAIN` specified, but `rustup` was not found. "
             "Ignoring toolchain and looking for a Rust toolchain not managed by rustup.")
@@ -32,8 +56,21 @@ else()
     if (DEFINED Rust_COMPILER)
         set(_Rust_COMPILER_TEST "${Rust_COMPILER}")
         set(_USER_SPECIFIED_RUSTC ON)
+        if(NOT (EXISTS "${_Rust_COMPILER_TEST}" AND NOT IS_DIRECTORY "${_Rust_COMPILER_TEST}"))
+            set(_ERROR_MESSAGE "Rust_COMPILER was set to `${Rust_COMPILER}`, but this file does "
+                "not exist."
+            )
+            _findrust_failed(${_ERROR_MESSAGE})
+            return()
+        endif()
     else()
         find_program(_Rust_COMPILER_TEST rustc PATHS "$ENV{HOME}/.cargo/bin")
+        if(NOT EXISTS "${_Rust_COMPILER_TEST}")
+            set(_ERROR_MESSAGE "`rustc` not found in PATH or `$ENV{HOME}/.cargo/bin`.\n"
+                    "Hint: Check if `rustc` is in PATH or manually specify the location "
+                    "by setting `Rust_COMPILER` to the path to `rustc`.")
+            _findrust_failed(${_ERROR_MESSAGE})
+        endif()
     endif()
 
     # Check if the discovered rustc is actually a "rustup" proxy.
@@ -43,7 +80,15 @@ else()
                 RUSTUP_FORCE_ARG0=rustup
             "${_Rust_COMPILER_TEST}" --version
         OUTPUT_VARIABLE _RUSTC_VERSION_RAW
+        ERROR_VARIABLE _RUSTC_VERSION_STDERR
+        RESULT_VARIABLE _RUSTC_VERSION_RESULT
     )
+
+    if(NOT (_RUSTC_VERSION_RESULT EQUAL "0"))
+        _findrust_failed("`${_Rust_COMPILER_TEST} --version` failed with ${_RUSTC_VERSION_RESULT}\n"
+            "rustc stderr:\n${_RUSTC_VERSION_STDERR}"
+            )
+    endif()
 
     if (_RUSTC_VERSION_RAW MATCHES "rustup [0-9\\.]+")
         if (_USER_SPECIFIED_RUSTC)
@@ -127,26 +172,27 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
         execute_process(
             COMMAND
                 "${Rust_RUSTUP}" show
+            RESULT_VARIABLE _SHOW_RESULT
             OUTPUT_VARIABLE _SHOW_RAW
         )
+        if(NOT "${_SHOW_RESULT}" EQUAL "0")
+            _findrust_failed("Command `${Rust_RUSTUP} show` failed")
+        endif()
 
         if (_SHOW_RAW MATCHES "Default host: ([a-zA-Z0-9_\\-]*)\n")
             set(_DEFAULT_HOST "${CMAKE_MATCH_1}")
         else()
-            message(FATAL_ERROR "Failed to parse \"Default host\" from `${Rust_RUSTUP} show`. Got: ${_SHOW_RAW}")
+            _findrust_failed("Failed to parse \"Default host\" from `${Rust_RUSTUP} show`. Got: ${_SHOW_RAW}")
         endif()
 
         if (NOT "${Rust_TOOLCHAIN}-${_DEFAULT_HOST}" IN_LIST _DISCOVERED_TOOLCHAINS)
-            message(NOTICE "Could not find toolchain '${Rust_TOOLCHAIN}'")
-            message(NOTICE "Available toolchains:")
-
-            list(APPEND CMAKE_MESSAGE_INDENT "  ")
+            set(_NOT_FOUND_MESSAGE "Could not find toolchain '${Rust_TOOLCHAIN}'\n"
+                "Available toolchains:\n"
+            )
             foreach(_TOOLCHAIN ${_DISCOVERED_TOOLCHAINS})
-                message(NOTICE "${_TOOLCHAIN}")
+                list(APPEND _NOT_FOUND_MESSAGE "  `${_TOOLCHAIN}`\n")
             endforeach()
-            list(POP_BACK CMAKE_MESSAGE_INDENT)
-
-            message(FATAL_ERROR "")
+            _findrust_failed(${_NOT_FOUND_MESSAGE})
         endif()
 
         set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}-${_DEFAULT_HOST}")
@@ -155,8 +201,10 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     endif()
 
     set(_RUST_TOOLCHAIN_PATH "${${_RUSTUP_TOOLCHAIN_FULL}_PATH}")
-    message(VERBOSE "Rust toolchain ${_RUSTUP_TOOLCHAIN_FULL}")
-    message(VERBOSE "Rust toolchain path ${_RUST_TOOLCHAIN_PATH}")
+    if(NOT "${Rust_FIND_QUIETLY}")
+        message(VERBOSE "Rust toolchain ${_RUSTUP_TOOLCHAIN_FULL}")
+        message(VERBOSE "Rust toolchain path ${_RUST_TOOLCHAIN_PATH}")
+    endif()
 
     # Is overridden if the user specifies `Rust_COMPILER` explicitly.
     find_program(
@@ -172,33 +220,47 @@ else()
     endif()
 endif()
 
-if (NOT Rust_COMPILER_CACHED)
-    message(
-        WARNING "The rustc executable was not found. "
-        "Rust not installed or ~/.cargo/bin not added to path? "
-        "Aborting further actions of find_package(Rust). ")
-    set(Rust_FOUND false)
-    return()
+if (NOT EXISTS "${Rust_COMPILER_CACHED}")
+    set(_NOT_FOUND_MESSAGE "The rustc executable was not found. "
+        "Rust not installed or ~/.cargo/bin not added to path?\n"
+        "Hint: Consider setting `Rust_COMPILER` to the absolute path of `rustc`."
+    )
+    _findrust_failed(${_NOT_FOUND_MESSAGE})
 endif()
 
 if (_RESOLVE_RUSTUP_TOOLCHAINS)
-    # If not already explicitly set by the `Rust_CARGO` variable, search for cargo next to rustc,
-    # since the toolchain is managed by rustup.
-    # Note: Not all toolchains managed by rustup have `cargo` installed. Specifically, a custom
-    # toolchain may not have had cargo built. In this case the user should manually specify
-    # `Rust_CARGO`.
+    set(_NOT_FOUND_MESSAGE "Rust was detected to be managed by rustup, but failed to find `cargo` "
+        "next to `rustc` in `${_RUST_TOOLCHAIN_PATH}/bin`. This can happen for custom toolchains, "
+        "if cargo was not built. "
+        "Please manually specify the path to a compatible `cargo` by setting `Rust_CARGO`."
+    )
     find_program(
         Rust_CARGO_CACHED
         cargo
             HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
-            REQUIRED NO_DEFAULT_PATH)
+            NO_DEFAULT_PATH
+    )
+    # note: maybe can use find_package_handle_standard_args here, if we remove the _CACHED postfix.
+    # not sure why that is here...
+    if(NOT EXISTS "${Rust_CARGO_CACHED}")
+        _findrust_failed(${_NOT_FOUND_MESSAGE})
+    endif()
 else()
+    set(_NOT_FOUND_MESSAGE "Failed to find `cargo` in PATH and `${_RUST_TOOLCHAIN_PATH}/bin`.\n"
+        "Please ensure cargo is in PATH or manually specify the path to a compatible `cargo` by "
+        "setting `Rust_CARGO`."
+    )
     # On some systems (e.g. NixOS) cargo is not managed by rustup and also not next to rustc.
     find_program(
             Rust_CARGO_CACHED
             cargo
                 HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
-                REQUIRED)
+    )
+    # note: maybe can use find_package_handle_standard_args here, if we remove the _CACHED postfix.
+    # not sure why that is here...
+    if(NOT EXISTS "${Rust_CARGO_CACHED}")
+        _findrust_failed(${_NOT_FOUND_MESSAGE})
+    endif()
 endif()
 
 set(CARGO_RUST_FLAGS "" CACHE STRING "Flags to pass to rustc")
@@ -213,8 +275,18 @@ set(CARGO_RUST_FLAGS_RELWITHDEBINFO -g CACHE STRING
 
 execute_process(
     COMMAND "${Rust_CARGO_CACHED}" --version --verbose
-    OUTPUT_VARIABLE _CARGO_VERSION_RAW)
+    OUTPUT_VARIABLE _CARGO_VERSION_RAW
+    RESULT_VARIABLE _CARGO_VERSION_RESULT
+)
+# todo: check if cargo is a required component!
+if(NOT ( "${_CARGO_VERSION_RESULT}" EQUAL "0" ))
+    _findrust_failed("Failed to get cargo version.\n"
+        "`${Rust_CARGO_CACHED} --version` failed with error: `${_CARGO_VERSION_RESULT}"
+)
+endif()
 
+# todo: don't set cache variables here, but let find_package_handle_standard_args do the promotion
+# later.
 if (_CARGO_VERSION_RAW MATCHES "cargo ([0-9]+)\\.([0-9]+)\\.([0-9]+)")
     set(Rust_CARGO_VERSION_MAJOR "${CMAKE_MATCH_1}" CACHE INTERNAL "" FORCE)
     set(Rust_CARGO_VERSION_MINOR "${CMAKE_MATCH_2}" CACHE INTERNAL "" FORCE)
@@ -227,14 +299,22 @@ elseif(_CARGO_VERSION_RAW MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
     set(Rust_CARGO_VERSION_PATCH "${CMAKE_MATCH_3}" CACHE INTERNAL "" FORCE)
     set(Rust_CARGO_VERSION "${Rust_CARGO_VERSION_MAJOR}.${Rust_CARGO_VERSION_MINOR}.${Rust_CARGO_VERSION_PATCH}" CACHE INTERNAL "" FORCE)
 else()
-    message(
-        FATAL_ERROR
-        "Failed to parse cargo version. `cargo --version` evaluated to (${_CARGO_VERSION_RAW})")
+    _findrust_failed(
+        "Failed to parse cargo version. `cargo --version` evaluated to (${_CARGO_VERSION_RAW}). "
+        "Expected a <Major>.<Minor>.<Patch> version triple."
+    )
 endif()
 
 execute_process(
     COMMAND "${Rust_COMPILER_CACHED}" --version --verbose
-    OUTPUT_VARIABLE _RUSTC_VERSION_RAW)
+    OUTPUT_VARIABLE _RUSTC_VERSION_RAW
+    RESULT_VARIABLE _RUSTC_VERSION_RESULT
+)
+
+if(NOT ( "${_RUSTC_VERSION_RESULT}" EQUAL "0" ))
+    _findrust_failed("Failed to get rustc version.\n"
+        "${Rust_COMPILER_CACHED} --version failed with error: `${_RUSTC_VERSION_RESULT}`")
+endif()
 
 if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?")
     set(Rust_VERSION_MAJOR "${CMAKE_MATCH_1}" CACHE INTERNAL "" FORCE)
@@ -247,17 +327,16 @@ if (_RUSTC_VERSION_RAW MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?"
         set(Rust_IS_NIGHTLY 0 CACHE INTERNAL "" FORCE)
     endif()
 else()
-    message(
-        FATAL_ERROR
-        "Failed to parse rustc version. `rustc --version --verbose` evaluated to:\n${_RUSTC_VERSION_RAW}")
+    _findrust_failed("Failed to parse rustc version. `${Rust_COMPILER_CACHED} --version --verbose` "
+        "evaluated to:\n`${_RUSTC_VERSION_RAW}`"
+    )
 endif()
 
 if (_RUSTC_VERSION_RAW MATCHES "host: ([a-zA-Z0-9_\\-]*)\n")
     set(Rust_DEFAULT_HOST_TARGET "${CMAKE_MATCH_1}")
     set(Rust_CARGO_HOST_TARGET_CACHED "${Rust_DEFAULT_HOST_TARGET}" CACHE STRING "Host triple")
 else()
-    message(
-        FATAL_ERROR
+    _findrust_failed(
         "Failed to parse rustc host target. `rustc --version --verbose` evaluated to:\n${_RUSTC_VERSION_RAW}"
     )
 endif()
@@ -269,7 +348,7 @@ if (_RUSTC_VERSION_RAW MATCHES "LLVM version: ([0-9]+)\\.([0-9]+)(\\.([0-9]+))?"
     # Since cmake regex does not support non-capturing groups, just ignore Match 3.
     set(Rust_LLVM_VERSION_PATCH "${CMAKE_MATCH_4}" CACHE INTERNAL "" FORCE)
     set(Rust_LLVM_VERSION "${Rust_LLVM_VERSION_MAJOR}.${Rust_LLVM_VERSION_MINOR}.${Rust_LLVM_VERSION_PATCH}" CACHE INTERNAL "" FORCE)
-else()
+elseif(NOT Rust_FIND_QUIETLY)
     message(
             WARNING
             "Failed to parse rustc LLVM version. `rustc --version --verbose` evaluated to:\n${_RUSTC_VERSION_RAW}"
@@ -290,6 +369,7 @@ if (NOT Rust_CARGO_TARGET_CACHED)
             endif()
         else ()
             if (NOT DEFINED CMAKE_SIZEOF_VOID_P)
+                # todo: this should only be best effort instead of failure
                 message(
                     FATAL_ERROR "Compiler hasn't been enabled yet - can't determine the target architecture")
             endif()
