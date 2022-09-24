@@ -8,4 +8,4 @@ edition = "2018"
 [dependencies]
 
 [lib]
-crate-type=["staticlib"]
+crate-type=["staticlib", "cdylib"]
