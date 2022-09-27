@@ -15,3 +15,9 @@ add_custom_target(genexdebug COMMAND ${CMAKE_COMMAND} -E echo "Config DEBUG: $<T
 
 corrosion_import_crate(MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml)
 add_dependencies(cargo-prebuild_generated after_generation)
+
+# Simple test for corrosion_parse_package_version
+corrosion_parse_package_version("${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml" srcgen_version)
+if (NOT "${srcgen_version}" VERSION_EQUAL "0.1.0")
+	message(FATAL_ERROR "Test failed to parse expected version")
+endif()
