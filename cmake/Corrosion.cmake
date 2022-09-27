@@ -1557,3 +1557,50 @@ function(corrosion_add_cxxbridge cxx_target)
         )
     endforeach()
 endfunction(corrosion_add_cxxbridge)
+
+# Parse the version of a Rust package from it's package manifest (Cargo.toml)
+function(corrosion_parse_package_version package_manifest_path out_package_version)
+    if(NOT EXISTS "${package_manifest_path}")
+        message(FATAL_ERROR "Package manifest `${package_manifest_path}` does not exist.")
+    endif()
+
+    file(READ "${package_manifest_path}" package_manifest)
+
+    # Find the package table. It may contain arrays, so match until \n\[, which should mark the next
+    # table. Note: backslashes must be doubled to escape the backslash for the bracket. LF is single
+    # backslash however. On windows the line also ends in \n, so matching against \n\[ is sufficient
+    # to detect an opening bracket on a new line.
+    set(package_table_regex "\\[package\\](.*)\n\\[")
+
+    string(REGEX MATCH "${package_table_regex}" _package_table "${package_manifest}")
+
+    if(CMAKE_MATCH_COUNT EQUAL "1")
+        set(package_table "${CMAKE_MATCH_1}")
+    else()
+        message(DEBUG
+                "Failed to find `[package]` table in package manifest `${package_manifest_path}`.\n"
+                "Matches: ${CMAKE_MATCH_COUNT}\n"
+        )
+        set(${out_package_version}
+            "NOTFOUND"
+            PARENT_SCOPE
+        )
+    endif()
+    # Match `version = "0.3.2"`, `"version" = "0.3.2" Contains one matching group for the version
+    set(version_regex "[\r]?\n[\"']?version[\"']?[ \t]*=[ \t]*[\"']([0-9\.]+)[\"']")
+
+    string(REGEX MATCH "${version_regex}" _version "${package_table}")
+
+    if("${package_table}" MATCHES "${version_regex}")
+        set(${out_package_version}
+            "${CMAKE_MATCH_1}"
+            PARENT_SCOPE
+        )
+    else()
+        message(DEBUG "Failed to extract package version from manifest `${package_manifest_path}`.")
+        set(${out_package_version}
+            "NOTFOUND"
+            PARENT_SCOPE
+        )
+    endif()
+endfunction()
