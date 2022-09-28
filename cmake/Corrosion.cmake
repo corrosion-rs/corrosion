@@ -101,15 +101,9 @@ function(_corrosion_parse_platform manifest rust_version target_triple)
     # except the filename from `target_triple`.
     get_filename_component(target_triple_ext "${target_triple}" EXT)
     if(target_triple_ext)
-        if(NOT (target_triple_ext STREQUAL ".json"))
-            message(FATAL_ERROR "Failed to parse target triple `${target_triple}`. "
-                "Invalid file extension `${target_triple_ext}` found."
-                "Help: Custom Rust target-triples must be a path to a `.json` file. "
-                "Other file extensions are not supported. Built-in target names may not contain a "
-                "dot."
-            )
+        if(target_triple_ext STREQUAL ".json")
+            get_filename_component(target_triple "${target_triple}"  NAME_WE)
         endif()
-        get_filename_component(target_triple "${target_triple}"  NAME_WE)
     endif()
 
     # The vendor part may be left out from the target triple, and since `env` is also optional,
@@ -134,7 +128,7 @@ function(_corrosion_parse_platform manifest rust_version target_triple)
     # vendors. The next field is the OS, which we assume to always be present, while the last field
     # is again optional and contains the environment.
     string(REGEX MATCH
-            "^([a-z0-9_]+)-((${known_vendors_joined})-)?([a-z0-9_]+)(-([a-z0-9_]+))?$"
+            "^([a-z0-9_\.]+)-((${known_vendors_joined})-)?([a-z0-9_]+)(-([a-z0-9_]+))?$"
             whole_match
             "${target_triple}"
     )
