@@ -1,7 +1,10 @@
-set(_release_profile $<IF:$<CONFIG:Release>,release-without-dbg,custom-without-dbg>)
-set(custom_profile $<IF:$<CONFIG:Debug>,dev-without-dbg,${_release_profile}>)
+corrosion_tests_add_test(custom_profiles "custom-profile-exe")
 
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml PROFILE ${custom_profile})
-
-add_executable(custom-profile-exe main.cpp)
-target_link_libraries(custom-profile-exe PUBLIC custom-profiles-lib)
+set_tests_properties("custom_profiles_run_custom-profile-exe" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^Hello, Cpp! I'm Rust!\r?\n$"
+        )
+if(Rust_VERSION VERSION_LESS 1.57.0)
+        set_tests_properties(custom_profiles_build custom_profiles_run_custom-profile-exe PROPERTIES
+                DISABLED TRUE
+        )
+endif()
