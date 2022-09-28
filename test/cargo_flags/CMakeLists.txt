@@ -1,12 +1,3 @@
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml FLAGS --features one)
+corrosion_tests_add_test(cargo_flags "flags-exe")
 
-add_executable(flags-exe main.cpp)
-target_link_libraries(flags-exe PUBLIC flags-lib)
-corrosion_set_cargo_flags(flags-lib --features two)
-corrosion_set_cargo_flags(flags-lib $<TARGET_PROPERTY:flags-lib,more_flags>)
-
-set_property(
-    TARGET flags-lib
-    APPEND
-    PROPERTY more_flags --features three
-)
+set_tests_properties("cargo_flags_run_flags-exe" PROPERTIES PASS_REGULAR_EXPRESSION [[Hello, Cxx! I am Rust!]])

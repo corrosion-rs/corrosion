@@ -1,23 +1,5 @@
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml FEATURES thirdfeature ALL_FEATURES)
+corrosion_tests_add_test(features "features-cpp-exe")
 
-add_executable(features-cpp-exe main.cpp)
-target_link_libraries(features-cpp-exe PUBLIC rust-feature-lib)
-
-corrosion_set_features(rust-feature-lib
-        ALL_FEATURES OFF
-        NO_DEFAULT_FEATURES
-        FEATURES
-            $<TARGET_PROPERTY:features-cpp-exe,app_features>
-)
-
-set_property(
-    TARGET features-cpp-exe
-    APPEND
-    PROPERTY app_features myfeature
-)
-set_property(
-    TARGET features-cpp-exe
-    APPEND
-    PROPERTY app_features secondfeature
-)
-
+set_tests_properties("features_run_features-cpp-exe" PROPERTIES PASS_REGULAR_EXPRESSION
+        "Hello, Cpp! I'm Rust!\r?\nHello, Cpp again! I'm Rust again!\r?\nHello, Cpp again! I'm Rust again, third time the charm!"
+        )

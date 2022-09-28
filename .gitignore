@@ -6,3 +6,4 @@ install*/
 .vscode
 .idea
 cmake-build-*
+test/test_header.cmake

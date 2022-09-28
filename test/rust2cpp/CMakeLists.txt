@@ -1,8 +1,9 @@
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
+corrosion_tests_add_test(rust2cpp "cpp-exe;cpp-exe-shared")
 
-add_executable(cpp-exe main.cpp)
-target_link_libraries(cpp-exe PUBLIC rust-lib)
+set_tests_properties("rust2cpp_run_cpp-exe" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^Hello, Cpp! I'm Rust!\r?\n$"
+        )
 
-add_executable(cpp-exe-shared main.cpp)
-target_link_libraries(cpp-exe-shared
-        PUBLIC rust-lib-shared)
+set_tests_properties("rust2cpp_run_cpp-exe-shared" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^Hello, Cpp! I'm Rust!\r?\n$"
+        )

@@ -185,40 +185,14 @@ jobs:
           ${{ steps.pick_compiler.outputs.system_name }}
           ${{ steps.pick_generator.outputs.generator }}
           -DRust_TOOLCHAIN="${{matrix.rust}}"
-      - name: Run Config Tests (x86_64 Only)
+      - name: Run Tests
         run: |
           cd build
           cmake \
             --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
             --target test-install
           ctest --verbose --build-config Debug
-        if: ${{ 'x86_64' == matrix.arch && !('windows-2019' == matrix.os && 'gnu' == matrix.abi) }}
-      - name: Build C++ program linking Rust
-        run: |
-          cmake \
-            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target cpp-exe
-      - name: Build Rust program linking C++
-        run: |
-          cmake \
-            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target cargo-build_rust-exe
-      - name: Build Rust cdylib and link against C++
-        run: |
-          cmake \
-            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target my_program
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' }}
-      - name: Build host program in cross-compile setup
-        run: |
-          cmake \
-            --build build ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target cargo-build_rust-host-program
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' && matrix.cmake == '3.19.0' }}
-      - name: Run host program in cross-compile setup
-        run: |
-          ./build/test/hostbuild/rust-host-program
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.abi == 'gnu' && matrix.cmake == '3.19.0' }}
+
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
@@ -229,18 +203,7 @@ jobs:
           - windows-2019
           - ubuntu-latest
           - macos-12
-        method:
-          - subdirectory
-          - install
     steps:
-      - name: Check tests external
-        id: check_external
-        run: |
-          if [ "${{ matrix.method }}" == "subdirectory" ]; then
-            echo "::set-output name=find::OFF"
-          elif [ "${{ matrix.method }}" == "install" ]; then
-            echo "::set-output name=find::ON"
-          fi
       - uses: actions/checkout@v2
       - name: Install CMake
         uses: corrosion-rs/install-cmake@v1.1
@@ -256,27 +219,28 @@ jobs:
         run: cmake --version
       - name: Rust Version
         run: rustc --version
-      - name: Install Corrosion
+      - name: Test Corrosion as subdirectory
         run: >
           cmake
           -S.
-          -Bbuild-corrosion
+          -Bbuild
           -DCORROSION_VERBOSE_OUTPUT=ON
-          -DCORROSION_BUILD_TESTS=OFF
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_INSTALL_PREFIX=install-corrosion
+          -DCORROSION_TESTS_INSTALL_CORROSION=OFF
 
-          cmake --build build-corrosion --config Release
+          cd build
 
-          cmake --install build-corrosion --config Release
-        if: ${{ matrix.method == 'install' }}
-      - name: Configure Tests
+          ctest --output-on-failure -C Debug
+      - name: Test Corrosion as installed module
         run: >
-          cmake
-          -Stest
-          -Bbuild-tests
-          -DCORROSION_TESTS_FIND_CORROSION=${{steps.check_external.outputs.find}}
-          -DCMAKE_PREFIX_PATH="$PWD/install-corrosion"
-      - name: Build Tests
-        run: cmake --build build-tests
+          rm -rf build
 
+          cmake
+          -S.
+          -Bbuild
+          -DCORROSION_VERBOSE_OUTPUT=ON
+          -DCMAKE_BUILD_TYPE=Release
+          -DCORROSION_TESTS_INSTALL_CORROSION=ON
+
+          cd build
+
+          ctest --output-on-failure -C Release

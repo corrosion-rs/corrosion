@@ -1,16 +1,6 @@
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
+corrosion_tests_add_test(rustflags "rustflags-cpp-exe")
 
-add_executable(rustflags-cpp-exe main.cpp)
-target_link_libraries(rustflags-cpp-exe PUBLIC rustflag-test-lib)
+set_tests_properties("rustflags_run_rustflags-cpp-exe" PROPERTIES PASS_REGULAR_EXPRESSION
+        "Hello, Cpp! I'm Rust!\r?\nHello, Cpp again! I'm Rust in (Debug|Release) mode again!\r?\nHello, Cpp again! I'm Rust again, third time the charm!\r?\n$"
+        )
 
-# Test --cfg=key="value" rustflag.
-corrosion_add_target_rustflags(rustflag-test-lib --cfg=test_rustflag_cfg1="test_rustflag_cfg1_value")
-
-# Test using a generator expression to produce a rustflag and passing multiple rustflags.
-corrosion_add_target_rustflags(rustflag-test-lib
-        --cfg=test_rustflag_cfg2="$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>"
-        "--cfg=test_rustflag_cfg3"
-)
-
-corrosion_add_target_local_rustflags(rustflag-test-lib "--cfg=test_local_rustflag1")
-corrosion_add_target_local_rustflags(rustflag-test-lib --cfg=test_local_rustflag2="value")

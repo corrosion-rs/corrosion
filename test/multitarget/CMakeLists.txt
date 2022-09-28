@@ -1,8 +1,13 @@
-corrosion_import_crate(MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml)
+corrosion_tests_add_test(multitarget "bin1;bin2;bin3")
 
-add_library(cpp-lib4 lib.cpp)
-target_compile_features(cpp-lib4 PRIVATE cxx_std_14)
-target_compile_options(cpp-lib4 PRIVATE -fPIE)
-corrosion_link_libraries(bin1 cpp-lib4)
-corrosion_link_libraries(bin2 cpp-lib4)
-corrosion_link_libraries(bin3 cpp-lib4)
+set_tests_properties("multitarget_run_bin1" PROPERTIES PASS_REGULAR_EXPRESSION
+        "Hello, world!\r?\nHello, bin1! I'm Cpp!"
+        )
+
+set_tests_properties("multitarget_run_bin2" PROPERTIES PASS_REGULAR_EXPRESSION
+        "Hello, world!\r?\nHello, bin2! I'm Cpp!"
+        )
+
+set_tests_properties("multitarget_run_bin3" PROPERTIES PASS_REGULAR_EXPRESSION
+        "Hello, world!\r?\nHello, bin3! I'm Cpp!"
+        )
