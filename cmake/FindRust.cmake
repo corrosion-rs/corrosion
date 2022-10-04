@@ -27,6 +27,42 @@ macro(_findrust_failed)
     return()
 endmacro()
 
+# Checks if the actual version of a Rust toolchain matches the VERSION requirements specified in find_package.
+function(_findrust_version_ok ACTUAL_VERSION OUT_IS_OK)
+    if(DEFINED Rust_FIND_VERSION_RANGE)
+        if(Rust_FIND_VERSION_RANGE_MAX STREQUAL "INCLUDE")
+            set(COMPARSION_OPERATOR "VERSION_LESS_EQUAL")
+        elseif(Rust_FIND_VERSION_RANGE_MAX STREQUAL "EXCLUDE")
+            set(COMPARSION_OPERATOR "VERSION_LESS")
+        else()
+            message(FATAL_ERROR "Unexpected value in `<PackageName>_FIND_VERSION_RANGE_MAX`: "
+                    "`${Rust_FIND_VERSION_RANGE_MAX}`.")
+        endif()
+        if(("${ACTUAL_VERSION}" VERSION_GREATER_EQUAL "${Rust_FIND_VERSION_RANGE_MIN}")
+                AND
+            ( "${ACTUAL_VERSION}" ${COMPARSION_OPERATOR} "${Rust_FIND_VERSION_RANGE_MAX}" )
+        )
+            set("${OUT_IS_OK}" TRUE PARENT_SCOPE)
+        else()
+            set("${OUT_IS_OK}" FALSE PARENT_SCOPE)
+        endif()
+    elseif(DEFINED Rust_FIND_VERSION)
+        if(Rust_VERSION_EXACT)
+            set(COMPARISON_OPERATOR VERSION_EQUAL)
+        else()
+            set(COMPARISON_OPERATOR VERSION_GREATER_EQUAL)
+        endif()
+        if(_TOOLCHAIN_${_TOOLCHAIN_SELECTED}_VERSION "${COMPARISON_OPERATOR}" Rust_FIND_VERSION)
+            set("${OUT_IS_OK}" TRUE PARENT_SCOPE)
+        else()
+            set("${OUT_IS_OK}" FALSE PARENT_SCOPE)
+        endif()
+    else()
+        # if no VERSION requirement was specified, the version is always okay.
+        set("${OUT_IS_OK}" TRUE PARENT_SCOPE)
+    endif()
+endfunction()
+
 if (NOT "${Rust_TOOLCHAIN}" STREQUAL "$CACHE{Rust_TOOLCHAIN}")
     # Promote Rust_TOOLCHAIN to a cache variable if it is not already a cache variable
     set(Rust_TOOLCHAIN ${Rust_TOOLCHAIN} CACHE STRING "Requested rustup toolchain" FORCE)
@@ -140,7 +176,7 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     foreach(_TOOLCHAIN_RAW ${_TOOLCHAINS_RAW})
         if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t\r\n]?(\\(default\\) \\(override\\)|\\(default\\)|\\(override\\))?[ \t\r\n]+(.+)")
             set(_TOOLCHAIN "${CMAKE_MATCH_1}")
-            set(_TOOLCHAIN_TYPE ${CMAKE_MATCH_2})
+            set(_TOOLCHAIN_TYPE "${CMAKE_MATCH_2}")
             list(APPEND _DISCOVERED_TOOLCHAINS "${_TOOLCHAIN}")
 
             set(${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
@@ -152,20 +188,59 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
             if (_TOOLCHAIN_TYPE MATCHES ".*\\(override\\).*")
                 set(_TOOLCHAIN_OVERRIDE "${_TOOLCHAIN}")
             endif()
+
+            execute_process(
+                    COMMAND
+                    "${_TOOLCHAIN}/bin/rustc" --version
+                    OUTPUT_VARIABLE _TOOLCHAIN_RAW_VERSION
+            )
+            if (_TOOLCHAIN_RAW_VERSION MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?")
+                # todo: maybe needs to be advanced cache variable...
+                set(_TOOLCHAIN_${_TOOLCHAIN}_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
+                if(CMAKE_MATCH_4)
+                    set(_TOOLCHAIN_${_TOOLCHAIN}_IS_NIGHTLY "TRUE")
+                else()
+                    set(_TOOLCHAIN_${_TOOLCHAIN}_IS_NIGHTLY "FALSE")
+                endif()
+            endif()
+
         else()
             message(WARNING "Didn't recognize toolchain: ${_TOOLCHAIN_RAW}")
         endif()
     endforeach()
 
+    # Rust_TOOLCHAIN is preferred over a requested version if it is set.
     if (NOT DEFINED Rust_TOOLCHAIN)
         if (NOT DEFINED _TOOLCHAIN_OVERRIDE)
             set(_TOOLCHAIN_SELECTED "${_TOOLCHAIN_DEFAULT}")
         else()
             set(_TOOLCHAIN_SELECTED "${_TOOLCHAIN_OVERRIDE}")
         endif()
+        # Check default toolchain first.
+        _findrust_version_ok("_TOOLCHAIN_${_TOOLCHAIN_SELECTED}_VERSION" _VERSION_OK)
+        if(NOT "${_VERSION_OK}")
+            foreach(_TOOLCHAIN "${_DISCOVERED_TOOLCHAINS}")
+                _findrust_version_ok("_TOOLCHAIN_${_TOOLCHAIN}_VERSION" _VERSION_OK)
+                if("${_VERSION_OK}")
+                    set(_TOOLCHAIN_SELECTED "${_TOOLCHAIN}")
+                    break()
+                endif()
+            endforeach()
+            # Check if we found a suitable version in the for loop.
+            if(NOT "${_VERSION_OK}")
+                string(REPLACE ";" "\n" _DISCOVERED_TOOLCHAINS "${_DISCOVERED_TOOLCHAINS}")
+                _findrust_failed("Failed to find a Rust toolchain matching the version requirements of "
+                        "${Rust_FIND_VERSION}. Available toolchains: ${_DISCOVERED_TOOLCHAINS}")
+            endif()
+        endif()
     endif()
+
     set(Rust_TOOLCHAIN "${_TOOLCHAIN_SELECTED}" CACHE STRING "The rustup toolchain to use")
-    message(STATUS "Rust Toolchain: ${Rust_TOOLCHAIN}")
+    set_property(CACHE Rust_TOOLCHAIN PROPERTY STRINGS "${_DISCOVERED_TOOLCHAINS}")
+
+    if(NOT Rust_FIND_QUIETLY)
+        message(STATUS "Rust Toolchain: ${Rust_TOOLCHAIN}")
+    endif()
 
     if (NOT Rust_TOOLCHAIN IN_LIST _DISCOVERED_TOOLCHAINS)
         # If the precise toolchain wasn't found, try appending the default host
@@ -214,7 +289,8 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
             NO_DEFAULT_PATH)
 else()
     find_program(Rust_COMPILER_CACHED rustc)
-    if (Rust_COMPILER_CACHED)
+    if (EXISTS "${Rust_COMPILER_CACHED}")
+        # rustc is expected to be at `<toolchain_path>/bin/rustc`.
         get_filename_component(_RUST_TOOLCHAIN_PATH "${Rust_COMPILER_CACHED}" DIRECTORY)
         get_filename_component(_RUST_TOOLCHAIN_PATH "${_RUST_TOOLCHAIN_PATH}" DIRECTORY)
     endif()
@@ -245,6 +321,7 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     if(NOT EXISTS "${Rust_CARGO_CACHED}")
         _findrust_failed(${_NOT_FOUND_MESSAGE})
     endif()
+    set(Rust_TOOLCHAIN_IS_RUSTUP_MANAGED TRUE CACHE INTERNAL "" FORCE)
 else()
     set(_NOT_FOUND_MESSAGE "Failed to find `cargo` in PATH and `${_RUST_TOOLCHAIN_PATH}/bin`.\n"
         "Please ensure cargo is in PATH or manually specify the path to a compatible `cargo` by "
