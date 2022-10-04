@@ -48,6 +48,29 @@ endif()
 
 find_package(Rust REQUIRED)
 
+if(Rust_TOOLCHAIN_IS_RUSTUP_MANAGED)
+    execute_process(COMMAND rustup target list --toolchain "${Rust_TOOLCHAIN}"
+            OUTPUT_VARIABLE AVAILABLE_TARGETS_RAW
+    )
+    string(REPLACE "\n" ";" AVAILABLE_TARGETS_RAW "${AVAILABLE_TARGETS_RAW}")
+    string(REPLACE " (installed)" "" "AVAILABLE_TARGETS" "${AVAILABLE_TARGETS_RAW}")
+    set(INSTALLED_TARGETS_RAW "${AVAILABLE_TARGETS_RAW}")
+    list(FILTER INSTALLED_TARGETS_RAW INCLUDE REGEX " \\(installed\\)")
+    string(REPLACE " (installed)" "" "INSTALLED_TARGETS" "${INSTALLED_TARGETS_RAW}")
+    list(TRANSFORM INSTALLED_TARGETS STRIP)
+    if("${Rust_CARGO_TARGET}" IN_LIST AVAILABLE_TARGETS)
+        message(DEBUG "Cargo target ${Rust_CARGO_TARGET} is an official target-triple")
+        message(DEBUG "Installed targets: ${INSTALLED_TARGETS}")
+        if(NOT ("${Rust_CARGO_TARGET}" IN_LIST INSTALLED_TARGETS))
+            message(FATAL_ERROR "Target ${Rust_CARGO_TARGET} is not installed for toolchain ${Rust_TOOLCHAIN}.\n"
+                    "Help: Run `rustup target add --toolchain ${Rust_TOOLCHAIN} ${Rust_CARGO_TARGET}` to install "
+                    "the missing target."
+            )
+        endif()
+    endif()
+
+endif()
+
 if (NOT TARGET Corrosion::Generator)
     message(STATUS "Using Corrosion as a subdirectory")
 endif()
