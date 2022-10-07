@@ -626,15 +626,8 @@ function(_add_cargo_build)
         # on the target.
         list(APPEND corrosion_cc_rs_flags "CC_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_C_COMPILER}")
     endif()
-    if(DEFINED ENV{CC})
-        # HOST_CC has a lower priority then CC_<target_triple> for cc-rs.
-        list(APPEND corrosion_cc_rs_flags "HOST_CC=$ENV{CC}")
-    endif()
     if(CMAKE_CXX_COMPILER AND _CORROSION_RUST_CARGO_TARGET_UNDERSCORE)
         list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_CXX_COMPILER}")
-    endif()
-    if(DEFINED ENV{CXX})
-        list(APPEND corrosion_cc_rs_flags "HOST_CXX=$ENV{CXX}")
     endif()
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
     # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
