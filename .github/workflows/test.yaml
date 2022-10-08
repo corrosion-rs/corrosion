@@ -35,6 +35,7 @@ jobs:
           - 3.19.0
         rust:
           - 1.46.0 # MSRV Minimum supported rust version
+          - 1.54.0 # MSRV macos-12
           - stable
           - nightly
         generator:
@@ -81,6 +82,14 @@ jobs:
           - os: macos-12
             abi: gnu
 
+          # Rust:
+          - rust: 1.46.0
+            os: macos-12
+          - rust: 1.54.0
+            os: windows-2019
+          - rust: 1.54.0
+            os: ubuntu-latest
+
     steps:
       - name: Determine Rust OS
         id: determine_rust_os
@@ -122,10 +131,6 @@ jobs:
           elif [ "${{ matrix.abi }}" == "default" ]; then
             echo "::set-output name=generator::"
           fi
-      - name: CMake Build Flags
-        id: cmake_build_flags
-        run: |
-          echo "::set-output name=cmake_build_flags::--verbose"
       - name: Arch Flags
         id: arch_flags
         run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
@@ -188,9 +193,6 @@ jobs:
       - name: Run Tests
         run: |
           cd build
-          cmake \
-            --build . ${{steps.cmake_build_flags.outputs.cmake_build_flags}} \
-            --target test-install
           ctest --verbose --build-config Debug
 
   install:
@@ -203,6 +205,10 @@ jobs:
           - windows-2019
           - ubuntu-latest
           - macos-12
+        include:
+          - rust: 1.46.0
+          - os: macos-12
+            rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
     steps:
       - uses: actions/checkout@v2
       - name: Install CMake
@@ -213,7 +219,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.46.0
+          toolchain: ${{matrix.rust}}
           default: true
       - name: CMake Version
         run: cmake --version
