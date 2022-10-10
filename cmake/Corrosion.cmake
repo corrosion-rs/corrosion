@@ -232,7 +232,7 @@ function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names
                         COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
                         COMMAND
                         ${CMAKE_COMMAND} -E copy_if_different
-                            # todo: test if this works with both multiple files and paths with spaces
+                            # tested to work with both multiple files and paths with spaces
                             ${src_file_names}
                             "${output_dir}"
                         BYPRODUCTS ${dst_file_names}
@@ -299,7 +299,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
                         COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
                         COMMAND
                         ${CMAKE_COMMAND} -E copy_if_different
-                            # todo: test if this works with both multiple files and paths with spaces
+                            # tested to work with both multiple files and paths with spaces
                             ${src_file_names}
                             "${output_dir}"
                         BYPRODUCTS ${dst_file_names}
