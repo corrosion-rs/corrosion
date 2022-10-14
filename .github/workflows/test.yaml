@@ -37,10 +37,30 @@ jobs:
           - 1.46.0 # MSRV Minimum supported rust version
           - 1.54.0 # MSRV macos-12
           - stable
-          - nightly
         generator:
           - default # This is just whatever the platform default is
           - ninja
+
+        include:
+          - rust: nightly
+            cmake: 3.19.0
+            generator: ninja
+            arch: x86_64
+            abi: msvc
+            os: windows-2019
+          - rust: nightly
+            cmake: 3.19.0
+            generator: ninja
+            arch: x86_64
+            abi: gnu
+            os: ubuntu-latest
+          - rust: nightly
+            cmake: 3.19.0
+            generator: ninja
+            arch: x86_64
+            abi: darwin
+            os: macos-12
+
         exclude:
 
           # You cannot build with GNU using Visual Studio on Windows
