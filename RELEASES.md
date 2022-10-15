@@ -30,11 +30,25 @@
   The linker can be selected via `corrosion_set_linker(target_name linker)`.
   Please note that this only has an effect for targets, where the final linker invocation is done
   by cargo, i.e. targets where foreign code is linked into rust code and not the other way around.
+- Corrosion now respects the CMake OUTPUT_DIRECTORY target properties and copies build artifacts to the expected
+  locations ([217](https://github.com/corrosion-rs/corrosion/pull/217)), if the properties are set.
+  This feature requires at least CMake 3.19 and is enabled by default if supported. Please note that the `OUTPUT_NAME`
+  target properties are currently not supported.
+  Specifically, the following target properties are now respected:
+  -   [ARCHIVE_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/ARCHIVE_OUTPUT_DIRECTORY.html)
+  -   [LIBRARY_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/LIBRARY_OUTPUT_DIRECTORY.html)
+  -   [RUNTIME_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html)
+  -   [PDB_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/PDB_OUTPUT_DIRECTORY.html)
 
 ## Fixes
 
 - Fix a CMake developer Warning when a Multi-Config Generator and Rust executable targets
   ([#213](https://github.com/corrosion-rs/corrosion/pull/213)).
+
+## Deprecation notice
+
+- Support for the MSVC Generators with CMake toolchains before 3.20 is deprecated and will be removed in the next
+  release (v0.4). All other Multi-config Generators already require CMake 3.20.
 
 # 0.2.2 (2022-09-01)
 
