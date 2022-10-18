@@ -340,16 +340,6 @@ else()
     endif()
 endif()
 
-set(CARGO_RUST_FLAGS "" CACHE STRING "Flags to pass to rustc")
-set(CARGO_RUST_FLAGS_DEBUG "" CACHE STRING
-    "Flags to pass to rustc in Debug Configuration")
-set(CARGO_RUST_FLAGS_RELEASE "" CACHE STRING
-    "Flags to pass to rustc in Release Configuration")
-set(CARGO_RUST_FLAGS_MINSIZEREL -C opt-level=z CACHE STRING
-    "Flags to pass to rustc in MinSizeRel Configuration")
-set(CARGO_RUST_FLAGS_RELWITHDEBINFO -g CACHE STRING
-    "Flags to pass to rustc in RelWithDebInfo Configuration")
-
 execute_process(
     COMMAND "${Rust_CARGO_CACHED}" --version --verbose
     OUTPUT_VARIABLE _CARGO_VERSION_RAW
