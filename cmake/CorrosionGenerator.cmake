@@ -55,6 +55,21 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
             list(APPEND kinds ${kind})
         endforeach()
 
+        if(TARGET "${target_name}"
+            AND ("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "bin" IN_LIST kinds)
+            )
+            message(WARNING "Failed to import Rust crate ${target_name} (kind: `${target_kind}`) because a target "
+                "with the same name already exists. Skipping this target.\n"
+                "Help: If you are importing a package which exposes both a `lib` and "
+                "a `bin` target, please consider explicitly naming the targets in your `Cargo.toml` manifest.\n"
+                "Note: If you have multiple different packages which have targets with the same name, please note that "
+                "this is currently not supported by Corrosion. Feel free to open an issue on Github to request "
+                "supporting this scenario."
+                )
+            # Skip this target to prevent a hard error.
+            continue()
+        endif()
+
         if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds)
             if("staticlib" IN_LIST kinds)
                 set(has_staticlib TRUE)
