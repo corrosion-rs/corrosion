@@ -17,3 +17,10 @@ set_target_properties(rust_lib
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/custom_lib"
         PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/custom_lib_pdb"
 )
+
+add_custom_command(TARGET cargo-build_rust_bin POST_BUILD
+    COMMAND
+    ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/another_dir"
+    COMMAND
+    ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_PROPERTY:rust_bin,LOCATION>" "${CMAKE_CURRENT_BINARY_DIR}/another_dir/moved_bin"
+    )

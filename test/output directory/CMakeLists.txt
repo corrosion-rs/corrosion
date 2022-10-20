@@ -117,3 +117,10 @@ if(WIN32)
         set_tests_properties("output_directory_bin_pdb" PROPERTIES FIXTURES_REQUIRED "output_directory_build")
     endif()
 endif()
+
+add_test(NAME postbuild_custom_command
+    COMMAND
+    "${CMAKE_COMMAND}"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/build/another_dir/moved_bin"
+    )
