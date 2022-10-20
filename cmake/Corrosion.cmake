@@ -227,7 +227,7 @@ function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names
     list(TRANSFORM file_names PREPEND "${cargo_build_dir}/" OUTPUT_VARIABLE src_file_names)
     list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
-    add_custom_command(TARGET cargo-build_${target_name}
+    add_custom_command(TARGET _cargo-build_${target_name}
                         POST_BUILD
                         COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
                         COMMAND
@@ -293,7 +293,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
     list(TRANSFORM file_names PREPEND "${cargo_build_dir}/" OUTPUT_VARIABLE src_file_names)
     list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
-    add_custom_command(TARGET cargo-build_${target_name}
+    add_custom_command(TARGET _cargo-build_${target_name}
                         POST_BUILD
                         # output_dir may contain a Generator expression.
                         COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
@@ -929,8 +929,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     message(DEBUG "TARGET ${target_name} produces byproducts ${byproducts}")
 
     add_custom_target(
-        cargo-build_${target_name}
-        ALL
+        _cargo-build_${target_name}
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
@@ -975,6 +974,25 @@ function(_add_cargo_build out_cargo_build_out_dir)
         COMMAND_EXPAND_LISTS
         VERBATIM
     )
+
+    # User exposed custom target, that depends on the internal target.
+    # Corrosion post build steps are added on the internal target, which
+    # ensures that they run before any user defined post build steps on this
+    # target.
+    add_custom_target(
+        cargo-build_${target_name}
+        ALL
+    )
+    add_dependencies(cargo-build_${target_name} _cargo-build_${target_name})
+
+    # Add custom target before actual build that user defined custom commands (e.g. code generators) can
+    # use as a hook to do something before the build. This mainly exists to not expose the `_cargo-build` targets.
+    add_custom_target(cargo-prebuild_${target_name})
+    add_dependencies(_cargo-build_${target_name} cargo-prebuild_${target_name})
+    if(NOT TARGET cargo-prebuild)
+        add_custom_target(cargo-prebuild)
+    endif()
+    add_dependencies(cargo-prebuild cargo-prebuild_${target_name})
 
     add_custom_target(
         cargo-clean_${target_name}
@@ -1087,7 +1105,7 @@ function(corrosion_set_linker_language target_name language)
     message(DEPRECATION "corrosion_set_linker_language is deprecated."
             "Please use corrosion_set_linker and set a specific linker.")
     set_property(
-        TARGET cargo-build_${target_name}
+        TARGET _cargo-build_${target_name}
         PROPERTY LINKER_LANGUAGE ${language}
     )
 endfunction()
@@ -1201,10 +1219,10 @@ function(cargo_link_libraries)
 endfunction(cargo_link_libraries)
 
 function(corrosion_link_libraries target_name)
-    add_dependencies(cargo-build_${target_name} ${ARGN})
+    add_dependencies(_cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
         set_property(
-            TARGET cargo-build_${target_name}
+            TARGET _cargo-build_${target_name}
             APPEND
             PROPERTY CARGO_DEPS_LINKER_LANGUAGES
             $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
