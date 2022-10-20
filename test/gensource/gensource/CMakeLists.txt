@@ -14,4 +14,4 @@ add_custom_target(after_generation DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/foo.
 add_custom_target(genexdebug COMMAND ${CMAKE_COMMAND} -E echo "Config DEBUG: $<TARGET_PROPERTY:srcgen,IMPORTED_LOCATION_DEBUG> Config Release: $<TARGET_PROPERTY:srcgen,IMPORTED_LOCATION_RELEASE> IMPORTED_LOCATION: $<TARGET_PROPERTY:srcgen,IMPORTED_LOCATION>")
 
 corrosion_import_crate(MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml)
-add_dependencies(cargo-build_generated after_generation)
+add_dependencies(cargo-prebuild_generated after_generation)
