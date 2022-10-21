@@ -2,8 +2,9 @@
 
 ## Breaking
 
-- The minimum supported rust version was increased to 1.46, due to a cargo issue that recently
-  surfaced on CI when using crates.io.
+- The minimum supported rust version (MSRV) was increased to 1.46, due to a cargo issue that recently
+  surfaced on CI when using crates.io. Please also note that on MacOS 12 at least Rust 1.54 is required.
+- MacOS 10 and 11 are no longer officially supported and untested in CI.
 - Increase the minimum required CMake version to 3.15 (may be bumped to 3.16 before the next release).
 
 ### Breaking: Removed previously deprecated functionality
@@ -12,6 +13,11 @@
 - Removed experimental CMake option `CORROSION_EXPERIMENTAL_PARSER`. This option was never included in an official
   release and has been marked as deprecated on the master branch since May 22.
   The corresponding stable option is `CORROSION_NATIVE_TOOLING` albeit with inverted semantics.
+- Previously Corrosion would set the `HOST_CC` and `HOST_CXX` environment variables when invoking 
+  cargo build, if the environment variables `CC` and `CXX` outside of CMake where set.
+  However this did not work as expected in all cases and sometimes the `HOST_CC` variable would be set
+  to a cross-compiler for unknown reasons. For this reason `HOST_CC` and `HOST_CXX` are not set by
+  corrosion anymore, but users can still set them manually if required via `corrosion_set_env_vars()`.
 
 ## Potentially breaking
 
@@ -24,6 +30,11 @@
   For example setting a `cfg` option previously required double escaping the rustflag like this
   `"--cfg=something=\\\"value\\\""`, but now it can be passed to corrosion without any escapes:
   `--cfg=something="value"`.
+- Adding a `PRE_BUILD` custom command on a `cargo-build_<target_name>` CMake target will no
+  longer work as expected. To support executing user defined commands before cargo build is 
+  invoked users should use the newly added targets `cargo-prebuild` (before all cargo build invocations)
+  or `cargo-prebuild_<target_name>` as a dependency target.
+  Example: `add_dependencies(cargo-prebuild code_generator_target)`
 
 ## New features
 
@@ -46,6 +57,9 @@
   -   [LIBRARY_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/LIBRARY_OUTPUT_DIRECTORY.html)
   -   [RUNTIME_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html)
   -   [PDB_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/PDB_OUTPUT_DIRECTORY.html)
+- Corrosion now supports packages with potentially multiple binaries (bins) and a library (lib) at the
+  same time. The only requirement is that the names of all `bin`s and `lib`s in the whole project must be unique.
+  Users can set the names in the `Cargo.toml` by adding `name = <unique_name>` in the `[[bin]]` and `[lib]` tables.
 
 ## Fixes
 
@@ -56,6 +70,13 @@
 
 - Support for the MSVC Generators with CMake toolchains before 3.20 is deprecated and will be removed in the next
   release (v0.4). All other Multi-config Generators already require CMake 3.20.
+
+## Internal Changes
+
+- The CMake Generator written in Rust and `CorrosionGenerator.cmake` which are responsible for parsing 
+  `cargo metadata` output to create corresponding CMake targets for all Rust targets now share most code.
+  This greatly simplified the CMake generator written in Rust and makes it much easier maintaining and adding
+  new features regardless of how `cargo metadata` is parsed.
 
 # 0.2.2 (2022-09-01)
 
