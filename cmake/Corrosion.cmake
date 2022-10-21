@@ -21,26 +21,10 @@ set(CORROSION_RESPECT_OUTPUT_DIRECTORY_DESCRIPTION
     `RUNTIME_OUTPUT_DIRECTORY`. This requires CMake >= 3.19, otherwise this option is forced off."
 )
 
-set(CORROSION_NATIVE_TOOLING_DEFAULT OFF)
-# `CORROSION_EXPERIMENTAL_PARSER` was not part of a tagged release, but we still provide a
-# deprecation notice for users that directly use corrosion on the master branch and may have set
-# this option.
-if(DEFINED CORROSION_EXPERIMENTAL_PARSER)
-    message(DEPRECATION "The experimental option `CORROSION_EXPERIMENTAL_PARSER` is now deprecated."
-                " Please use `CORROSION_NATIVE_TOOLING` instead (with inverted semantics)."
-                " This warning will be removed in version 0.3 and the variable silently ignored."
-    )
-    if(CORROSION_EXPERIMENTAL_PARSER)
-        set(CORROSION_NATIVE_TOOLING_DEFAULT OFF)
-    else()
-        set(CORROSION_NATIVE_TOOLING_DEFAULT ON)
-    endif()
-endif()
-
 option(
     CORROSION_NATIVE_TOOLING
     "${CORROSION_NATIVE_TOOLING_DESCRIPTION}"
-    ${CORROSION_NATIVE_TOOLING_DEFAULT}
+    OFF
 )
 
 option(CORROSION_RESPECT_OUTPUT_DIRECTORY
@@ -1095,12 +1079,6 @@ function(corrosion_import_crate)
     endif()
 endfunction(corrosion_import_crate)
 
-function(add_crate path_to_toml)
-    message(DEPRECATION "add_crate is deprecated. Switch to corrosion_import_crate.")
-
-    corrosion_import_crate(MANIFEST_PATH ${path_to_toml})
-endfunction(add_crate)
-
 function(corrosion_set_linker_language target_name language)
     message(DEPRECATION "corrosion_set_linker_language is deprecated."
             "Please use corrosion_set_linker and set a specific linker.")
@@ -1211,12 +1189,6 @@ function(corrosion_set_features target_name)
         )
     endif()
 endfunction()
-
-function(cargo_link_libraries)
-    message(DEPRECATION "cargo_link_libraries is deprecated. Switch to corrosion_link_libraries.")
-
-    corrosion_link_libraries(${ARGN})
-endfunction(cargo_link_libraries)
 
 function(corrosion_link_libraries target_name)
     add_dependencies(_cargo-build_${target_name} ${ARGN})

@@ -6,6 +6,13 @@
   surfaced on CI when using crates.io.
 - Increase the minimum required CMake version to 3.15 (may be bumped to 3.16 before the next release).
 
+### Breaking: Removed previously deprecated functionality
+- Removed `add_crate()` function. Use `corrosio_import_crate` instead.
+- Removed `cargo_link_libraries()` function. Use `corrosion_link_libraries()` instead.
+- Removed experimental CMake option `CORROSION_EXPERIMENTAL_PARSER`. This option was never included in an official
+  release and has been marked as deprecated on the master branch since May 22.
+  The corresponding stable option is `CORROSION_NATIVE_TOOLING` albeit with inverted semantics.
+
 ## Potentially breaking
 
 - The working directory when invoking `cargo build` was changed to the directory of the Manifest
