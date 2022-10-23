@@ -18,6 +18,8 @@
   However this did not work as expected in all cases and sometimes the `HOST_CC` variable would be set
   to a cross-compiler for unknown reasons. For this reason `HOST_CC` and `HOST_CXX` are not set by
   corrosion anymore, but users can still set them manually if required via `corrosion_set_env_vars()`.
+- The `CARGO_RUST_FLAGS` family of cache variables were removed. Corrosion does not internally use them
+  anymore.
 
 ## Potentially breaking
 
@@ -60,11 +62,16 @@
 - Corrosion now supports packages with potentially multiple binaries (bins) and a library (lib) at the
   same time. The only requirement is that the names of all `bin`s and `lib`s in the whole project must be unique.
   Users can set the names in the `Cargo.toml` by adding `name = <unique_name>` in the `[[bin]]` and `[lib]` tables.
+- FindRust now has improved support for the `VERSION` option of `find_package` and will now attempt to find a matching
+  toolchain version. Previously it was only checked if the default toolchain matched to required version.
+- For rustup managed toolchains a CMake error is issued with a helpful message if the required target for
+  the selected toolchain is not installed.
 
 ## Fixes
 
 - Fix a CMake developer Warning when a Multi-Config Generator and Rust executable targets
   ([#213](https://github.com/corrosion-rs/corrosion/pull/213)).
+- FindRust now respects the `QUIET` option to `find_package()` in most cases.
 
 ## Deprecation notice
 
