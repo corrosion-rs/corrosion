@@ -45,7 +45,7 @@ add_test(NAME output_directory_bin
         -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/build/custom_bin/${bin_name}"
 )
-set_tests_properties("output_directory_bin" PROPERTIES FIXTURES_REQUIRED "output_directory_build")
+set_tests_properties("output_directory_bin" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
 set(lib_name "rust_lib")
 
@@ -61,7 +61,7 @@ add_test(NAME output_directory_staticlib
         -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/build/custom_archive/${static_lib_name}"
 )
-set_tests_properties("output_directory_staticlib" PROPERTIES FIXTURES_REQUIRED "output_directory_build")
+set_tests_properties("output_directory_staticlib" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
 if(WIN32)
     set(dynamic_lib_name "${lib_name}.dll")
@@ -77,7 +77,7 @@ add_test(NAME output_directory_cdylib
         -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/build/custom_lib/${dynamic_lib_name}"
 )
-set_tests_properties("output_directory_cdylib" PROPERTIES FIXTURES_REQUIRED "output_directory_build")
+set_tests_properties("output_directory_cdylib" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
 if(WIN32)
     if(MSVC)
@@ -95,7 +95,7 @@ if(WIN32)
         # https://cmake.org/cmake/help/v3.25/manual/cmake-buildsystem.7.html#archive-output-artifacts
         "${CMAKE_CURRENT_BINARY_DIR}/build/custom_archive/${implib_name}"
         )
-    set_tests_properties("output_directory_implib" PROPERTIES FIXTURES_REQUIRED "output_directory_build")
+    set_tests_properties("output_directory_implib" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
     if(MSVC)
         set(lib_pdb_name "${lib_name}.pdb")
@@ -105,7 +105,7 @@ if(WIN32)
             -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
             "${CMAKE_CURRENT_BINARY_DIR}/build/custom_lib_pdb/${lib_pdb_name}"
             )
-        set_tests_properties("output_directory_cdylib_pdb" PROPERTIES FIXTURES_REQUIRED "output_directory_build")
+        set_tests_properties("output_directory_cdylib_pdb" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
         set(bin_pdb_name "rust_bin.pdb")
         add_test(NAME output_directory_bin_pdb
@@ -114,7 +114,7 @@ if(WIN32)
             -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
             "${CMAKE_CURRENT_BINARY_DIR}/build/custom_bin_pdb/${bin_pdb_name}"
             )
-        set_tests_properties("output_directory_bin_pdb" PROPERTIES FIXTURES_REQUIRED "output_directory_build")
+        set_tests_properties("output_directory_bin_pdb" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
     endif()
 endif()
 
@@ -124,3 +124,4 @@ add_test(NAME postbuild_custom_command
     -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/build/another_dir/moved_bin"
     )
+set_tests_properties("postbuild_custom_command" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
