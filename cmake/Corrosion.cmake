@@ -123,12 +123,21 @@ endfunction()
 # directory target property value at configure time. This function must be deferred to the end of
 # the configure stage, so we can be sure that the output directory is not modified afterwards.
 function(_corrosion_set_imported_location_deferred target_name base_property output_directory_property filename)
-    get_target_property(output_directory ${target_name} "${output_directory_property}")
+    # The output directory property is expected to be set on the exposed target (without postfix),
+    # but we need to set the imported location on the actual library target with postfix.
+    if("${target_name}" MATCHES "^([^-]+)-(static|shared)$")
+        set(output_dir_prop_target_name "${CMAKE_MATCH_1}")
+    else()
+        set(output_dir_prop_target_name "${target_name}")
+    endif()
+
+    get_target_property(output_directory "${output_dir_prop_target_name}" "${output_directory_property}")
+    message(DEBUG "Output directory property (target ${output_dir_prop_target_name}): ${output_directory_property} dir: ${output_directory}")
 
     if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
         foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
             string(TOUPPER "${config_type}" config_type_upper)
-            get_target_property(output_dir_curr_config ${target_name}
+            get_target_property(output_dir_curr_config "${output_dir_prop_target_name}"
                 "${output_directory_property}_${config_type_upper}"
             )
             if(output_dir_curr_config)
