@@ -155,14 +155,14 @@ jobs:
         shell: bash
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
-            echo "::set-output name=os::pc-windows"
-            echo "::set-output name=host_abi::msvc"
+            echo "os=pc-windows" >> $GITHUB_OUTPUT
+            echo "host_abi=msvc" >> $GITHUB_OUTPUT
           elif [ "${{ runner.os }}" == "Linux" ]; then
-            echo "::set-output name=os::unknown-linux"
-            echo "::set-output name=host_abi::gnu"
+            echo "os=unknown-linux" >> $GITHUB_OUTPUT
+            echo "host_abi=gnu" >> $GITHUB_OUTPUT
           elif [ "${{ runner.os }}" == "macOS" ]; then
-            echo "::set-output name=os::apple"
-            echo "::set-output name=host_abi::darwin"
+            echo "os=apple" >> $GITHUB_OUTPUT
+            echo "host_abi=darwin" >> $GITHUB_OUTPUT
           fi
       - name: Pick Compiler
         id: pick_compiler
@@ -170,30 +170,29 @@ jobs:
         run: |
           if [ "${{ matrix.abi }}" == "gnu" ]; then
             if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-              echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=${{matrix.arch}}-linux-gnu-gcc"
-              echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++"
-              echo "::set-output name=system_name::-DCMAKE_SYSTEM_NAME=Linux"
+              echo "c_compiler=-DCMAKE_C_COMPILER=${{matrix.arch}}-linux-gnu-gcc" >> $GITHUB_OUTPUT
+              echo "cxx_compiler=-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++" >> $GITHUB_OUTPUT
+              # todo: only set this when cross-compiling
+              echo "system_name=-DCMAKE_SYSTEM_NAME=Linux" >> $GITHUB_OUTPUT
             else
-              echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=gcc"
-              echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=g++"
+              echo "c_compiler=-DCMAKE_C_COMPILER=gcc" >> $GITHUB_OUTPUT
+              echo "cxx_compiler=-DCMAKE_CXX_COMPILER=g++" >> $GITHUB_OUTPUT
             fi
           elif [ "${{ matrix.abi }}" == "darwin" ]; then
-            echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=clang"
-            echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=clang++"
+            echo "c_compiler=-DCMAKE_C_COMPILER=clang" >> $GITHUB_OUTPUT
+            echo "cxx_compiler=-DCMAKE_CXX_COMPILER=clang++" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.abi }}" == "msvc" ]; then
-            echo "::set-output name=c_compiler::-DCMAKE_C_COMPILER=cl"
-            echo "::set-output name=cxx_compiler::-DCMAKE_CXX_COMPILER=cl"
+            echo "c_compiler=-DCMAKE_C_COMPILER=cl" >> $GITHUB_OUTPUT
+            echo "cxx_compiler=-DCMAKE_CXX_COMPILER=cl" >> $GITHUB_OUTPUT
           fi
       - name: Pick Generator
         id: pick_generator
         shell: bash
         run: |
           if [ "${{ matrix.generator }}" == "ninja" ]; then
-            echo "::set-output name=generator::-GNinja"
+            echo "generator=-GNinja" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.generator }}" == "ninja-multiconfig" ];then
-            echo "::set-output name=generator::-GNinja Multi-Config"
-          elif [ "${{ matrix.abi }}" == "default" ]; then
-            echo "::set-output name=generator::"
+            echo "generator=-GNinja Multi-Config" >> $GITHUB_OUTPUT
           fi
       - name: Arch Flags
         id: arch_flags
@@ -202,21 +201,22 @@ jobs:
           if [ "${{ runner.os }}" == "Windows" ]; then
             if [ "${{matrix.generator}}" == "default" ]; then
               if [ "${{ matrix.arch }}" == "x86_64" ]; then
-                echo "::set-output name=msvc::amd64"
-                echo "::set-output name=cmake::-Ax64"
+                echo "msvc=amd64" >> $GITHUB_OUTPUT
+                echo "cmake=-Ax64" >> $GITHUB_OUTPUT
               elif [ "${{ matrix.arch }}" == "i686" ]; then
-                echo "::set-output name=msvc::amd64_x86"
-                echo "::set-output name=cmake::-AWin32"
+                echo "msvc=amd64_x86" >> $GITHUB_OUTPUT
+                echo "cmake=-AWin32" >> $GITHUB_OUTPUT
               elif [ "${{ matrix.arch }}" == "aarch64" ]; then
-                echo "::set-output name=msvc::amd64_arm64"
-                echo "::set-output name=cmake::-AARM64"
+                echo "msvc=amd64_arm64" >> $GITHUB_OUTPUT
+                echo "cmake=-AARM64" >> $GITHUB_OUTPUT
               fi
             elif [ "${{matrix.generator}}" == "ninja" ]; then
               # We don't do cross-compiling builds with Ninja
-              echo "::set-output name=msvc::amd64"
+              # Todo: Why not (cross-compile)?
+              echo "msvc=amd64" >> $GITHUB_OUTPUT
             fi
           elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            echo "::set-output name=cmake::-DRust_CARGO_TARGET=${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}"
+            echo "cmake=-DRust_CARGO_TARGET=${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}" >> $GITHUB_OUTPUT
           fi
       - name: Setup MSVC Development Environment
         uses: ilammy/msvc-dev-cmd@v1
