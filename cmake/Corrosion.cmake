@@ -1482,9 +1482,8 @@ function(corrosion_add_cxxbridge cxx_target)
         set(rust_source_path ${CMAKE_CURRENT_LIST_DIR}/${crate_path}/src/${filepath})
 
         add_custom_command(
-            OUTPUT
-                ${header_placement_dir}/${cxx_header}
-                ${source_placement_dir}/${cxx_source}
+            TARGET cargo-build_${_arg_CRATE}
+            POST_BUILD
             COMMAND
                 "${CMAKE_COMMAND}" -E make_directory ${header_placement_dir}/${directory}
             COMMAND
@@ -1493,8 +1492,9 @@ function(corrosion_add_cxxbridge cxx_target)
                 ${CXXBRIDGE} ${rust_source_path} --header > ${header_placement_dir}/${cxx_header}
             COMMAND
                 ${CXXBRIDGE} ${rust_source_path} > ${source_placement_dir}/${cxx_source}
-            DEPENDS
-                ${rust_source_path}
+            BYPRODUCTS
+                ${header_placement_dir}/${cxx_header}
+                ${source_placement_dir}/${cxx_source}
         )
 
         target_sources(${cxx_target}
