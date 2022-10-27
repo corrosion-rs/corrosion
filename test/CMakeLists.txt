@@ -5,6 +5,10 @@ if(NOT CORROSION_TESTS)
     return()
 endif()
 
+option(CORROSION_TESTS_CXXBRIDGE
+        "Build cxxbridge tests which requires cxxbridge exectuable being available"
+        OFF)
+
 set(test_install_path "${CMAKE_CURRENT_BINARY_DIR}/test-install-corrosion")
 
 set(test_header_contents
@@ -105,6 +109,7 @@ endfunction()
 add_subdirectory(cargo_flags)
 add_subdirectory(cpp2rust)
 add_subdirectory(custom_profiles)
+add_subdirectory(cxxbridge)
 add_subdirectory(envvar)
 add_subdirectory(external_corrosion_generator)
 add_subdirectory(features)
