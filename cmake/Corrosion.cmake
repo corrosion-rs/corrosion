@@ -1142,6 +1142,12 @@ function(corrosion_set_hostbuild target_name)
     )
 endfunction()
 
+function(corrosion_add_target_generated_headers target_name)
+    set(generated_header_dir "${CMAKE_CURRENT_BINARY_DIR}/generated-code")
+    target_include_directories("${target_name}" INTERFACE "${generated_header_dir}")
+    corrosion_set_env_vars("${target_name}" "GENERATED_HEADER_DIR=${generated_header_dir}")
+endfunction()
+
 # Add flags for rustc (RUSTFLAGS) which affect the target and all of it's Rust dependencies
 #
 # Additional rustflags may be passed as optional parameters after rustflag.

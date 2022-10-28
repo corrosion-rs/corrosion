@@ -216,6 +216,10 @@ Some configuration options can be specified individually for each target. You ca
   the environment variable will only be set for direct builds of the target via cmake, and not for any
   build where cargo built the crate in question as a dependency for another target.
   The environment variables may contain generator expressions.
+- `corrosion_add_target_generated_headers(<target_name>)`: Use this for crates whose build scripts generate C/C++
+  headers to add the headers to the target's include paths. Currently cxx-build and cxx-qt-build support this.
+  The build script must output the generated headers to the path specified by the GENERATED_HEADER_DIR environment
+  variable for this to work.
 - `corrosion_add_target_rustflags(<target_name> <rustflag> [... <rustflagN>])`: When building the target,
   the `RUSTFLAGS` environment variable will contain the flags added via this function. Please note that any
   dependencies (built by cargo) will also see these flags. In the future corrosion may offer a second function
