@@ -8,7 +8,7 @@ from a crate.
 ## Features
 - Automatic Import of Executable, Static, and Shared Libraries from Rust Crate
 - Easy Installation of Rust Executables
-- Trivially Link Rust Executables to C++ Libraries in Tree
+- Trivially Link Rust Executables to C/C++ Libraries in Tree
 - Multi-Config Generator Support
 - Simple Cross-Compilation
 
@@ -252,7 +252,7 @@ profile is chosen for cargo.
 
 ### Importing C-Style Libraries Written in Rust
 Corrosion makes it completely trivial to import a crate into an existing CMake project. Consider
-a project called [rust2cpp](test/rust2cpp) with the following file structure:
+a project called [rust2cpp](test/rust2cpp/rust2cpp) with the following file structure:
 ```
 rust2cpp/
     rust/
@@ -264,7 +264,7 @@ rust2cpp/
     main.cpp
 ```
 
-This project defines a simple Rust lib crate, like so, in [`rust2cpp/rust/Cargo.toml`](test/rust2cpp/rust/Cargo.toml):
+This project defines a simple Rust lib crate, like so, in [`rust2cpp/rust/Cargo.toml`](test/rust2cpp/rust2cpp/rust/Cargo.toml):
 ```toml
 [package]
 name = "rust-lib"
@@ -311,7 +311,34 @@ Integration with [cbindgen](https://github.com/eqrion/cbindgen) is
 planned for the future.
 
 ### Importing Libraries Written in C and C++ Into Rust
-TODO
+
+The rust targets can be imported with `corrosion_import_crate()` into CMake.
+For targets where the linker should be invoked by Rust corrosion provides
+`corrosion_link_libraries()` to link your C/C++ libraries with the Rust target.
+For additional linker flags you may use `corrosion_add_target_local_rustflags()`
+and pass linker arguments via the `-Clink-args` flag to rustc. These flags will
+only be passed to the final rustc invocation and not affect any rust dependencies.
+
+C bindings can be generated via [bindgen](https://github.com/rust-lang/rust-bindgen).
+Corrosion does not offer any direct integration yet, but you can either generate the
+bindings in the build-script of your crate, or generate the bindings as a CMake build step
+(e.g. a custom target) and add a dependency from `cargo-prebuild_<rust_target>` to your
+custom target for generating the bindings.
+
+Example:
+
+```cmake
+# Import your Rust targets
+corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
+# Link C/C++ libraries with your Rust target
+corrosion_link_libraries(target_name c_library)
+# Optionally explicitly define which linker to use.
+corrosion_set_linker(target_name your_custom_linker)
+# Optionally set linker arguments
+corrosion_add_target_local_rustflags(target_name "-Clink-args=<linker arguments>")
+# Optionally tell CMake that the rust crate depends on another target (e.g. a code generator)
+add_dependencies(cargo-prebuild_<target_name> custom_bindings_target)
+```
 
 ### Cross Compiling
 Corrosion attempts to support cross-compiling as generally as possible, though not all
