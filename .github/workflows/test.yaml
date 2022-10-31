@@ -179,7 +179,7 @@ jobs:
           - os: macos-12
             rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup MSVC Development Environment
         uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
