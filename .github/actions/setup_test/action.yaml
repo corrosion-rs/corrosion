@@ -97,7 +97,7 @@ runs:
         arch: ${{ steps.arch_flags.outputs.msvc }}
       if: ${{ 'msvc' == inputs.abi }}
     - name: Install CMake
-      uses: corrosion-rs/install-cmake@v1.1
+      uses: corrosion-rs/install-cmake@v2
       with:
         cmake: ${{inputs.cmake}}
         ninja: 1.10.0

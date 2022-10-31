@@ -184,7 +184,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Install CMake
-        uses: corrosion-rs/install-cmake@v1.1
+        uses: corrosion-rs/install-cmake@v2
         with:
           cmake: 3.18.0
           ninja: 1.10.0
