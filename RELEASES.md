@@ -1,17 +1,21 @@
-# Unreleased
+# 0.3.0 (2022-10-31)
 
 ## Breaking
 
 - The minimum supported rust version (MSRV) was increased to 1.46, due to a cargo issue that recently
-  surfaced on CI when using crates.io. Please also note that on MacOS 12 at least Rust 1.54 is required.
+  surfaced on CI when using crates.io. On MacOS 12 and Windows-2022 at least Rust 1.54 is required.
 - MacOS 10 and 11 are no longer officially supported and untested in CI.
-- Increase the minimum required CMake version to 3.15 (may be bumped to 3.16 before the next release).
+- The minimum required CMake version is now 3.15.
+- Adding a `PRE_BUILD` custom command on a `cargo-build_<target_name>` CMake target will no 
+  longer work as expected. To support executing user defined commands before cargo build is
+  invoked users should use the newly added targets `cargo-prebuild` (before all cargo build invocations)
+  or `cargo-prebuild_<target_name>` as a dependency target. 
+  Example: `add_dependencies(cargo-prebuild code_generator_target)`
 
 ### Breaking: Removed previously deprecated functionality
-- Removed `add_crate()` function. Use `corrosio_import_crate` instead.
+- Removed `add_crate()` function. Use `corrosio_import_crate()` instead.
 - Removed `cargo_link_libraries()` function. Use `corrosion_link_libraries()` instead.
-- Removed experimental CMake option `CORROSION_EXPERIMENTAL_PARSER`. This option was never included in an official
-  release and has been marked as deprecated on the master branch since May 22.
+- Removed experimental CMake option `CORROSION_EXPERIMENTAL_PARSER`.
   The corresponding stable option is `CORROSION_NATIVE_TOOLING` albeit with inverted semantics.
 - Previously Corrosion would set the `HOST_CC` and `HOST_CXX` environment variables when invoking 
   cargo build, if the environment variables `CC` and `CXX` outside of CMake where set.
@@ -32,15 +36,11 @@
   For example setting a `cfg` option previously required double escaping the rustflag like this
   `"--cfg=something=\\\"value\\\""`, but now it can be passed to corrosion without any escapes:
   `--cfg=something="value"`.
-- Adding a `PRE_BUILD` custom command on a `cargo-build_<target_name>` CMake target will no
-  longer work as expected. To support executing user defined commands before cargo build is 
-  invoked users should use the newly added targets `cargo-prebuild` (before all cargo build invocations)
-  or `cargo-prebuild_<target_name>` as a dependency target.
-  Example: `add_dependencies(cargo-prebuild code_generator_target)`
+- Corrosion now respects the CMake `OUTPUT_DIRECTORY` target properties. More details in the "New features" section.
 
 ## New features
 
-- Support setting rustflags for only the main target and none of it's dependencies ([215](https://github.com/corrosion-rs/corrosion/pull/215)).
+- Support setting rustflags for only the main target and none of its dependencies ([215](https://github.com/corrosion-rs/corrosion/pull/215)).
   A new function `corrosion_add_target_local_rustflags(target_name rustc_flag [more_flags ...])`
   is added for this purpose.
   This is useful in cases where you only need rustflags on the main-crate, but need to set different
@@ -50,7 +50,7 @@
   The linker can be selected via `corrosion_set_linker(target_name linker)`.
   Please note that this only has an effect for targets, where the final linker invocation is done
   by cargo, i.e. targets where foreign code is linked into rust code and not the other way around.
-- Corrosion now respects the CMake OUTPUT_DIRECTORY target properties and copies build artifacts to the expected
+- Corrosion now respects the CMake `OUTPUT_DIRECTORY` target properties and copies build artifacts to the expected
   locations ([217](https://github.com/corrosion-rs/corrosion/pull/217)), if the properties are set.
   This feature requires at least CMake 3.19 and is enabled by default if supported. Please note that the `OUTPUT_NAME`
   target properties are currently not supported.
