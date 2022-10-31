@@ -150,116 +150,19 @@ jobs:
             os: ubuntu-latest
 
     steps:
-      - name: Determine Rust OS
-        id: determine_rust_os
-        shell: bash
-        run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            echo "os=pc-windows" >> $GITHUB_OUTPUT
-            echo "host_abi=msvc" >> $GITHUB_OUTPUT
-          elif [ "${{ runner.os }}" == "Linux" ]; then
-            echo "os=unknown-linux" >> $GITHUB_OUTPUT
-            echo "host_abi=gnu" >> $GITHUB_OUTPUT
-          elif [ "${{ runner.os }}" == "macOS" ]; then
-            echo "os=apple" >> $GITHUB_OUTPUT
-            echo "host_abi=darwin" >> $GITHUB_OUTPUT
-          fi
-      - name: Pick Compiler
-        id: pick_compiler
-        shell: bash
-        run: |
-          if [ "${{ matrix.abi }}" == "gnu" ]; then
-            if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-              echo "c_compiler=-DCMAKE_C_COMPILER=${{matrix.arch}}-linux-gnu-gcc" >> $GITHUB_OUTPUT
-              echo "cxx_compiler=-DCMAKE_CXX_COMPILER=${{matrix.arch}}-linux-gnu-g++" >> $GITHUB_OUTPUT
-              # todo: only set this when cross-compiling
-              echo "system_name=-DCMAKE_SYSTEM_NAME=Linux" >> $GITHUB_OUTPUT
-            else
-              echo "c_compiler=-DCMAKE_C_COMPILER=gcc" >> $GITHUB_OUTPUT
-              echo "cxx_compiler=-DCMAKE_CXX_COMPILER=g++" >> $GITHUB_OUTPUT
-            fi
-          elif [ "${{ matrix.abi }}" == "darwin" ]; then
-            echo "c_compiler=-DCMAKE_C_COMPILER=clang" >> $GITHUB_OUTPUT
-            echo "cxx_compiler=-DCMAKE_CXX_COMPILER=clang++" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.abi }}" == "msvc" ]; then
-            echo "c_compiler=-DCMAKE_C_COMPILER=cl" >> $GITHUB_OUTPUT
-            echo "cxx_compiler=-DCMAKE_CXX_COMPILER=cl" >> $GITHUB_OUTPUT
-          fi
-      - name: Pick Generator
-        id: pick_generator
-        shell: bash
-        run: |
-          if [ "${{ matrix.generator }}" == "ninja" ]; then
-            echo "generator=-GNinja" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.generator }}" == "ninja-multiconfig" ];then
-            echo "generator=-GNinja Multi-Config" >> $GITHUB_OUTPUT
-          fi
-      - name: Arch Flags
-        id: arch_flags
-        shell: bash
-        run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            if [ "${{matrix.generator}}" == "default" ]; then
-              if [ "${{ matrix.arch }}" == "x86_64" ]; then
-                echo "msvc=amd64" >> $GITHUB_OUTPUT
-                echo "cmake=-Ax64" >> $GITHUB_OUTPUT
-              elif [ "${{ matrix.arch }}" == "i686" ]; then
-                echo "msvc=amd64_x86" >> $GITHUB_OUTPUT
-                echo "cmake=-AWin32" >> $GITHUB_OUTPUT
-              elif [ "${{ matrix.arch }}" == "aarch64" ]; then
-                echo "msvc=amd64_arm64" >> $GITHUB_OUTPUT
-                echo "cmake=-AARM64" >> $GITHUB_OUTPUT
-              fi
-            elif [ "${{matrix.generator}}" == "ninja" ]; then
-              # We don't do cross-compiling builds with Ninja
-              # Todo: Why not (cross-compile)?
-              echo "msvc=amd64" >> $GITHUB_OUTPUT
-            fi
-          elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            echo "cmake=-DRust_CARGO_TARGET=${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}" >> $GITHUB_OUTPUT
-          fi
-      - name: Setup MSVC Development Environment
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ steps.arch_flags.outputs.msvc }}
-        if: ${{ 'msvc' == matrix.abi }}
       - uses: actions/checkout@v2
-      - name: Install CMake
-        uses: corrosion-rs/install-cmake@v1.1
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
         with:
+          target_arch: ${{matrix.arch}}
+          abi: ${{matrix.abi}}
           cmake: ${{matrix.cmake}}
-          ninja: 1.10.0
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{matrix.rust}}
-          target: ${{matrix.arch}}-${{steps.determine_rust_os.outputs.os}}-${{matrix.abi}}
-      - name: Install Cross Compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-$(echo "${{matrix.arch}}" | tr _ -)-linux-gnu
-        if: ${{ 'ubuntu-latest' == matrix.os }}
-      - name: CMake Version
-        run: cmake --version
-      - name: Rust Version
-        run: rustc +${{matrix.rust}} --version
-      - name: Configure
-        run: >
-          cmake
-          "-S."
-          "-Bbuild"
-          "-DCORROSION_VERBOSE_OUTPUT=ON"
-          "${{steps.arch_flags.outputs.cmake}}"
-          "${{steps.pick_compiler.outputs.c_compiler}}"
-          "${{steps.pick_compiler.outputs.cxx_compiler}}"
-          "${{steps.pick_compiler.outputs.system_name}}"
-          "${{steps.pick_generator.outputs.generator}}"
-          "-DRust_TOOLCHAIN=${{matrix.rust}}"
+          rust: ${{matrix.rust}}
+          generator: ${{matrix.generator}}
+          build_dir: build
       - name: Run Tests
-        run: >
-          cd build
-          
-          ctest --verbose --build-config Debug
+        working-directory: build
+        run: ctest --verbose --build-config Debug
 
   install:
     name: Test Corrosion as a Library
