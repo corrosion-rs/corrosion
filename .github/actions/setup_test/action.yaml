@@ -1,0 +1,136 @@
+name: Setup Corrosion Tests
+description: "Internal helper action to setup the Environment for Corrosions tests"
+inputs:
+  target_arch:
+    required: true
+    description: CMake target architecture
+  abi:
+    required: true
+    description: msvc, gnu or darwin
+  cmake:
+    required: true
+    description: Cmake version
+  rust:
+    required: true
+    description: Rust version
+  generator:
+    required: true
+    description: CMake Generator (e.g Ninja)
+  build_dir:
+    required: true
+    description: Path of the CMake build directory
+
+runs:
+  using: composite
+  steps:
+    - name: Determine Rust OS
+      id: determine_rust_os
+      shell: bash
+      run: |
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          echo "os=pc-windows" >> $GITHUB_OUTPUT
+          echo "host_abi=msvc" >> $GITHUB_OUTPUT
+        elif [ "${{ runner.os }}" == "Linux" ]; then
+          echo "os=unknown-linux" >> $GITHUB_OUTPUT
+          echo "host_abi=gnu" >> $GITHUB_OUTPUT
+        elif [ "${{ runner.os }}" == "macOS" ]; then
+          echo "os=apple" >> $GITHUB_OUTPUT
+          echo "host_abi=darwin" >> $GITHUB_OUTPUT
+        fi
+    - name: Pick Compiler
+      id: pick_compiler
+      shell: bash
+      run: |
+        if [ "${{ inputs.abi }}" == "gnu" ]; then
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            echo "c_compiler=-DCMAKE_C_COMPILER=${{inputs.target_arch}}-linux-gnu-gcc" >> $GITHUB_OUTPUT
+            echo "cxx_compiler=-DCMAKE_CXX_COMPILER=${{inputs.target_arch}}-linux-gnu-g++" >> $GITHUB_OUTPUT
+            # todo: only set this when cross-compiling
+            echo "system_name=-DCMAKE_SYSTEM_NAME=Linux" >> $GITHUB_OUTPUT
+          else
+            echo "c_compiler=-DCMAKE_C_COMPILER=gcc" >> $GITHUB_OUTPUT
+            echo "cxx_compiler=-DCMAKE_CXX_COMPILER=g++" >> $GITHUB_OUTPUT
+          fi
+        elif [ "${{ inputs.abi }}" == "darwin" ]; then
+          echo "c_compiler=-DCMAKE_C_COMPILER=clang" >> $GITHUB_OUTPUT
+          echo "cxx_compiler=-DCMAKE_CXX_COMPILER=clang++" >> $GITHUB_OUTPUT
+        elif [ "${{ inputs.abi }}" == "msvc" ]; then
+          echo "c_compiler=-DCMAKE_C_COMPILER=cl" >> $GITHUB_OUTPUT
+          echo "cxx_compiler=-DCMAKE_CXX_COMPILER=cl" >> $GITHUB_OUTPUT
+        fi
+    - name: Pick Generator
+      id: pick_generator
+      shell: bash
+      run: |
+        if [ "${{ inputs.generator }}" == "ninja" ]; then
+          echo "generator=-GNinja" >> $GITHUB_OUTPUT
+        elif [ "${{ inputs.generator }}" == "ninja-multiconfig" ];then
+          echo "generator=-GNinja Multi-Config" >> $GITHUB_OUTPUT
+        fi
+    - name: Arch Flags
+      id: arch_flags
+      shell: bash
+      run: | # Cross-compiling is currently only supported on Windows+MSVC with the default generator
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          if [ "${{inputs.generator}}" == "default" ]; then
+            if [ "${{ inputs.target_arch }}" == "x86_64" ]; then
+              echo "msvc=amd64" >> $GITHUB_OUTPUT
+              echo "cmake=-Ax64" >> $GITHUB_OUTPUT
+            elif [ "${{ inputs.target_arch }}" == "i686" ]; then
+              echo "msvc=amd64_x86" >> $GITHUB_OUTPUT
+              echo "cmake=-AWin32" >> $GITHUB_OUTPUT
+            elif [ "${{ inputs.target_arch }}" == "aarch64" ]; then
+              echo "msvc=amd64_arm64" >> $GITHUB_OUTPUT
+              echo "cmake=-AARM64" >> $GITHUB_OUTPUT
+            fi
+          elif [ "${{inputs.generator}}" == "ninja" ]; then
+            # We don't do cross-compiling builds with Ninja
+            # Todo: Why not (cross-compile)?
+            echo "msvc=amd64" >> $GITHUB_OUTPUT
+          fi
+        elif [ "${{ runner.os }}" == "Linux" ]; then
+          echo "cmake=-DRust_CARGO_TARGET=${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{inputs.abi}}" >> $GITHUB_OUTPUT
+        fi
+    - name: Setup MSVC Development Environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ steps.arch_flags.outputs.msvc }}
+      if: ${{ 'msvc' == inputs.abi }}
+    - name: Install CMake
+      uses: corrosion-rs/install-cmake@v1.1
+      with:
+        cmake: ${{inputs.cmake}}
+        ninja: 1.10.0
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{inputs.rust}}
+        target: ${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{inputs.abi}}
+    - name: Install Cross Compiler
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y g++-$(echo "${{inputs.target_arch}}" | tr _ -)-linux-gnu
+      if: ${{ 'Linux' == runner.os }}
+    - name: Determine Configure Shell
+      id: configure_shell
+      shell: bash
+      run: |
+        if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "shell=pwsh" >> $GITHUB_OUTPUT
+        else
+            echo "shell=bash" >> $GITHUB_OUTPUT
+        fi
+    - name: Configure
+      shell: ${{steps.configure_shell.outputs.shell}}
+      run: >
+        cmake
+        "-S."
+        "-B${{inputs.build_dir}}"
+        "-DCORROSION_VERBOSE_OUTPUT=ON"
+        "${{steps.arch_flags.outputs.cmake}}"
+        "${{steps.pick_compiler.outputs.c_compiler}}"
+        "${{steps.pick_compiler.outputs.cxx_compiler}}"
+        "${{steps.pick_compiler.outputs.system_name}}"
+        "${{steps.pick_generator.outputs.generator}}"
+        "-DRust_TOOLCHAIN=${{inputs.rust}}"
