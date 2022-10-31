@@ -112,7 +112,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
     GIT_TAG v0.2.1 # Optionally specify a commit hash, version tag or branch here
 )
-
+# Set any global configuration variables such as `Rust_TOOLCHAIN` before this line!
 FetchContent_MakeAvailable(Corrosion)
 ```
 
@@ -406,3 +406,21 @@ prefer over any CMake you've installed locally. CMake 3.10 is insufficient for u
 which requires a minimum of CMake 3.15. If you're using Android Studio to build your project,
 follow the instructions in the Android Studio documentation for
 [using a specific version of CMake](https://developer.android.com/studio/projects/install-ndk#vanilla_cmake).
+
+## Limitations
+
+### CMake `OUTPUT_DIRECTORY` target properties and `IMPORTED_LOCATION`
+
+Corrosion respects the following `OUTPUT_DIRECTORY` target properties on CMake >= 3.19:
+-   [ARCHIVE_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/ARCHIVE_OUTPUT_DIRECTORY.html)
+-   [LIBRARY_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/LIBRARY_OUTPUT_DIRECTORY.html)
+-   [RUNTIME_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html)
+-   [PDB_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/PDB_OUTPUT_DIRECTORY.html)
+
+Due to limitations in CMake these target properties are evaluated in a deferred manner, to 
+support the user setting the target properties after the call to `corrosion_import_crate()`.
+This has the side effect that `IMPORTED_LOCATION` will be set late, and users should not
+use `get_property` to read `IMPORTED_LOCATION` at configure time. Instead, generator expressions
+should be used to get the location of the target artifact.
+If `IMPORTED_LOCATION` is needed at configure time users may use `cmake_language(DEFER CALL ...)` to defer
+evaluation to after the `IMPORTED_LOCATION` property is set.
