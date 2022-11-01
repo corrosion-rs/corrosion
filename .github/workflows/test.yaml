@@ -150,7 +150,7 @@ jobs:
             os: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Environment and Configure CMake
         uses: "./.github/actions/setup_test"
         with:
