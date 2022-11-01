@@ -189,10 +189,9 @@ jobs:
           cmake: 3.18.0
           ninja: 1.10.0
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{matrix.rust}}
-          default: true
       - name: CMake Version
         run: cmake --version
       - name: Rust Version

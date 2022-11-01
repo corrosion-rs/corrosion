@@ -102,10 +102,10 @@ runs:
         cmake: ${{inputs.cmake}}
         ninja: 1.10.0
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{inputs.rust}}
-        target: ${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{inputs.abi}}
+        targets: ${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{inputs.abi}}
     - name: Install Cross Compiler
       shell: bash
       run: |
