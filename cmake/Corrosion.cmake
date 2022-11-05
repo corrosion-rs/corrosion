@@ -1421,35 +1421,80 @@ endfunction()
 # 
 # Example: corrosion_add_cxxbridge(myCxxTarget CRATE someCrate MANIFEST_PATH someCratePath FILES lib.rs)
 function(corrosion_add_cxxbridge cxx_target)
-    find_program(CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
-    if(${CXXBRIDGE} STREQUAL "CXXBRIDGE-NOTFOUND")
-        message(FATAL_ERROR
-            "corrosion_add_cxxbridge is based on the details given by https://cxx.rs/build/other.html#producing-the-generated-code\n"
-            "This requires the cxxbridge executable to be installed on the system. This can be completed by running `cargo install cxxbridge-cmd`")
-    endif()
-
     set(OPTIONS)
     set(ONE_VALUE_KEYWORDS CRATE MANIFEST_PATH)
     set(MULTI_VALUE_KEYWORDS FILES)
-    cmake_parse_arguments(_arg "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
+    cmake_parse_arguments(PARSE_ARGV 1 _arg "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
-    if("${_arg_CRATE}" STREQUAL "")
-        message(FATAL_ERROR "corrosion_add_cxxbridge called without a crate")
-    endif()
-
-    if("${_arg_MANIFEST_PATH}" STREQUAL "")
-        message(FATAL_ERROR "corrosion_add_cxxbridge called without path to folder of Cargo.toml of target ${_arg_CRATE}")
-    endif()
+    set(required_keywords CRATE MANIFEST_PATH FILES)
+    foreach(keyword ${required_keywords})
+        if(NOT DEFINED "_arg_${keyword}")
+            message(FATAL_ERROR "Missing required parameter `${keyword}`.")
+        elseif("${_arg_${keyword}}" STREQUAL "")
+            message(FATAL_ERROR "Required parameter `${keyword}` may not be set to an empty string.")
+        endif()
+    endforeach()
 
     if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/${_arg_MANIFEST_PATH}/Cargo.toml")
         message(FATAL_ERROR "The path ${CMAKE_CURRENT_LIST_DIR}/${_arg_MANIFEST_PATH} does not contain a Cargo.toml")
     endif()
 
-    if("${_arg_FILES}" STREQUAL "")
-        message(FATAL_ERROR "Must supply at least the path of a single file to be bridged, defined as relative path from the src folder of the related Cargo.toml")
+    set(crate_path ${_arg_MANIFEST_PATH})
+
+    execute_process(COMMAND cargo tree -i cxx --depth=0
+        WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/${_arg_MANIFEST_PATH}"
+        RESULT_VARIABLE cxx_version_result
+        OUTPUT_VARIABLE cxx_version_output
+    )
+    if(NOT "${cxx_version_result}" EQUAL "0")
+        message(FATAL_ERROR "Crate ${_arg_CRATE} does not depend on cxx.")
+    endif()
+    if(cxx_version_output MATCHES "cxx v([0-9]+.[0-9]+.[0-9]+)")
+        set(cxx_required_version "${CMAKE_MATCH_1}")
+    else()
+        message(FATAL_ERROR "Failed to parse cxx version from cargo tree output: `cxx_version_output`")
     endif()
 
-    set(crate_path ${_arg_MANIFEST_PATH})
+    # First check if a suitable version of cxxbridge is installed
+    find_program(INSTALLED_CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
+    mark_as_advanced(INSTALLED_CXXBRIDGE)
+    if(INSTALLED_CXXBRIDGE)
+        execute_process(COMMAND ${INSTALLED_CXXBRIDGE} --version OUTPUT_VARIABLE cxxbridge_version_output)
+        if(cxxbridge_version_output MATCHES "cxxbridge ([0-9]+.[0-9]+.[0-9]+)")
+            set(cxxbridge_version "${CMAKE_MATCH_1}")
+        else()
+            set(cxxbridge_version "")
+        endif()
+    endif()
+
+    set(cxxbridge "")
+    if(cxxbridge_version)
+        if(cxxbridge_version VERSION_EQUAL cxx_required_version)
+            set(cxxbridge "${INSTALLED_CXXBRIDGE}")
+        endif()
+    endif()
+
+    # No suitable version of cxxbridge was installed, so use custom target to build correct version.
+    if(NOT cxxbridge)
+        if(NOT TARGET "cxxbridge_v${cxx_required_version}")
+            add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge"
+                COMMAND
+                ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
+                COMMAND ${_CORROSION_CARGO} install
+                    cxxbridge-cmd
+                    --version "${cxx_required_version}"
+                    --root "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
+                    --quiet
+                    # todo: use --target-dir to potentially reuse artifacts
+                COMMENT "Building cxxbridge (version ${cxx_required_version})"
+                )
+            add_custom_target("cxxbridge_v${cxx_required_version}"
+                DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge"
+                )
+        endif()
+        add_dependencies(_cargo-build_${_arg_CRATE} "cxxbridge_v${cxx_required_version}")
+        set(cxxbridge "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge")
+    endif()
 
 
     # The generated folder structure will be of the following form
@@ -1468,44 +1513,46 @@ function(corrosion_add_cxxbridge cxx_target)
     #            other
     #                ...
 
-    set(corrosion_generated_dir ${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated)
-    set(generated_dir ${corrosion_generated_dir}/cxxbridge/${cxx_target})
-    set(header_placement_dir ${generated_dir}/include/${cxx_target})
-    set(source_placement_dir ${generated_dir}/src)
+    set(corrosion_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated")
+    set(generated_dir "${corrosion_generated_dir}/cxxbridge/${cxx_target}")
+    set(header_placement_dir "${generated_dir}/include/${cxx_target}")
+    set(source_placement_dir "${generated_dir}/src")
     
     add_library(${cxx_target})
-    target_include_directories(${cxx_target} PUBLIC ${generated_dir}/include)
+    target_include_directories(${cxx_target} PUBLIC "${generated_dir}/include")
     target_link_libraries(${cxx_target} PRIVATE ${_arg_CRATE})
 
     foreach(filepath ${_arg_FILES})
         get_filename_component(filename ${filepath} NAME_WE)
         get_filename_component(directory ${filepath} DIRECTORY)
-
+        # todo: this approach does not scale for arbitrarily deep directories.
         set(cxx_header ${directory}/${filename}.h)
         set(cxx_source ${directory}/${filename}.cpp)
 
         set(rust_source_path ${CMAKE_CURRENT_LIST_DIR}/${crate_path}/src/${filepath})
 
         add_custom_command(
-            TARGET cargo-build_${_arg_CRATE}
+            TARGET _cargo-build_${_arg_CRATE}
             POST_BUILD
             COMMAND
                 "${CMAKE_COMMAND}" -E make_directory ${header_placement_dir}/${directory}
             COMMAND
                 "${CMAKE_COMMAND}" -E make_directory ${source_placement_dir}/${directory}
             COMMAND
-                ${CXXBRIDGE} ${rust_source_path} --header > ${header_placement_dir}/${cxx_header}
+                ${cxxbridge} ${rust_source_path} --header --output "${header_placement_dir}/${cxx_header}"
             COMMAND
-                ${CXXBRIDGE} ${rust_source_path} > ${source_placement_dir}/${cxx_source}
+                ${cxxbridge} ${rust_source_path} --output "${source_placement_dir}/${cxx_source}"
             BYPRODUCTS
-                ${header_placement_dir}/${cxx_header}
-                ${source_placement_dir}/${cxx_source}
+                "${header_placement_dir}/${cxx_header}"
+                "${source_placement_dir}/${cxx_source}"
+            DEPENDS ${cxxbridge}
+            COMMENT Generating cxx bindings for crate ${_arg_CRATE}
         )
 
         target_sources(${cxx_target}
             PRIVATE
-                ${header_placement_dir}/${cxx_header}
-                ${source_placement_dir}/${cxx_source}
+                "${header_placement_dir}/${cxx_header}"
+                "${source_placement_dir}/${cxx_source}"
         )
     endforeach()
 endfunction(corrosion_add_cxxbridge)
