@@ -164,6 +164,42 @@ jobs:
         working-directory: build
         run: ctest --verbose --build-config Debug
 
+  test_cxxbridge:
+    name: Test cxxbridge integration
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - windows-2019
+          - ubuntu-latest
+          - macos-12
+        include:
+          - rust: 1.46.0
+          - os: macos-12
+            rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
+          - os: macos-12
+            abi: darwin
+          - os: ubuntu-latest
+            abi: gnu
+          - os: windows
+            abi: msvc
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install cxxbridge
+        run: cargo install cxxbridge-cmd@1.0.80
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
+        with:
+          target_arch: x86_64
+          abi: ${{matrix.abi}}
+          cmake: 3.15.7
+          rust: ${{matrix.rust}}
+          generator: ninja
+          build_dir: build
+          configure_params: -DCORROSION_TESTS_CXXBRIDGE=ON
+      - name: Run Tests
+        working-directory: build
+        run: ctest --verbose --build-config Debug
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
