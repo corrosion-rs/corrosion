@@ -864,9 +864,14 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # problem if we specify the linker ourselves (which we do, since this is necessary for e.g. linking C++ code).
     # We can however set `LIBRARY_PATH`, which is propagated to the build-script-build properly.
     if(NOT CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        # not needed anymore on macos 13 (and causes issues)
+        if(${CMAKE_SYSTEM_VERSION} VERSION_LESS 22)
         set(cargo_library_path "LIBRARY_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib")
+        endif()
     elseif(CMAKE_CROSSCOMPILING AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
-        set(cargo_library_path "$<IF:${if_not_host_build_condition},,LIBRARY_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib>")
+        if(${CMAKE_HOST_SYSTEM_VERSION} VERSION_LESS 22)
+            set(cargo_library_path "$<IF:${if_not_host_build_condition},,LIBRARY_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib>")
+        endif()
     endif()
 
     if(cargo_profile_name)
