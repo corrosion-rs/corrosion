@@ -19,6 +19,9 @@ inputs:
   build_dir:
     required: true
     description: Path of the CMake build directory
+  configure_params:
+    required: false
+    description: Additional parameters to pass to CMake configure step
 
 runs:
   using: composite
@@ -134,3 +137,4 @@ runs:
         "${{steps.pick_compiler.outputs.system_name}}"
         "${{steps.pick_generator.outputs.generator}}"
         "-DRust_TOOLCHAIN=${{inputs.rust}}"
+        ${{ inputs.configure_params }}
