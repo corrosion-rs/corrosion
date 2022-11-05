@@ -185,7 +185,13 @@ jobs:
             abi: msvc
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        id: cache_cxxbridge
+        with:
+          path: /home/runner/.cargo/bin/cxxbridge
+          key: ${{ runner.os }}-cxxbridge_1_0_80
       - name: Install cxxbridge
+        if: steps.cache_cxxbridge.outputs.cache-hit != 'true'
         run: cargo install cxxbridge-cmd@1.0.80
       - name: Setup Environment and Configure CMake
         uses: "./.github/actions/setup_test"
