@@ -181,7 +181,7 @@ jobs:
             abi: darwin
           - os: ubuntu-latest
             abi: gnu
-          - os: windows
+          - os: windows-2019
             abi: msvc
     steps:
       - uses: actions/checkout@v3
