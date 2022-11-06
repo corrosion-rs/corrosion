@@ -517,7 +517,7 @@ function(_corrosion_add_library_target workspace_manifest_path target_name has_s
         set(dynamic_lib_name "lib${lib_name}.so")
     endif()
 
-    if(MSVC)
+    if(is_windows_msvc)
         set(implib_name "${lib_name}.dll.lib")
     elseif(is_windows_gnu)
         set(implib_name "lib${lib_name}.dll.a")
