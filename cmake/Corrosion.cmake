@@ -1520,7 +1520,11 @@ function(corrosion_add_cxxbridge cxx_target)
     set(source_placement_dir "${generated_dir}/src")
     
     add_library(${cxx_target})
-    target_include_directories(${cxx_target} PUBLIC "${generated_dir}/include")
+    target_include_directories(${cxx_target}
+        PUBLIC
+            $<BUILD_INTERFACE:${generated_dir}/include>
+            $<INSTALL_INTERFACE:include>
+    )
     target_link_libraries(${cxx_target} PRIVATE ${_arg_CRATE})
 
     foreach(filepath ${_arg_FILES})
