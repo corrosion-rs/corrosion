@@ -150,6 +150,8 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
     if(NOT corrosion_targets)
         message(DEBUG "No relevant targets found in package ${package_name} - Ignoring")
+    else()
+        set_target_properties(${corrosion_targets} PROPERTIES INTERFACE_COR_PACKAGE_MANIFEST_PATH "${package_manifest_path}")
     endif()
     set(${out_created_targets} "${corrosion_targets}" PARENT_SCOPE)
 

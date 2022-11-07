@@ -41,7 +41,7 @@ impl CargoTarget {
         };
 
         Some(Self {
-            cargo_package: cargo_package,
+            cargo_package,
             cargo_target,
             target_type,
             workspace_manifest_path,
@@ -133,10 +133,14 @@ impl CargoTarget {
                 cargo_build_out_dir
                 PACKAGE \"{package_name}\"
                 TARGET \"{target_name}\"
-                MANIFEST_PATH \"{manifest_path}\"
+                MANIFEST_PATH \"{package_manifest_path}\"
                 {profile_option}
                 TARGET_KIND \"{target_kind}\"
                 BYPRODUCTS \"${{byproducts}}\"
+            )
+
+            set_target_properties({target_name} PROPERTIES
+                INTERFACE_COR_PACKAGE_MANIFEST_PATH \"{package_manifest_path}\"
             )
 
             if(archive_byproducts)
@@ -162,7 +166,7 @@ impl CargoTarget {
             ",
             package_name = self.cargo_package.name,
             target_name = self.cargo_target.name,
-            manifest_path = self.cargo_package.manifest_path.as_str().replace("\\", "/"),
+            package_manifest_path = self.cargo_package.manifest_path.as_str().replace("\\", "/"),
             profile_option = cargo_build_profile_option,
             target_kind = target_kind,
 
