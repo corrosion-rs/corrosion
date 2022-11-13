@@ -7,6 +7,71 @@ on:
     branches:
       - '**'
 jobs:
+  build_legacy_generator_linux:
+    name: Build and install Legacy corrosion
+    uses: ./.github/workflows/build_legacy_generator.yml
+    with:
+      os: ubuntu-20.04
+  build_legacy_generator_mac:
+    name: Build and install Legacy corrosion
+    uses: ./.github/workflows/build_legacy_generator.yml
+    with:
+      os: macos-12
+  build_legacy_generator_windows:
+    name: Build and install Legacy corrosion
+    uses: ./.github/workflows/build_legacy_generator.yml
+    with:
+      os: windows-2019
+
+  test_legacy:
+    name: Test Corrosion (CMae 3.15)
+    needs: # todo: split this job into multiple jobs, so we only wait for the minimum necessary time
+      - build_legacy_generator_linux
+      - build_legacy_generator_mac
+      - build_legacy_generator_windows
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2019
+          - ubuntu-20.04
+          - macos-12
+        arch:
+          - x86_64
+        cmake:
+          - 3.15.7
+        generator:
+          - default # This is just whatever the platform default is
+        include:
+          - rust: 1.46.0
+          - os: macos-12
+            rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
+          - os: macos-12
+            abi: darwin
+          - os: ubuntu-latest
+            abi: gnu
+          - os: windows-2019
+            abi: msvc
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: corrosion_install_${{runner.os}}
+          path: ${{env.GITHUB_WORKSPACE}}/corrosion-prebuilt-generator
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
+        with:
+          target_arch: ${{matrix.arch}}
+          abi: ${{matrix.abi}}
+          cmake: ${{matrix.cmake}}
+          rust: ${{matrix.rust}}
+          generator: ${{matrix.generator}}
+          build_dir: build
+          configure_params: "-DCORROSION_GENERATOR_EXECUTABLE=${{env.GITHUB_WORKSPACE}}/corrosion-prebuilt-generator"
+      - name: Run Tests
+        working-directory: build
+        run: ctest --verbose --build-config Debug
   test:
     name: Test Corrosion
     runs-on: ${{ matrix.os }}
@@ -28,7 +93,6 @@ jobs:
           - darwin
           - msvc
         cmake:
-          - 3.15.7
           - 3.19.0
         rust:
           - 1.46.0 # MSRV Minimum supported rust version
@@ -37,7 +101,6 @@ jobs:
         generator:
           - default # This is just whatever the platform default is
           - ninja
-
         include:
           - rust: nightly
             cmake: 3.19.0

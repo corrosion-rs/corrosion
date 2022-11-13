@@ -1,0 +1,36 @@
+name: Build the CMake Generator
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+
+jobs:
+  build_generator:
+    runs-on: ${{inputs.os}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
+        with:
+          target_arch: x86_64
+          cmake: 3.15.7
+          rust: 1.54.0 # todo use MSRV instead
+          generator: ninja
+          build_dir: build
+          install_path: ${{env.GITHUB_WORKSPACE}}/corrosion-preinstall
+          configure_params: "-DCMAKE_BUILD_TYPE=Release"
+      - name: Build corrosion
+        run: cmake --build build --config Release
+      - name: Install corrosion
+        run: cmake --install build --config Release
+      - name: Debug list files
+        shell: bash
+        run: ls -l ${{env.GITHUB_WORKSPACE}}/corrosion-preinstall/
+      - uses: actions/upload-artifact@v3
+        with:
+          name: corrosion_generator_${{runner.os}}
+          path: ${{env.GITHUB_WORKSPACE}}/corrosion-preinstall/libexec/corrosion-generator
+        if: ${{runner.os}} != 'Windows'
