@@ -5,8 +5,9 @@ inputs:
     required: true
     description: CMake target architecture
   abi:
-    required: true
+    required: false
     description: msvc, gnu or darwin
+    default: default
   cmake:
     required: true
     description: Cmake version
@@ -40,11 +41,24 @@ runs:
           echo "os=apple" >> $GITHUB_OUTPUT
           echo "host_abi=darwin" >> $GITHUB_OUTPUT
         fi
+    - name: Determine Rust ABI
+      id: determine_abi
+      shell: bash
+      run: |
+        if [ "${{ inputs.abi }}" != "default" ]; then
+           echo "abi=${{ inputs.abi }}" >> $GITHUB_OUTPUT
+         elif [ "${{ runner.os }}" == "Linux" ]; then
+           echo "abi=gnu" >> $GITHUB_OUTPUT
+         elif [ "${{ runner.os }}" == "macOS" ]; then
+           echo "abi=darwin" >> $GITHUB_OUTPUT
+         else 
+           echo "abi=msvc" >> $GITHUB_OUTPUT
+         fi
     - name: Pick Compiler
       id: pick_compiler
       shell: bash
       run: |
-        if [ "${{ inputs.abi }}" == "gnu" ]; then
+        if [ "${{ steps.determine_abi.outputs.abi }}" == "gnu" ]; then
           if [ "${{ runner.os }}" == "Linux" ]; then
             echo "c_compiler=-DCMAKE_C_COMPILER=${{inputs.target_arch}}-linux-gnu-gcc" >> $GITHUB_OUTPUT
             echo "cxx_compiler=-DCMAKE_CXX_COMPILER=${{inputs.target_arch}}-linux-gnu-g++" >> $GITHUB_OUTPUT
@@ -54,10 +68,10 @@ runs:
             echo "c_compiler=-DCMAKE_C_COMPILER=gcc" >> $GITHUB_OUTPUT
             echo "cxx_compiler=-DCMAKE_CXX_COMPILER=g++" >> $GITHUB_OUTPUT
           fi
-        elif [ "${{ inputs.abi }}" == "darwin" ]; then
+        elif [ "${{ steps.determine_abi.outputs.abi }}" == "darwin" ]; then
           echo "c_compiler=-DCMAKE_C_COMPILER=clang" >> $GITHUB_OUTPUT
           echo "cxx_compiler=-DCMAKE_CXX_COMPILER=clang++" >> $GITHUB_OUTPUT
-        elif [ "${{ inputs.abi }}" == "msvc" ]; then
+        elif [ "${{ steps.determine_abi.outputs.abi }}" == "msvc" ]; then
           echo "c_compiler=-DCMAKE_C_COMPILER=cl" >> $GITHUB_OUTPUT
           echo "cxx_compiler=-DCMAKE_CXX_COMPILER=cl" >> $GITHUB_OUTPUT
         fi
@@ -92,13 +106,13 @@ runs:
             echo "msvc=amd64" >> $GITHUB_OUTPUT
           fi
         elif [ "${{ runner.os }}" == "Linux" ]; then
-          echo "cmake=-DRust_CARGO_TARGET=${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{inputs.abi}}" >> $GITHUB_OUTPUT
+          echo "cmake=-DRust_CARGO_TARGET=${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{steps.determine_abi.outputs.abi}}" >> $GITHUB_OUTPUT
         fi
     - name: Setup MSVC Development Environment
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: ${{ steps.arch_flags.outputs.msvc }}
-      if: ${{ 'msvc' == inputs.abi }}
+      if: ${{ 'msvc' == steps.determine_abi.outputs.abi }}
     - name: Install CMake
       uses: corrosion-rs/install-cmake@v2
       with:
@@ -108,7 +122,7 @@ runs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{inputs.rust}}
-        targets: ${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{inputs.abi}}
+        targets: ${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{steps.determine_abi.outputs.abi}}
     - name: Install Cross Compiler
       shell: bash
       run: |
