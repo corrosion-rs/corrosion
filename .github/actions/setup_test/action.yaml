@@ -23,6 +23,10 @@ inputs:
   configure_params:
     required: false
     description: Additional parameters to pass to CMake configure step
+  install_path:
+    required: false
+    description: CMake install prefix
+    default: ""
 
 runs:
   using: composite
@@ -108,6 +112,13 @@ runs:
         elif [ "${{ runner.os }}" == "Linux" ]; then
           echo "cmake=-DRust_CARGO_TARGET=${{inputs.target_arch}}-${{steps.determine_rust_os.outputs.os}}-${{steps.determine_abi.outputs.abi}}" >> $GITHUB_OUTPUT
         fi
+    - name: Determine Install Prefix
+      id: install_prefix
+      shell: bash
+      run: |
+        if [ ! -z "${{ inputs.install_path }}" ]; then
+          echo "prefix=-DCMAKE_INSTALL_PREFIX=${{ inputs.install_path }}" >> $GITHUB_OUTPUT
+        fi
     - name: Setup MSVC Development Environment
       uses: ilammy/msvc-dev-cmd@v1
       with:
@@ -150,5 +161,6 @@ runs:
         "${{steps.pick_compiler.outputs.cxx_compiler}}"
         "${{steps.pick_compiler.outputs.system_name}}"
         "${{steps.pick_generator.outputs.generator}}"
+        ${{steps.install_prefix.outputs.install_path}}
         "-DRust_TOOLCHAIN=${{inputs.rust}}"
         ${{ inputs.configure_params }}
