@@ -209,21 +209,12 @@ jobs:
     name: Test cxxbridge integration
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - windows-2019
           - ubuntu-latest
           - macos-12
-        include:
-#          - rust: 1.46.0
-#          - os: macos-12
-#            rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
-          - os: macos-12
-            abi: darwin
-          - os: ubuntu-latest
-            abi: gnu
-          - os: windows-2019
-            abi: msvc
     steps:
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
@@ -240,7 +231,7 @@ jobs:
           target_arch: x86_64
           abi: ${{matrix.abi}}
           cmake: 3.15.7
-          rust: 1.54.0 # ${{matrix.rust}} temporarily require 1.54 until cxxbridge integration is improved.
+          rust: 1.54.0
           generator: ninja
           build_dir: build
           configure_params: -DCORROSION_TESTS_CXXBRIDGE=ON
