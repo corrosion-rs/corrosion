@@ -1,0 +1,46 @@
+name: Build the CMake Generator
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+      rust:
+        required: false
+        type: string
+        default: 1.46.0
+
+jobs:
+  build_generator:
+    name: Build (${{inputs.os}})
+    runs-on: ${{inputs.os}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache Legacy Generator
+        id: cache_generator
+        uses: actions/cache@v3
+        with:
+          path: ${{github.workspace}}/corrosion-preinstall
+          key: ${{ runner.os }}-generator-${{ hashFiles('generator/src/**', 'generator/Cargo.toml', 'generator/Cargo.lock') }}
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
+        with:
+          target_arch: x86_64
+          cmake: 3.15.7
+          rust: ${{inputs.rust}}
+          generator: ninja
+          build_dir: build
+          install_path: ${{github.workspace}}/corrosion-preinstall
+          configure_params: "-DCMAKE_BUILD_TYPE=Release"
+        if: steps.cache_generator.outputs.cache-hit != 'true'
+      - name: Build corrosion
+        run: cmake --build build --config Release
+        if: steps.cache_generator.outputs.cache-hit != 'true'
+      - name: Install corrosion
+        run: cmake --install build --config Release
+        if: steps.cache_generator.outputs.cache-hit != 'true'
+      - uses: actions/upload-artifact@v3
+        with:
+          name: corrosion_generator_${{runner.os}}
+          path: ${{github.workspace}}/corrosion-preinstall/

@@ -67,6 +67,10 @@ function(corrosion_tests_add_test test_name bin_names)
     if(CMAKE_GENERATOR_PLATFORM)
         set(TEST_GENERATOR_PLATFORM "GENERATOR_PLATFORM" "${CMAKE_GENERATOR_PLATFORM}")
     endif()
+    if(CORROSION_GENERATOR_EXECUTABLE)
+        # Mainly used in CI to build the native generator once and then reuse it for all tests
+        set(TEST_GENERATOR_BIN EXTERNAL_CORROSION_GENERATOR "${CORROSION_GENERATOR_EXECUTABLE}")
+    endif()
 
     add_test(NAME "${test_name}_build"
             COMMAND
@@ -81,6 +85,7 @@ function(corrosion_tests_add_test test_name bin_names)
             "${TEST_C_COMPILER}"
             "${TEST_CXX_COMPILER}"
             "${TEST_GENERATOR_PLATFORM}"
+            "${TEST_GENERATOR_BIN}"
 
             COMMAND_EXPAND_LISTS
             )
