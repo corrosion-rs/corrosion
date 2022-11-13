@@ -1,13 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
-if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config" AND CMAKE_VERSION VERSION_LESS 3.20.0)
-    message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with the \"Ninja Multi-Config\" "
-       "generator. Please use a different generator or update to cmake >= 3.20.")
-elseif(CMAKE_VERSION VERSION_LESS 3.20.0 AND CMAKE_CONFIGURATION_TYPES)
-    message(DEPRECATION "Corrosion will require at least CMake 3.20 for use with all Multi-Config"
-            "Generators starting with Corrosion 0.4. Please consider upgrading your CMake version"
-            " or using a different Generator."
-    )
+if (CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_LESS 3.20.0)
+    message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with Multi-Config Generators such as "
+       "\"Ninja Multi-Config\" or Visual Studio. "
+       "Please use a different generator or update to cmake >= 3.20.")
 endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
@@ -96,20 +92,19 @@ get_property(
 # Note: Legacy function, used when respecting the `XYZ_OUTPUT_DIRECTORY` target properties is not
 # possible.
 function(_corrosion_set_imported_location_legacy target_name base_property filename)
-    if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
-        foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
-            set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
-            string(TOUPPER "${config_type}" config_type_upper)
-            message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
-                    " to `${binary_root}/${filename}`.")
-            # For Multiconfig we want to specify the correct location for each configuration
-            set_property(
-                TARGET ${target_name}
-                PROPERTY "${base_property}_${config_type_upper}"
-                    "${binary_root}/${filename}"
-            )
-        endforeach()
-    else()
+    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+        string(TOUPPER "${config_type}" config_type_upper)
+        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
+                " to `${binary_root}/${filename}`.")
+        # For Multiconfig we want to specify the correct location for each configuration
+        set_property(
+            TARGET ${target_name}
+            PROPERTY "${base_property}_${config_type_upper}"
+                "${binary_root}/${filename}"
+        )
+    endforeach()
+    if(NOT "${CMAKE_CONFIGURATION_TYPES}")
         set(binary_root "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
 
@@ -142,45 +137,30 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
     get_target_property(output_directory "${output_dir_prop_target_name}" "${output_directory_property}")
     message(DEBUG "Output directory property (target ${output_dir_prop_target_name}): ${output_directory_property} dir: ${output_directory}")
 
-    if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
-        foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
-            string(TOUPPER "${config_type}" config_type_upper)
-            get_target_property(output_dir_curr_config "${output_dir_prop_target_name}"
-                "${output_directory_property}_${config_type_upper}"
-            )
-            if(output_dir_curr_config)
-                set(curr_out_dir "${output_dir_curr_config}")
-            elseif(output_directory)
-                set(curr_out_dir "${output_directory}")
-            else()
-                set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
-            endif()
-            message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
-                    " to `${curr_out_dir}/${filename}`.")
-            # For Multiconfig we want to specify the correct location for each configuration
-            set_property(
-                TARGET ${target_name}
-                PROPERTY "${base_property}_${config_type_upper}"
-                    "${curr_out_dir}/${filename}"
-            )
-            set(base_output_directory "${curr_out_dir}")
-        endforeach()
-    elseif(CMAKE_CONFIGURATION_TYPES)
-        # Fallback path needed for MSVC + CMake < 3.20
-        if(output_directory)
-            string(GENEX_STRIP "${output_directory}" stripped_output_dir)
-            if("${stripped_output_dir}" STREQUAL "${output_directory}")
-                # Output directory does not contain a genex and can be respected.
-                set(base_output_directory "${output_directory}")
-            else()
-                # Fallback to default directory if output_dir contains a genex.
-                set(base_output_directory "${CMAKE_CURRENT_BINARY_DIR}")
-            endif()
+    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER "${config_type}" config_type_upper)
+        get_target_property(output_dir_curr_config ${output_dir_prop_target_name}
+            "${output_directory_property}_${config_type_upper}"
+        )
+        if(output_dir_curr_config)
+            set(curr_out_dir "${output_dir_curr_config}")
+        elseif(output_directory)
+            set(curr_out_dir "${output_directory}")
         else()
-            # Fallback to default directory.
-            set(base_output_directory "${CMAKE_CURRENT_BINARY_DIR}")
+            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
         endif()
-    else()
+        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
+                " to `${curr_out_dir}/${filename}`.")
+        # For Multiconfig we want to specify the correct location for each configuration
+        set_property(
+            TARGET ${target_name}
+            PROPERTY "${base_property}_${config_type_upper}"
+                "${curr_out_dir}/${filename}"
+        )
+        set(base_output_directory "${curr_out_dir}")
+    endforeach()
+
+    if(NOT CMAKE_CONFIGURATION_TYPES)
         if(output_directory)
             set(base_output_directory "${output_directory}")
         else()
@@ -242,7 +222,7 @@ function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names
         message(FATAL_ERROR "Unexpected additional arguments")
     endif()
 
-    if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
+    if(CMAKE_CONFIGURATION_TYPES)
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>")
     else()
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
@@ -285,6 +265,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
             # Fallback to `output_dir` if specified
             # Note: Multi-configuration generators append a per-configuration subdirectory to the
             # specified directory unless a generator expression is used (from CMake documentation).
+            # todo: double check if cmake does this or if we have to do it here
             set(curr_out_dir "${output_dir}")
         else()
             # Fallback to default directory.
@@ -293,20 +274,8 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
         set(multiconfig_out_dir_genex "${multiconfig_out_dir_genex}$<$<CONFIG:${config_type}>:${curr_out_dir}>")
     endforeach()
 
-    if(CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.20.0)
+    if(CMAKE_CONFIGURATION_TYPES)
         set(output_dir "${multiconfig_out_dir_genex}")
-    elseif(CMAKE_CONFIGURATION_TYPES)
-        # Fallback support for MSVC with CMake < 3.20.0 (byproducts may not contain genexes)
-        if(output_dir)
-            string(GENEX_STRIP "${output_dir}" stripped_output_dir)
-            if(NOT ("${stripped_output_dir}" STREQUAL "${output_dir}"))
-                 # Fallback to default directory if output_dir contains a genex.
-                set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
-            endif()
-        else()
-            # Fallback to default directory.
-            set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
-        endif()
     else()
         if(NOT output_dir)
             # Fallback to default directory.
@@ -1417,7 +1386,7 @@ endfunction()
 # <cxx_target> is the name of the target created that will host the cxx interface
 # CRATE <crate> is the name of the specific imported target generated by corrosion_import_crate
 # FILES [<filePath, ...] is the relative paths to files with #[cxx::bridge]. These are relative to <tomlPath>/src
-# 
+#
 # Example: corrosion_add_cxxbridge(myCxxTarget CRATE someCrate FILES lib.rs)
 function(corrosion_add_cxxbridge cxx_target)
     set(OPTIONS)
@@ -1518,7 +1487,7 @@ function(corrosion_add_cxxbridge cxx_target)
     set(generated_dir "${corrosion_generated_dir}/cxxbridge/${cxx_target}")
     set(header_placement_dir "${generated_dir}/include/${cxx_target}")
     set(source_placement_dir "${generated_dir}/src")
-    
+
     add_library(${cxx_target})
     target_include_directories(${cxx_target}
         PUBLIC

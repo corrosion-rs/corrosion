@@ -103,24 +103,11 @@ jobs:
             cmake: 3.20.0
             rust: stable
             generator: ninja-multiconfig
-          - os: windows-2022
-            arch: aarch64
-            abi: msvc
-            cmake: 3.21.5 # Earliest supported version for VS 17 in windows-2022
-            rust: "1.54" # Minimum supported rust version for cross-compile with Windows MSVC
-            generator: default
-          - os: windows-2022
-            arch: i686
-            abi: msvc
-            cmake: 3.21.5 # Earliest supported version for VS 17 in windows-2022
-            rust: "1.54" # Minimum supported rust version for cross-compile with Windows MSVC
-            generator: default
 
         exclude:
 
-          # You cannot build with GNU using Visual Studio on Windows
+          # We have a separate test Matrix for the Visual Studio Generator
           - os: windows-2019
-            abi: gnu
             generator: default # Default generator is Visual Studio
 
           # ARCH
@@ -167,6 +154,44 @@ jobs:
           cmake: ${{matrix.cmake}}
           rust: ${{matrix.rust}}
           generator: ${{matrix.generator}}
+          build_dir: build
+      - name: Run Tests
+        working-directory: build
+        run: ctest --verbose --build-config Debug
+
+  test_msvc:
+    name: Test MSVC Generator
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2019
+          - windows-2022
+        arch:
+          - x86_64
+          - i686
+          - aarch64
+        include:
+          - rust: 1.54.0
+          # Override rust version for x86_64
+          - arch: x86_64
+            rust: 1.46.0
+          - os: windows-2019
+            cmake: 3.20.6  # Multi-config Generators require at least CMake 3.20
+          - os: windows-2022
+            cmake: 3.21.5 # VS on windows-2022 requires at least CMake 3.21
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Environment and Configure CMake
+        uses: "./.github/actions/setup_test"
+        with:
+          target_arch: ${{matrix.arch}}
+          abi: msvc
+          cmake: ${{matrix.cmake}}
+          rust: ${{matrix.rust}}
+          generator: default
           build_dir: build
       - name: Run Tests
         working-directory: build
@@ -241,6 +266,7 @@ jobs:
           cmake
           -S.
           -Bbuild
+          -GNinja
           -DCORROSION_VERBOSE_OUTPUT=ON
           -DCORROSION_TESTS_INSTALL_CORROSION=OFF
 
