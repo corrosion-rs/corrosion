@@ -33,90 +33,100 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
     set_tests_properties("output_directory_build" PROPERTIES FIXTURES_REQUIRED "fixture_corrosion_install")
 endif()
 
-if(WIN32)
-    set(bin_name "rust_bin.exe")
-else()
-    set(bin_name "rust_bin")
-endif()
-
-add_test(NAME output_directory_bin
-        COMMAND
-        "${CMAKE_COMMAND}"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/build/custom_bin/${bin_name}"
-)
-set_tests_properties("output_directory_bin" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
-
-set(lib_name "rust_lib")
-
-if(MSVC)
-    set(static_lib_name "${lib_name}.lib")
-else()
-    set(static_lib_name "lib${lib_name}.a")
-endif()
-
-add_test(NAME output_directory_staticlib
-        COMMAND
-        "${CMAKE_COMMAND}"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/build/custom_archive/${static_lib_name}"
-)
-set_tests_properties("output_directory_staticlib" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
-
-if(WIN32)
-    set(dynamic_lib_name "${lib_name}.dll")
-elseif(APPLE)
-    set(dynamic_lib_name "lib${lib_name}.dylib")
-else()
-    set(dynamic_lib_name "lib${lib_name}.so")
-endif()
-
-add_test(NAME output_directory_cdylib
-        COMMAND
-        "${CMAKE_COMMAND}"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/build/custom_lib/${dynamic_lib_name}"
-)
-set_tests_properties("output_directory_cdylib" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
-
-if(WIN32)
-    if(MSVC)
-        set(implib_name "${lib_name}.dll.lib")
+foreach(output_approach targetprop var)
+    if(output_approach STREQUAL "targetprop")
+       set(rust_proj_suffix "1")
+    elseif(output_approach STREQUAL "var")
+        set(rust_proj_suffix "2")
     else()
-        # windows-gnu
-        set(implib_name "lib${lib_name}.dll.a")
+        message(FATAL_ERROR "specify rust project suffix for new output approach ${output_approach}")
     endif()
 
-    add_test(NAME output_directory_implib
-        COMMAND
-        "${CMAKE_COMMAND}"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
-        # Implib is an ARCHIVE artifact, see:
-        # https://cmake.org/cmake/help/v3.25/manual/cmake-buildsystem.7.html#archive-output-artifacts
-        "${CMAKE_CURRENT_BINARY_DIR}/build/custom_archive/${implib_name}"
-        )
-    set_tests_properties("output_directory_implib" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+    set(bin_name "rust_bin${rust_proj_suffix}${CMAKE_EXECUTABLE_SUFFIX}")
 
-    if(MSVC)
-        set(lib_pdb_name "${lib_name}.pdb")
-        add_test(NAME output_directory_cdylib_pdb
+    add_test(NAME output_directory_bin_${output_approach}
             COMMAND
             "${CMAKE_COMMAND}"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
-            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_lib_pdb/${lib_pdb_name}"
-            )
-        set_tests_properties("output_directory_cdylib_pdb" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_bin_${output_approach}/${bin_name}"
+    )
+    set_tests_properties("output_directory_bin_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
-        set(bin_pdb_name "rust_bin.pdb")
-        add_test(NAME output_directory_bin_pdb
+    set(lib_name "rust_lib${rust_proj_suffix}")
+
+    set(static_lib_name "${CMAKE_STATIC_LIBRARY_PREFIX}${lib_name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+    add_test(NAME output_directory_staticlib_${output_approach}
             COMMAND
             "${CMAKE_COMMAND}"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
-            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_bin_pdb/${bin_pdb_name}"
-            )
-        set_tests_properties("output_directory_bin_pdb" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_archive_${output_approach}/${static_lib_name}"
+    )
+    set_tests_properties("output_directory_staticlib_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+
+    if(MINGW)
+        # Windows-GNU defines "lib" as prefix for DLLs, but cargo creates foo.dll instead of libfoo.dll
+        set(dynamic_lib_prefix "")
+    else()
+        set(dynamic_lib_prefix "${CMAKE_SHARED_LIBRARY_PREFIX}")
     endif()
-endif()
+    set(dynamic_lib_name "${dynamic_lib_prefix}${lib_name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+    add_test(NAME output_directory_cdylib_${output_approach}
+            COMMAND
+            "${CMAKE_COMMAND}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
+            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_lib_${output_approach}/${dynamic_lib_name}"
+    )
+    set_tests_properties("output_directory_cdylib_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+
+    if(WIN32)
+        set(implib_name ${CMAKE_IMPORT_LIBRARY_PREFIX}${lib_name}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+
+        add_test(NAME output_directory_implib_${output_approach}
+            COMMAND
+            "${CMAKE_COMMAND}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
+            # Implib is an ARCHIVE artifact, see:
+            # https://cmake.org/cmake/help/v3.25/manual/cmake-buildsystem.7.html#archive-output-artifacts
+            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_archive_${output_approach}/${implib_name}"
+            )
+        set_tests_properties("output_directory_implib_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+
+        if(MSVC)
+            if(output_approach STREQUAL "targetprop")
+                set(expected_lib_pdb_path "custom_lib_pdb_targetprop")
+                set(expected_bin_pdb_path "custom_bin_pdb_targetprop")
+            elseif(output_approach STREQUAL "var")
+                # When using a CMAKE_ variable instead of a target property, both targets
+                # end up in the same directory.
+                set(expected_lib_pdb_path "custom_binlib_pdb_var")
+                set(expected_bin_pdb_path "custom_binlib_pdb_var")
+            else()
+                message(FATAL_ERROR "specify rust project suffix for new output approach ${output_approach}")
+            endif()
+
+            set(lib_pdb_name "${lib_name}.pdb")
+            add_test(NAME output_directory_cdylib_pdb_${output_approach}
+                COMMAND
+                "${CMAKE_COMMAND}"
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
+                "${CMAKE_CURRENT_BINARY_DIR}/build/${expected_lib_pdb_path}/${lib_pdb_name}"
+                )
+            set_tests_properties("output_directory_cdylib_pdb_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+
+            set(bin_pdb_name "rust_bin${rust_proj_suffix}.pdb")
+            add_test(NAME output_directory_bin_pdb_${output_approach}
+                COMMAND
+                "${CMAKE_COMMAND}"
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
+                "${CMAKE_CURRENT_BINARY_DIR}/build/${expected_bin_pdb_path}/${bin_pdb_name}"
+                )
+            set_tests_properties("output_directory_bin_pdb_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+        endif()
+    endif()
+
+endforeach()
 
 add_test(NAME postbuild_custom_command
     COMMAND
