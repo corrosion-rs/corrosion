@@ -1045,7 +1045,7 @@ endfunction()
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE)
-    set(MULTI_VALUE_KEYWORDS CRATES FEATURES FLAGS)
+    set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if (NOT DEFINED COR_MANIFEST_PATH)
@@ -1122,6 +1122,8 @@ function(corrosion_import_crate)
                 "${COR_MANIFEST_PATH}"
             CRATES
                 "${COR_CRATES}"
+            CRATE_TYPES
+                "${COR_CRATE_TYPES}"
             PROFILE
                 "${COR_PROFILE}"
         )
