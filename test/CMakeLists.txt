@@ -104,6 +104,10 @@ endfunction()
 # Please keep this in alphabetical order.
 add_subdirectory(cargo_flags)
 add_subdirectory(cpp2rust)
+if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0")
+    # Flag `--crate-type` is only supported since Rust 1.64.0
+    add_subdirectory(crate_type)
+endif()
 add_subdirectory(custom_profiles)
 add_subdirectory(envvar)
 add_subdirectory(external_corrosion_generator)
