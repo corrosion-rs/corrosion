@@ -94,6 +94,7 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
                 PACKAGE ${package_name}
                 TARGET ${target_name}
                 MANIFEST_PATH "${manifest_path}"
+                WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 PROFILE "${profile}"
                 TARGET_KIND "lib"
                 BYPRODUCTS "${byproducts}"
@@ -130,6 +131,7 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
                 PACKAGE "${package_name}"
                 TARGET "${target_name}"
                 MANIFEST_PATH "${manifest_path}"
+                WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 PROFILE "${profile}"
                 TARGET_KIND "bin"
                 BYPRODUCTS "${byproducts}"
