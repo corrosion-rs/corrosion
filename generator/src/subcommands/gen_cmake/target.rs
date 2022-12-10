@@ -53,20 +53,27 @@ impl CargoTarget {
         out_file: &mut dyn std::io::Write,
         cargo_profile: Option<&str>,
     ) -> Result<(), Box<dyn Error>> {
-
         let cargo_build_profile_option = if let Some(profile) = cargo_profile {
             format!("PROFILE \"{}\"", profile)
         } else {
             String::default()
         };
 
-        writeln!(out_file, "set(byproducts \"\")
+        writeln!(
+            out_file,
+            "set(byproducts \"\")
                             set(cargo_build_out_dir \"\")
                             set(archive_byproducts \"\")
                             set(shared_lib_byproduct \"\")
                             set(pdb_byproduct \"\")
                             set(bin_byproduct \"\")
-        ")?;
+        "
+        )?;
+        let ws_manifest = self
+            .workspace_manifest_path
+            .to_str()
+            .expect("Non-utf8 path encountered")
+            .replace("\\", "/");
 
         let target_kind = match self.target_type {
             CargoTargetType::Library {
@@ -97,7 +104,6 @@ impl CargoTarget {
                             \"${{pdb_byproduct}}\"
                     )
                     ",
-                    // todo: check if this should be the workspace manifest (probably yes)
                     workspace_manifest_path = ws_manifest,
                     target_name = self.cargo_target.name,
                     has_staticlib = has_staticlib,
@@ -106,11 +112,6 @@ impl CargoTarget {
                 "lib"
             }
             CargoTargetType::Executable => {
-                let ws_manifest = self
-                    .workspace_manifest_path
-                    .to_str()
-                    .expect("Non-utf8 path encountered")
-                    .replace("\\", "/");
                 writeln!(
                     out_file,
                     "
@@ -134,6 +135,7 @@ impl CargoTarget {
                 PACKAGE \"{package_name}\"
                 TARGET \"{target_name}\"
                 MANIFEST_PATH \"{package_manifest_path}\"
+                WORKSPACE_MANIFEST_PATH \"{workspace_manifest_path}\"
                 {profile_option}
                 TARGET_KIND \"{target_kind}\"
                 BYPRODUCTS \"${{byproducts}}\"
@@ -167,11 +169,11 @@ impl CargoTarget {
             package_name = self.cargo_package.name,
             target_name = self.cargo_target.name,
             package_manifest_path = self.cargo_package.manifest_path.as_str().replace("\\", "/"),
+            workspace_manifest_path = ws_manifest,
             profile_option = cargo_build_profile_option,
             target_kind = target_kind,
 
         )?;
         Ok(())
     }
-
 }
