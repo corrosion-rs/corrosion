@@ -729,7 +729,7 @@ endif()
 # A target may be either a specific bin
 function(_add_cargo_build out_cargo_build_out_dir)
     set(options "")
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE TARGET_KIND)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE TARGET_KIND WORKSPACE_MANIFEST_PATH)
     set(multi_value_args BYPRODUCTS)
     cmake_parse_arguments(
         ACB
@@ -744,6 +744,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(path_to_toml "${ACB_MANIFEST_PATH}")
     set(cargo_profile_name "${ACB_PROFILE}")
     set(target_kind "${ACB_TARGET_KIND}")
+    set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
 
     if(NOT target_kind)
         message(FATAL_ERROR "TARGET_KIND not specified")
@@ -768,9 +769,12 @@ function(_add_cargo_build out_cargo_build_out_dir)
         set (build_dir .)
     endif()
 
+    unset(is_windows_msvc)
+    get_source_file_property(is_windows_msvc "${workspace_manifest_path}" CORROSION_PLATFORM_IS_WINDOWS_MSVC)
+
     # For MSVC targets, don't mess with linker preferences.
     # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
-    if (NOT MSVC)
+    if (NOT is_windows_msvc)
         set(languages C CXX Fortran)
 
         set(has_compiler OFF)
