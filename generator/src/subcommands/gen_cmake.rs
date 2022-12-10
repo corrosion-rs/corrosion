@@ -59,7 +59,6 @@ pub fn invoke(
     args: &crate::GeneratorSharedArgs,
     matches: &ArgMatches,
 ) -> Result<(), Box<dyn std::error::Error>> {
-
     let mut out_file: Box<dyn Write> = if let Some(path) = matches.value_of(OUT_FILE) {
         let path = Path::new(path);
         if let Some(parent) = path.parent() {
@@ -95,11 +94,9 @@ cmake_minimum_required(VERSION 3.15)
         .flat_map(|package| {
             let package2 = package.clone();
             let ws_manifest_path = workspace_manifest_path.clone();
-            package
-                .targets
-                .clone()
-                .into_iter()
-                .filter_map(move |t| target::CargoTarget::from_metadata(package2.clone(), t, ws_manifest_path.clone()))
+            package.targets.clone().into_iter().filter_map(move |t| {
+                target::CargoTarget::from_metadata(package2.clone(), t, ws_manifest_path.clone())
+            })
         })
         .collect();
 
@@ -107,10 +104,7 @@ cmake_minimum_required(VERSION 3.15)
 
     for target in &targets {
         target
-            .emit_cmake_target(
-                &mut out_file,
-                cargo_profile,
-            )
+            .emit_cmake_target(&mut out_file, cargo_profile)
             .unwrap();
     }
 
