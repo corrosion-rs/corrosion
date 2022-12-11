@@ -27,6 +27,10 @@ inputs:
     required: false
     description: CMake install prefix
     default: ""
+  compiler:
+    required: false
+    description: Compiler to use. Valid options are clang, gcc and cl.
+    default: ""
 
 runs:
   using: composite
@@ -58,27 +62,30 @@ runs:
          else 
            echo "abi=msvc" >> $GITHUB_OUTPUT
          fi
+    - name: Determine if Cross-compiling
+      id: determine_cross_compile
+      shell: bash
+      run: |
+        # For now it is safe to assume that all github runners are x86_64
+        if [[ "${{ inputs.target_arch }}" != "x86_64" ]]; then
+          echo "Cross-Compiling to ${{ inputs.target_arch }}"
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            echo "system_name=-DCMAKE_SYSTEM_NAME=Darwin" >> $GITHUB_OUTPUT
+          else
+            # Either `Linux` or `Windows`
+            echo "system_name=-DCMAKE_SYSTEM_NAME=${{ runner.os }}" >> $GITHUB_OUTPUT
+          fi
+        fi
     - name: Pick Compiler
       id: pick_compiler
       shell: bash
-      run: |
-        if [ "${{ steps.determine_abi.outputs.abi }}" == "gnu" ]; then
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            echo "c_compiler=-DCMAKE_C_COMPILER=${{inputs.target_arch}}-linux-gnu-gcc" >> $GITHUB_OUTPUT
-            echo "cxx_compiler=-DCMAKE_CXX_COMPILER=${{inputs.target_arch}}-linux-gnu-g++" >> $GITHUB_OUTPUT
-            # todo: only set this when cross-compiling
-            echo "system_name=-DCMAKE_SYSTEM_NAME=Linux" >> $GITHUB_OUTPUT
-          else
-            echo "c_compiler=-DCMAKE_C_COMPILER=gcc" >> $GITHUB_OUTPUT
-            echo "cxx_compiler=-DCMAKE_CXX_COMPILER=g++" >> $GITHUB_OUTPUT
-          fi
-        elif [ "${{ steps.determine_abi.outputs.abi }}" == "darwin" ]; then
-          echo "c_compiler=-DCMAKE_C_COMPILER=clang" >> $GITHUB_OUTPUT
-          echo "cxx_compiler=-DCMAKE_CXX_COMPILER=clang++" >> $GITHUB_OUTPUT
-        elif [ "${{ steps.determine_abi.outputs.abi }}" == "msvc" ]; then
-          echo "c_compiler=-DCMAKE_C_COMPILER=cl" >> $GITHUB_OUTPUT
-          echo "cxx_compiler=-DCMAKE_CXX_COMPILER=cl" >> $GITHUB_OUTPUT
-        fi
+      run: > 
+        ./.github/scripts/determine_compiler.sh 
+        "${{ inputs.compiler }}"
+        "${{ runner.os }}"
+        "${{ steps.determine_abi.outputs.abi }}"
+        "${{steps.determine_cross_compile.outputs.system_name}}"
+        "${{inputs.target_arch}}"
     - name: Pick Generator
       id: pick_generator
       shell: bash
@@ -159,7 +166,7 @@ runs:
         "${{steps.arch_flags.outputs.cmake}}"
         "${{steps.pick_compiler.outputs.c_compiler}}"
         "${{steps.pick_compiler.outputs.cxx_compiler}}"
-        "${{steps.pick_compiler.outputs.system_name}}"
+        "${{steps.determine_cross_compile.outputs.system_name}}"
         "${{steps.pick_generator.outputs.generator}}"
         ${{steps.install_prefix.outputs.install_path}}
         "-DRust_TOOLCHAIN=${{inputs.rust}}"
