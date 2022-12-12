@@ -23,7 +23,7 @@ function(_cargo_metadata out manifest)
 endfunction()
 
 # Add targets (crates) of one package
-function(_generator_add_package_targets workspace_manifest_path package_manifest_path package_name targets profile out_created_targets)
+function(_generator_add_package_targets workspace_manifest_path package_manifest_path package_name targets profile no_linker_override out_created_targets)
     # target types
     set(has_staticlib FALSE)
     set(has_cdylib FALSE)
@@ -39,6 +39,12 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
     string(JSON targets_len LENGTH "${targets}")
     math(EXPR targets_len-1 "${targets_len} - 1")
+
+    if(${no_linker_override})
+        set(_NO_LINKER_OVERRIDE "NO_LINKER_OVERRIDE")
+    else()
+        set(_NO_LINKER_OVERRIDE "")
+    endif()
 
     foreach(ix RANGE ${targets_len-1})
         #
@@ -90,6 +96,7 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
+                ${_NO_LINKER_OVERRIDE}
                 cargo_build_out_dir
                 PACKAGE ${package_name}
                 TARGET ${target_name}
@@ -127,6 +134,7 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
+                ${_NO_LINKER_OVERRIDE}
                 cargo_build_out_dir
                 PACKAGE "${package_name}"
                 TARGET "${target_name}"
@@ -160,7 +168,7 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 endfunction()
 
 
-function(_generator_add_cargo_targets)
+function(_generator_add_cargo_targets no_linker_override)
     set(options "")
     set(one_value_args MANIFEST_PATH PROFILE)
     set(multi_value_args CRATES)
@@ -197,7 +205,7 @@ function(_generator_add_cargo_targets)
             if(ws_mem STREQUAL pkg_id AND ((NOT GGC_CRATES) OR (pkg_name IN_LIST GGC_CRATES)))
                 message(DEBUG "Found ${targets_len} targets in package ${pkg_name}")
 
-                _generator_add_package_targets("${GGC_MANIFEST_PATH}" "${pkg_manifest_path}" "${pkg_name}" "${targets}" "${GGC_PROFILE}" curr_created_targets)
+                _generator_add_package_targets("${GGC_MANIFEST_PATH}" "${pkg_manifest_path}" "${pkg_name}" "${targets}" "${GGC_PROFILE}" "${no_linker_override}" curr_created_targets)
                 list(APPEND created_targets "${curr_created_targets}")
             endif()
         endforeach()
