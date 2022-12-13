@@ -193,6 +193,8 @@ corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
         # Disable linking of standard libraries (required for no_std crates).
         [NO_STD]
         # Specify  cargo build profile (e.g. release or a custom profile)
+        [NO_LINKER_OVERRIDE]
+        # Disable corrosions normal liker override mechanism.  (Needed occasionally for unique build setups.)
         [PROFILE <cargo-profile>]
         # Only import the specified crates from a workspace
         [CRATES <crate1> ... <crateN>]
