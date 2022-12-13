@@ -194,7 +194,7 @@ corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
         [NO_STD]
         # Specify  cargo build profile (e.g. release or a custom profile)
         [NO_LINKER_OVERRIDE]
-        # Disable corrosions normal liker override mechanism.  (Needed occasionally for unique build setups.)
+        # Will let Rust/Cargo determine which linker to use instead of corrosion (when linking is invoked by Rust) (Ignored with CMake < 3.19)
         [PROFILE <cargo-profile>]
         # Only import the specified crates from a workspace
         [CRATES <crate1> ... <crateN>]
