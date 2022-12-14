@@ -23,7 +23,7 @@ function(_cargo_metadata out manifest)
 endfunction()
 
 # Add targets (crates) of one package
-function(_generator_add_package_targets workspace_manifest_path package_manifest_path package_name targets profile no_linker_override out_created_targets)
+function(_generator_add_package_targets workspace_manifest_path package_manifest_path package_name targets profile no_linker_override out_created_targets crate_types)
     # target types
     set(has_staticlib FALSE)
     set(has_cdylib FALSE)
@@ -58,7 +58,9 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
         set(kinds)
         foreach(ix RANGE ${target_kind_len-1})
             string(JSON kind GET "${target_kind}" ${ix})
-            list(APPEND kinds ${kind})
+            if(NOT crate_types OR ${kind} IN_LIST crate_types)
+                list(APPEND kinds ${kind})
+            endif()
         endforeach()
 
         if(TARGET "${target_name}"
@@ -171,7 +173,7 @@ endfunction()
 function(_generator_add_cargo_targets no_linker_override)
     set(options "")
     set(one_value_args MANIFEST_PATH PROFILE)
-    set(multi_value_args CRATES)
+    set(multi_value_args CRATES CRATE_TYPES)
     cmake_parse_arguments(
         GGC
         "${options}"
@@ -205,7 +207,7 @@ function(_generator_add_cargo_targets no_linker_override)
             if(ws_mem STREQUAL pkg_id AND ((NOT GGC_CRATES) OR (pkg_name IN_LIST GGC_CRATES)))
                 message(DEBUG "Found ${targets_len} targets in package ${pkg_name}")
 
-                _generator_add_package_targets("${GGC_MANIFEST_PATH}" "${pkg_manifest_path}" "${pkg_name}" "${targets}" "${GGC_PROFILE}" "${no_linker_override}" curr_created_targets)
+                _generator_add_package_targets("${GGC_MANIFEST_PATH}" "${pkg_manifest_path}" "${pkg_name}" "${targets}" "${GGC_PROFILE}" "${no_linker_override}" curr_created_targets "${GGC_CRATE_TYPES}")
                 list(APPEND created_targets "${curr_created_targets}")
             endif()
         endforeach()

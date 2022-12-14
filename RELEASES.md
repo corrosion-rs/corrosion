@@ -1,3 +1,17 @@
+# 0.3.1 (2022-12-13)
+
+### Fixes
+
+- Fix a regression in detecting the MSVC abi ([#256])
+- Fix an issue on macOS 13 which affected rust crates compiling C++ code in build scripts ([#254]).
+- Fix corrosion not respecting `CMAKE_<XYZ>_OUTPUT_DIRECTORY` values ([#268]).
+- Don't override rusts linker choice for the msvc abi (previously this was only skipped for msvc generators) ([#271])
+
+[#254]: https://github.com/corrosion-rs/corrosion/pull/254
+[#256]: https://github.com/corrosion-rs/corrosion/pull/256
+[#268]: https://github.com/corrosion-rs/corrosion/pull/268
+[#271]: https://github.com/corrosion-rs/corrosion/pull/271
+
 # 0.3.0 (2022-10-31)
 
 ## Breaking
