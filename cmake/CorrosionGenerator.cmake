@@ -23,7 +23,7 @@ function(_cargo_metadata out manifest)
 endfunction()
 
 # Add targets (crates) of one package
-function(_generator_add_package_targets workspace_manifest_path package_manifest_path package_name targets profile out_created_targets)
+function(_generator_add_package_targets workspace_manifest_path package_manifest_path package_name targets profile no_linker_override out_created_targets crate_types)
     # target types
     set(has_staticlib FALSE)
     set(has_cdylib FALSE)
@@ -40,6 +40,12 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
     string(JSON targets_len LENGTH "${targets}")
     math(EXPR targets_len-1 "${targets_len} - 1")
 
+    if(${no_linker_override})
+        set(_NO_LINKER_OVERRIDE "NO_LINKER_OVERRIDE")
+    else()
+        set(_NO_LINKER_OVERRIDE "")
+    endif()
+
     foreach(ix RANGE ${targets_len-1})
         #
         string(JSON target GET "${targets}" ${ix})
@@ -52,7 +58,9 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
         set(kinds)
         foreach(ix RANGE ${target_kind_len-1})
             string(JSON kind GET "${target_kind}" ${ix})
-            list(APPEND kinds ${kind})
+            if(NOT crate_types OR ${kind} IN_LIST crate_types)
+                list(APPEND kinds ${kind})
+            endif()
         endforeach()
 
         if(TARGET "${target_name}"
@@ -90,10 +98,12 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
+                ${_NO_LINKER_OVERRIDE}
                 cargo_build_out_dir
                 PACKAGE ${package_name}
                 TARGET ${target_name}
                 MANIFEST_PATH "${manifest_path}"
+                WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 PROFILE "${profile}"
                 TARGET_KIND "lib"
                 BYPRODUCTS "${byproducts}"
@@ -126,10 +136,12 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
+                ${_NO_LINKER_OVERRIDE}
                 cargo_build_out_dir
                 PACKAGE "${package_name}"
                 TARGET "${target_name}"
                 MANIFEST_PATH "${manifest_path}"
+                WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 PROFILE "${profile}"
                 TARGET_KIND "bin"
                 BYPRODUCTS "${byproducts}"
@@ -158,10 +170,10 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 endfunction()
 
 
-function(_generator_add_cargo_targets)
+function(_generator_add_cargo_targets no_linker_override)
     set(options "")
     set(one_value_args MANIFEST_PATH PROFILE)
-    set(multi_value_args CRATES)
+    set(multi_value_args CRATES CRATE_TYPES)
     cmake_parse_arguments(
         GGC
         "${options}"
@@ -195,7 +207,7 @@ function(_generator_add_cargo_targets)
             if(ws_mem STREQUAL pkg_id AND ((NOT GGC_CRATES) OR (pkg_name IN_LIST GGC_CRATES)))
                 message(DEBUG "Found ${targets_len} targets in package ${pkg_name}")
 
-                _generator_add_package_targets("${GGC_MANIFEST_PATH}" "${pkg_manifest_path}" "${pkg_name}" "${targets}" "${GGC_PROFILE}" curr_created_targets)
+                _generator_add_package_targets("${GGC_MANIFEST_PATH}" "${pkg_manifest_path}" "${pkg_name}" "${targets}" "${GGC_PROFILE}" "${no_linker_override}" curr_created_targets "${GGC_CRATE_TYPES}")
                 list(APPEND created_targets "${curr_created_targets}")
             endif()
         endforeach()
@@ -206,4 +218,21 @@ function(_generator_add_cargo_targets)
     else()
         message(DEBUG "Corrosion created the following CMake targets: ${curr_created_targets}")
     endif()
+
+    foreach(target_name ${created_targets})
+        foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
+            get_target_property(output_dir ${target_name} "${output_var}")
+            if (NOT output_dir AND DEFINED "CMAKE_${output_var}")
+                set_property(TARGET ${target_name} PROPERTY ${output_var} "${CMAKE_${output_var}}")
+            endif()
+
+            foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+                string(TOUPPER "${config_type}" config_type_upper)
+                get_target_property(output_dir ${target_name} "${output_var}_${config_type_upper}")
+                if (NOT output_dir AND DEFINED "CMAKE_${output_var}_${config_type_upper}")
+                    set_property(TARGET ${target_name} PROPERTY "${output_var}_${config_type_upper}" "${CMAKE_${output_var}_${config_type_upper}}")
+                endif()
+            endforeach()
+        endforeach()
+    endforeach()
 endfunction()

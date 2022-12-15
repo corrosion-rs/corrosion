@@ -110,7 +110,7 @@ include(FetchContent)
 FetchContent_Declare(
     Corrosion
     GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-    GIT_TAG v0.3.0 # Optionally specify a commit hash, version tag or branch here
+    GIT_TAG v0.3.1 # Optionally specify a commit hash, version tag or branch here
 )
 # Set any global configuration variables such as `Rust_TOOLCHAIN` before this line!
 FetchContent_MakeAvailable(Corrosion)
@@ -193,7 +193,11 @@ corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
         # Disable linking of standard libraries (required for no_std crates).
         [NO_STD]
         # Specify  cargo build profile (e.g. release or a custom profile)
+        [NO_LINKER_OVERRIDE]
+        # Will let Rust/Cargo determine which linker to use instead of corrosion (when linking is invoked by Rust) (Ignored with CMake < 3.19)
         [PROFILE <cargo-profile>]
+        # Build only the specified crate types (Ignored with CMake < 3.19)
+        [CRATE_TYPES <crate_type1> ... <crate_typeN>]
         # Only import the specified crates from a workspace
         [CRATES <crate1> ... <crateN>]
         # Enable the specified features
