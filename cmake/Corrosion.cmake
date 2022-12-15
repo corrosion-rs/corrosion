@@ -728,7 +728,7 @@ endif()
 #
 # A target may be either a specific bin
 function(_add_cargo_build out_cargo_build_out_dir)
-    set(options "")
+    set(options NO_LINKER_OVERRIDE)
     set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE TARGET_KIND WORKSPACE_MANIFEST_PATH)
     set(multi_value_args BYPRODUCTS)
     cmake_parse_arguments(
@@ -935,28 +935,33 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     # Used to set a linker for a specific target-triple.
     set(cargo_target_linker_var "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER")
-    if(CORROSION_LINKER_PREFERENCE)
-        set(cargo_target_linker_arg "$<IF:$<BOOL:${explicit_linker_property}>,${explicit_linker_property},${CORROSION_LINKER_PREFERENCE}>")
-        set(cargo_target_linker "${cargo_target_linker_var}=${cargo_target_linker_arg}")
-        if(CMAKE_CROSSCOMPILING)
-            # CMake does not offer a host compiler we could select when configured for cross-compiling. This
-            # effectively means that by default cc will be selected for builds targeting host. The user can still
-            # override this by manually adding the appropriate rustflags to select the compiler for the target!
-            set(cargo_target_linker "$<${if_not_host_build_condition}:${cargo_target_linker}>")
-        endif()
-        # Will be only set for cross-compilers like clang, c.f. `CMAKE_<LANG>_COMPILER_TARGET`.
-        if(CORROSION_LINKER_PREFERENCE_TARGET)
-            set(rustflag_linker_arg "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
-            # Skip adding the linker argument, if the linker is explicitly set, since the
-            # explicit_linker_property will not be set when this function runs.
-            # Passing this rustflag is necessary for clang.
-            corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:$<BOOL:${explicit_linker_property}>>:${rustflag_linker_arg}>")
+    if(NOT ACB_NO_LINKER_OVERRIDE)
+        if(CORROSION_LINKER_PREFERENCE)
+            set(cargo_target_linker_arg "$<IF:$<BOOL:${explicit_linker_property}>,${explicit_linker_property},${CORROSION_LINKER_PREFERENCE}>")
+            set(cargo_target_linker "${cargo_target_linker_var}=${cargo_target_linker_arg}")
+            if(CMAKE_CROSSCOMPILING)
+                # CMake does not offer a host compiler we could select when configured for cross-compiling. This
+                # effectively means that by default cc will be selected for builds targeting host. The user can still
+                # override this by manually adding the appropriate rustflags to select the compiler for the target!
+                set(cargo_target_linker "$<${if_not_host_build_condition}:${cargo_target_linker}>")
+            endif()
+            # Will be only set for cross-compilers like clang, c.f. `CMAKE_<LANG>_COMPILER_TARGET`.
+            if(CORROSION_LINKER_PREFERENCE_TARGET)
+                set(rustflag_linker_arg "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
+                # Skip adding the linker argument, if the linker is explicitly set, since the
+                # explicit_linker_property will not be set when this function runs.
+                # Passing this rustflag is necessary for clang.
+                corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:$<BOOL:${explicit_linker_property}>>:${rustflag_linker_arg}>")
+            endif()
+        else()
+            message(DEBUG "No linker preference for target ${target_name} could be detected.")
+            # Note: Adding quotes here introduces wierd errors when using MSVC. Since there are no spaces here at
+            # configure time, we can omit the quotes without problems
+            set(cargo_target_linker $<$<BOOL:${explicit_linker_property}>:${cargo_target_linker_var}=${explicit_linker_property}>)
         endif()
     else()
-        message(DEBUG "No linker preference for target ${target_name} could be detected.")
-        # Note: Adding quotes here introduces wierd errors when using MSVC. Since there are no spaces here at
-        # configure time, we can omit the quotes without problems
-        set(cargo_target_linker $<$<BOOL:${explicit_linker_property}>:${cargo_target_linker_var}=${explicit_linker_property}>)
+        # Disable the linker override by setting it to an empty string.
+        set(cargo_target_linker "")
     endif()
 
     message(DEBUG "TARGET ${target_name} produces byproducts ${byproducts}")
@@ -1043,7 +1048,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
 endfunction()
 
 function(corrosion_import_crate)
-    set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD)
+    set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD NO_LINKER_OVERRIDE)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
@@ -1118,6 +1123,7 @@ function(corrosion_import_crate)
         include(${generated_cmake})
     else()
         _generator_add_cargo_targets(
+            COR_NO_LINKER_OVERRIDE
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
             CRATES
