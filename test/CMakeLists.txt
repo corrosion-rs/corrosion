@@ -71,6 +71,9 @@ function(corrosion_tests_add_test test_name bin_names)
         # Mainly used in CI to build the native generator once and then reuse it for all tests
         set(TEST_GENERATOR_BIN EXTERNAL_CORROSION_GENERATOR "${CORROSION_GENERATOR_EXECUTABLE}")
     endif()
+    if(CMAKE_CROSSCOMPILING)
+        set(TEST_SYSTEM_NAME SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
+    endif()
 
     add_test(NAME "${test_name}_build"
             COMMAND
@@ -81,7 +84,7 @@ function(corrosion_tests_add_test test_name bin_names)
             GENERATOR "${CMAKE_GENERATOR}"
             RUST_TOOLCHAIN "${Rust_TOOLCHAIN}"
             CARGO_TARGET "${Rust_CARGO_TARGET}"
-            SYSTEM_NAME "${CMAKE_SYSTEM_NAME}"
+            "${TEST_SYSTEM_NAME}"
             "${TEST_C_COMPILER}"
             "${TEST_CXX_COMPILER}"
             "${TEST_GENERATOR_PLATFORM}"
