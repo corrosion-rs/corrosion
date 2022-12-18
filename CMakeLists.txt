@@ -36,16 +36,10 @@ if (CORROSION_GENERATOR_EXECUTABLE)
         TARGET Corrosion::Generator
         PROPERTY IMPORTED_LOCATION ${CORROSION_GENERATOR_EXECUTABLE})
     set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
-# If corrosion is used as a subdirectory, the CMake version is recent enough and the option is not
-# explicitly disabled, then we do not need to build the Rust based parser and use the CMake based
-# parser instead.
-elseif((NOT _CORROSION_TOP_LEVEL)
-        AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0
-        AND NOT CORROSION_NATIVE_TOOLING
-        )
-    set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
+elseif(CORROSION_NATIVE_TOOLING OR CMAKE_VERSION VERSION_LESS 3.19.0)
+        set(CORROSION_INSTALL_EXECUTABLE_DEFAULT "ON")
 else()
-    set(CORROSION_INSTALL_EXECUTABLE_DEFAULT ON)
+    set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
 endif()
 
 option(
