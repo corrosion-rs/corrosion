@@ -31,10 +31,20 @@ inputs:
     required: false
     description: Compiler to use. Valid options are clang, gcc and cl.
     default: ""
+  vendor:
+    required: false
+    description: Whether to use vendored dependencies or not
+    default: "true"
 
 runs:
   using: composite
   steps:
+    - name: Setup crates-io vendoring
+      shell: bash
+      run: | 
+        mkdir -p "${{ github.workspace }}/.cargo"
+        cp ./.github/scripts/vendoring.toml "${{ github.workspace }}/.cargo/config.toml"
+      if: ${{ 'true' == inputs.vendor }}
     - name: Determine Rust OS
       id: determine_rust_os
       shell: bash
