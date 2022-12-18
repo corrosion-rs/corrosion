@@ -19,6 +19,26 @@ pub struct CargoTarget {
     workspace_manifest_path: Rc<PathBuf>,
 }
 
+impl CargoTargetType {
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        match self {
+            Self::Executable => {
+                s.push_str("bin");
+            },
+            Self::Library { has_staticlib, has_cdylib} => {
+                if *has_staticlib {
+                    s.push_str("staticlib")
+                }
+                if *has_cdylib {
+                    s.push_str(" cdylib")
+                }
+            }
+        }
+        s
+    }
+}
+
 impl CargoTarget {
     pub fn from_metadata(
         cargo_package: Rc<cargo_metadata::Package>,
@@ -75,7 +95,7 @@ impl CargoTarget {
             .expect("Non-utf8 path encountered")
             .replace("\\", "/");
 
-        let target_kind = match self.target_type {
+        match self.target_type {
             CargoTargetType::Library {
                 has_staticlib,
                 has_cdylib,
@@ -109,7 +129,6 @@ impl CargoTarget {
                     has_staticlib = has_staticlib,
                     has_cdylib = has_cdylib,
                 )?;
-                "lib"
             }
             CargoTargetType::Executable => {
                 writeln!(
@@ -124,9 +143,9 @@ impl CargoTarget {
                     workspace_manifest_path = ws_manifest,
                     target_name = self.cargo_target.name,
                 )?;
-                "bin"
             }
         };
+        let target_kinds = self.target_type.to_string();
         writeln!(out_file,
             "
             set(cargo_build_out_dir \"\")
@@ -137,7 +156,7 @@ impl CargoTarget {
                 MANIFEST_PATH \"{package_manifest_path}\"
                 WORKSPACE_MANIFEST_PATH \"{workspace_manifest_path}\"
                 {profile_option}
-                TARGET_KIND \"{target_kind}\"
+                TARGET_KINDS {target_kinds}
                 BYPRODUCTS \"${{byproducts}}\"
             )
 
@@ -171,7 +190,7 @@ impl CargoTarget {
             package_manifest_path = self.cargo_package.manifest_path.as_str().replace("\\", "/"),
             workspace_manifest_path = ws_manifest,
             profile_option = cargo_build_profile_option,
-            target_kind = target_kind,
+            target_kinds = target_kinds,
 
         )?;
         Ok(())
