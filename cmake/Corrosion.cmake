@@ -147,7 +147,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         elseif(output_directory)
             set(curr_out_dir "${output_directory}")
         else()
-            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
         message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
                 " to `${curr_out_dir}/${filename}`.")
@@ -265,11 +265,12 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
             # Fallback to `output_dir` if specified
             # Note: Multi-configuration generators append a per-configuration subdirectory to the
             # specified directory unless a generator expression is used (from CMake documentation).
-            # todo: double check if cmake does this or if we have to do it here
             set(curr_out_dir "${output_dir}")
         else()
-            # Fallback to default directory.
-            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
+            # Fallback to the default directory. We do not append the configuration directory here
+            # and instead let CMake do this, since otherwise the resolving of dynamic library
+            # imported paths may fail.
+            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
         set(multiconfig_out_dir_genex "${multiconfig_out_dir_genex}$<$<CONFIG:${config_type}>:${curr_out_dir}>")
     endforeach()
