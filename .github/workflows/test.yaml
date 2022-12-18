@@ -212,7 +212,7 @@ jobs:
       - uses: actions/cache@v3
         id: cache_cxxbridge
         with:
-          path: /home/runner/.cargo/bin/cxxbridge
+          path: "~/.cargo/bin/cxxbridge*"
           key: ${{ runner.os }}-cxxbridge_1_0_80
       - name: Install cxxbridge
         if: steps.cache_cxxbridge.outputs.cache-hit != 'true'
