@@ -105,7 +105,7 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
                 MANIFEST_PATH "${manifest_path}"
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 PROFILE "${profile}"
-                TARGET_KIND "lib"
+                TARGET_KINDS "${kinds}"
                 BYPRODUCTS "${byproducts}"
             )
             if(archive_byproducts)
@@ -143,7 +143,7 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
                 MANIFEST_PATH "${manifest_path}"
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 PROFILE "${profile}"
-                TARGET_KIND "bin"
+                TARGET_KINDS "bin"
                 BYPRODUCTS "${byproducts}"
             )
             _corrosion_copy_byproducts(
