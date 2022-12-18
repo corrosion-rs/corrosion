@@ -60,6 +60,7 @@ execute_process(
         "${CMAKE_COMMAND}"
             "-G${TEST_GENERATOR}"
             "-DRust_TOOLCHAIN=${TEST_RUST_TOOLCHAIN}"
+            --log-level Debug
             ${TEST_Rust_CARGO_TARGET}
             ${TEST_CORROSION_INSTALL}
             ${TEST_GENERATOR_PLATFORM}
