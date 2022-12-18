@@ -7,14 +7,22 @@ function(_cargo_metadata out manifest)
         CARGO_EXECUTABLE
         TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
     )
+    get_filename_component(manifest_dir "${manifest}" DIRECTORY)
+    if(EXISTS "${manifest_dir}/Cargo.lock")
+        set(cargo_locked "--locked")
+    else()
+        set(cargo_locked "")
+    endif()
     execute_process(
         COMMAND
             ${CMAKE_COMMAND} -E env
                 CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
                 ${CARGO_EXECUTABLE}
                     metadata
-                        --manifest-path ${manifest}
+                        --manifest-path "${manifest}"
                         --format-version 1
+                        ${cargo_locked}
+
         OUTPUT_VARIABLE json
         COMMAND_ERROR_IS_FATAL ANY
     )
