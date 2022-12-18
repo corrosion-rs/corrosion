@@ -729,8 +729,8 @@ endif()
 # A target may be either a specific bin
 function(_add_cargo_build out_cargo_build_out_dir)
     set(options NO_LINKER_OVERRIDE)
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE TARGET_KIND WORKSPACE_MANIFEST_PATH)
-    set(multi_value_args BYPRODUCTS)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE WORKSPACE_MANIFEST_PATH)
+    set(multi_value_args BYPRODUCTS TARGET_KINDS)
     cmake_parse_arguments(
         ACB
         "${options}"
@@ -743,17 +743,18 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(target_name "${ACB_TARGET}")
     set(path_to_toml "${ACB_MANIFEST_PATH}")
     set(cargo_profile_name "${ACB_PROFILE}")
-    set(target_kind "${ACB_TARGET_KIND}")
+    set(target_kinds "${ACB_TARGET_KINDS}")
     set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
 
-    if(NOT target_kind)
-        message(FATAL_ERROR "TARGET_KIND not specified")
-    elseif(target_kind STREQUAL "lib")
+
+    if(NOT target_kinds)
+        message(FATAL_ERROR "TARGET_KINDS not specified")
+    elseif("staticlib" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
         set(cargo_rustc_filter "--lib")
-    elseif(target_kind STREQUAL "bin")
+    elseif("bin" IN_LIST target_kinds)
         set(cargo_rustc_filter "--bin=${target_name}")
     else()
-        message(FATAL_ERROR "TARGET_KIND must be `lib` or `bin`, but was `${target_kind}`")
+        message(FATAL_ERROR "TARGET_KINDS contained unknown kind `${target_kind}`")
     endif()
 
     if (NOT IS_ABSOLUTE "${path_to_toml}")
@@ -772,9 +773,21 @@ function(_add_cargo_build out_cargo_build_out_dir)
     unset(is_windows_msvc)
     get_source_file_property(is_windows_msvc "${workspace_manifest_path}" CORROSION_PLATFORM_IS_WINDOWS_MSVC)
 
-    # For MSVC targets, don't mess with linker preferences.
-    # TODO: We still should probably make sure that rustc is using the correct cl.exe to link programs.
-    if (NOT is_windows_msvc)
+    # Corrosions currently attempts to select a correct linker, based on the enabled languages.
+    # This approach is flawed and should be revisited in the future.
+    # Currently we disable this approach for the MSVC abi, because it just doesn't work
+    # and for static libraries, because the linker shouldn't be invoked for those, but
+    # potentially could be if Rust side build scripts or proc macros etc. happened to be involved.
+    # Overriding the linker in those cases is probably unwanted.
+    if(is_windows_msvc)
+        set(determine_linker_preference FALSE)
+    elseif("staticlib" IN_LIST target_kinds AND NOT "cdylib" IN_LIST target_kinds)
+        set(determine_linker_preference FALSE)
+    else()
+        set(determine_linker_preference TRUE)
+    endif()
+
+    if(determine_linker_preference)
         set(languages C CXX Fortran)
 
         set(has_compiler OFF)
