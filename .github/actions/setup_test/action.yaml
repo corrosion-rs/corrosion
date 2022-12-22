@@ -35,6 +35,12 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Cache Cargo registry
+      id: cache-registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry
     - name: Determine Rust OS
       id: determine_rust_os
       shell: bash
