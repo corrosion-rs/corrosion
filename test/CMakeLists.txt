@@ -80,7 +80,7 @@ function(corrosion_tests_add_test test_name bin_names)
             ${CMAKE_COMMAND}
             -P "${CMAKE_SOURCE_DIR}/test/ConfigureAndBuild.cmake"
             SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/${test_name}"
-            BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build"
+            BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}"
             GENERATOR "${CMAKE_GENERATOR}"
             RUST_TOOLCHAIN "${Rust_TOOLCHAIN}"
             CARGO_TARGET "${Rust_CARGO_TARGET}"
@@ -102,7 +102,7 @@ function(corrosion_tests_add_test test_name bin_names)
         else()
             set(bin_filename "${bin}")
         endif()
-        add_test(NAME "${test_name}_run_${bin}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/build/${bin_filename}")
+        add_test(NAME "${test_name}_run_${bin}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}/${bin_filename}")
         set_tests_properties("${test_name}_run_${bin}" PROPERTIES FIXTURES_REQUIRED "build_fixture_${test_name}")
         # CMAKE_CROSSCOMPILING is not set when cross-compiling with VS (via -A flag).
         # Todo: We could run x86 binaries on x64 hosts.
