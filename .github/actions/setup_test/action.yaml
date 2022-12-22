@@ -150,8 +150,10 @@ runs:
     - name: Install Cross Compiler
       shell: bash
       run: |
-        sudo apt-get update
-        sudo apt-get install -y g++-$(echo "${{inputs.target_arch}}" | tr _ -)-linux-gnu
+        if [[ "${{ inputs.target_arch }}" != 'x86_64' ]]; then
+          sudo apt-get update
+          sudo apt-get install -y g++-$(echo "${{inputs.target_arch}}" | tr _ -)-linux-gnu
+        fi
       if: ${{ 'Linux' == runner.os }}
     - name: Determine Configure Shell
       id: configure_shell
