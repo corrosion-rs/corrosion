@@ -156,8 +156,9 @@ jobs:
           generator: ${{matrix.generator}}
           build_dir: build
       - name: Run Tests
+        id: run_tests
         working-directory: build
-        run: ctest --verbose --build-config Debug
+        run: ctest --output-on-failure --build-config Debug -j 3
 
   test_msvc:
     name: Test MSVC Generator
@@ -195,7 +196,7 @@ jobs:
           build_dir: build
       - name: Run Tests
         working-directory: build
-        run: ctest --verbose --build-config Debug
+        run: ctest --output-on-failure --build-config Debug -j 3
 
   test_cxxbridge:
     name: Test cxxbridge integration
@@ -228,7 +229,7 @@ jobs:
           configure_params: -DCORROSION_TESTS_CXXBRIDGE=ON
       - name: Run Tests
         working-directory: build
-        run: ctest --verbose --build-config Debug
+        run: ctest --output-on-failure --build-config Debug -j 3
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
@@ -272,7 +273,7 @@ jobs:
 
           cd build
 
-          ctest --output-on-failure -C Debug
+          ctest --output-on-failure -C Debug -j 3
       - name: Test Corrosion as installed module
         run: >
           cmake -E remove_directory build
@@ -286,4 +287,4 @@ jobs:
 
           cd build
 
-          ctest --output-on-failure -C Release
+          ctest --output-on-failure -C Release -j 3
