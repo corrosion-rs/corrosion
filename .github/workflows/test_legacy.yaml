@@ -73,7 +73,7 @@ jobs:
       - name: Run Tests
         id: run_tests
         working-directory: build
-        run: ctest --build-config Debug
+        run: ctest --build-config Debug -j 3
       - name: Rerun failed tests verbose
         working-directory: build
         run: ctest --rerun-failed --verbose --build-config Debug
