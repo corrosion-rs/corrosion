@@ -185,6 +185,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      # The initial configure for MSVC is quite slow, so we cache the build directory
+      # since reconfiguring is faster
+      - name: Cache MSVC build directory
+        id: cache-msvc-builddir
+        uses: actions/cache@v3
+        with:
+          path: build
+          key: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.rust }}-msvc-build
       - name: Setup Environment and Configure CMake
         uses: "./.github/actions/setup_test"
         with:
