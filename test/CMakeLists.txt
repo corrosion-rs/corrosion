@@ -52,6 +52,18 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
     set_tests_properties("install_corrosion_build"     PROPERTIES FIXTURES_REQUIRED "fixture_corrosion_configure")
     set_tests_properties("install_corrosion_install"   PROPERTIES FIXTURES_REQUIRED "install_corrosion_build")
     set_tests_properties("install_corrosion_install"   PROPERTIES FIXTURES_SETUP "fixture_corrosion_install")
+
+    add_test(NAME "install_corrosion_build_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build-corrosion")
+    set_tests_properties("install_corrosion_build_cleanup" PROPERTIES
+        FIXTURES_CLEANUP
+        "fixture_corrosion_configure;fixture_corrosion_build"
+    )
+
+    add_test(NAME "install_corrosion_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${test_install_path}")
+    set_tests_properties("install_corrosion_cleanup" PROPERTIES
+        FIXTURES_CLEANUP
+        "fixture_corrosion_configure;fixture_corrosion_build;fixture_corrosion_install"
+    )
 endif()
 
 function(corrosion_tests_add_test test_name bin_names)
@@ -111,6 +123,8 @@ function(corrosion_tests_add_test test_name bin_names)
             set_tests_properties("${test_name}_run_${bin}" PROPERTIES DISABLED TRUE)
         endif()
     endforeach()
+    add_test(NAME "${test_name}_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}")
+    set_tests_properties("${test_name}_cleanup" PROPERTIES FIXTURES_CLEANUP "build_fixture_${test_name}")
 endfunction()
 
 # Please keep this in alphabetical order.
