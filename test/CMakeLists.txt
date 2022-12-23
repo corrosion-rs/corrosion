@@ -6,8 +6,13 @@ if(NOT CORROSION_TESTS)
 endif()
 
 option(CORROSION_TESTS_CXXBRIDGE
-        "Build cxxbridge tests which requires cxxbridge exectuable being available"
+        "Build cxxbridge tests which requires cxxbridge executable being available"
         OFF)
+option(CORROSION_TESTS_KEEP_BUILDDIRS
+    "By default corrosion tests will cleanup after themselves. This option limits the cleaning up to the
+     target directories and will keep the build directories, which may be useful for caching."
+    OFF)
+mark_as_advanced(CORROSION_TESTS_NO_CLEANUP)
 
 set(test_install_path "${CMAKE_CURRENT_BINARY_DIR}/test-install-corrosion")
 
@@ -123,8 +128,20 @@ function(corrosion_tests_add_test test_name bin_names)
             set_tests_properties("${test_name}_run_${bin}" PROPERTIES DISABLED TRUE)
         endif()
     endforeach()
-    add_test(NAME "${test_name}_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}")
-    set_tests_properties("${test_name}_cleanup" PROPERTIES FIXTURES_CLEANUP "build_fixture_${test_name}")
+
+    if(CORROSION_TESTS_KEEP_BUILDDIRS)
+        add_test(NAME "${test_name}_cleanup_artifacts"
+            COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}" --target clean
+        )
+        add_test(NAME "${test_name}_cleanup_cargo"
+            COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}/cargo"
+            )
+        set_tests_properties("${test_name}_cleanup_artifacts" PROPERTIES FIXTURES_CLEANUP "build_fixture_${test_name}")
+        set_tests_properties("${test_name}_cleanup_cargo" PROPERTIES FIXTURES_CLEANUP "build_fixture_${test_name}")
+    else()
+        add_test(NAME "${test_name}_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}")
+        set_tests_properties("${test_name}_cleanup" PROPERTIES FIXTURES_CLEANUP "build_fixture_${test_name}")
+    endif()
 endfunction()
 
 # Please keep this in alphabetical order.
