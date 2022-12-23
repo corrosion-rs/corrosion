@@ -50,7 +50,7 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
     set_tests_properties("install_corrosion_configure" PROPERTIES FIXTURES_SETUP "fixture_corrosion_configure")
     set_tests_properties("install_corrosion_build"     PROPERTIES FIXTURES_SETUP "fixture_corrosion_build")
     set_tests_properties("install_corrosion_build"     PROPERTIES FIXTURES_REQUIRED "fixture_corrosion_configure")
-    set_tests_properties("install_corrosion_install"   PROPERTIES FIXTURES_REQUIRED "install_corrosion_build")
+    set_tests_properties("install_corrosion_install"   PROPERTIES FIXTURES_REQUIRED "fixture_corrosion_build")
     set_tests_properties("install_corrosion_install"   PROPERTIES FIXTURES_SETUP "fixture_corrosion_install")
 
     add_test(NAME "install_corrosion_build_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build-corrosion")
