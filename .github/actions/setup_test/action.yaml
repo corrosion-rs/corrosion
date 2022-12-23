@@ -178,4 +178,5 @@ runs:
         "${{steps.pick_generator.outputs.generator}}"
         ${{steps.install_prefix.outputs.install_path}}
         "-DRust_TOOLCHAIN=${{inputs.rust}}"
+        --log-level=DEBUG
         ${{ inputs.configure_params }}
