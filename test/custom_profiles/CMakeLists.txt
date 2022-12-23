@@ -7,4 +7,9 @@ if(Rust_VERSION VERSION_LESS 1.57.0)
         set_tests_properties(custom_profiles_build custom_profiles_run_custom-profile-exe PROPERTIES
                 DISABLED TRUE
         )
+        if(TEST custom_profiles_cleanup_artifacts)
+                set_tests_properties(custom_profiles_cleanup_artifacts PROPERTIES
+                    DISABLED TRUE
+            )
+        endif()
 endif()

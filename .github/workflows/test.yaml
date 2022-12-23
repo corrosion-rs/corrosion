@@ -185,6 +185,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      # The initial configure for MSVC is quite slow, so we cache the build directory
+      # (including the build directories of the tests) since reconfiguring is
+      # significantly faster.
+      - name: Cache MSVC build directory
+        id: cache-msvc-builddir
+        uses: actions/cache@v3
+        with:
+          path: build
+          key: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.rust }}-msvc-build
       - name: Setup Environment and Configure CMake
         uses: "./.github/actions/setup_test"
         with:
@@ -194,6 +203,7 @@ jobs:
           rust: ${{matrix.rust}}
           generator: default
           build_dir: build
+          configure_params: "-DCORROSION_TESTS_KEEP_BUILDDIRS=ON"
       - name: Run Tests
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
