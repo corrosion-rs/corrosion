@@ -1048,7 +1048,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     add_custom_target(
         cargo-clean_${target_name}
         COMMAND
-            $<TARGET_FILE:Rust::Cargo> clean --target ${_CORROSION_RUST_CARGO_TARGET}
+            $<TARGET_FILE:Rust::Cargo> clean ${cargo_target_option}
             -p ${package_name} --manifest-path ${path_to_toml}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
         USES_TERMINAL
