@@ -106,8 +106,8 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
-                ${_NO_LINKER_OVERRIDE}
                 cargo_build_out_dir
+                ${_NO_LINKER_OVERRIDE}
                 PACKAGE ${package_name}
                 TARGET ${target_name}
                 MANIFEST_PATH "${manifest_path}"
@@ -144,8 +144,8 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
-                ${_NO_LINKER_OVERRIDE}
                 cargo_build_out_dir
+                ${_NO_LINKER_OVERRIDE}
                 PACKAGE "${package_name}"
                 TARGET "${target_name}"
                 MANIFEST_PATH "${manifest_path}"
