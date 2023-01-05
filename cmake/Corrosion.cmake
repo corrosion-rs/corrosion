@@ -1506,6 +1506,11 @@ function(corrosion_add_cxxbridge cxx_target)
     if(cxxbridge_version)
         if(cxxbridge_version VERSION_EQUAL cxx_required_version)
             set(cxxbridge "${INSTALLED_CXXBRIDGE}")
+            if(NOT TARGET "cxxbridge_v${cxx_required_version}")
+                # Add an empty target.
+                add_custom_target("cxxbridge_v${cxx_required_version}"
+                    )
+            endif()
         endif()
     endif()
 
@@ -1527,7 +1532,6 @@ function(corrosion_add_cxxbridge cxx_target)
                 DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge"
                 )
         endif()
-        add_dependencies(_cargo-build_${_arg_CRATE} "cxxbridge_v${cxx_required_version}")
         set(cxxbridge "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge")
     endif()
 
@@ -1572,8 +1576,9 @@ function(corrosion_add_cxxbridge cxx_target)
         set(rust_source_path "${manifest_dir}/src/${filepath}")
 
         add_custom_command(
-            TARGET _cargo-build_${_arg_CRATE}
-            POST_BUILD
+            OUTPUT
+            "${header_placement_dir}/${cxx_header}"
+            "${source_placement_dir}/${cxx_source}"
             COMMAND
                 "${CMAKE_COMMAND}" -E make_directory ${header_placement_dir}/${directory}
             COMMAND
@@ -1581,11 +1586,10 @@ function(corrosion_add_cxxbridge cxx_target)
             COMMAND
                 ${cxxbridge} ${rust_source_path} --header --output "${header_placement_dir}/${cxx_header}"
             COMMAND
-                ${cxxbridge} ${rust_source_path} --output "${source_placement_dir}/${cxx_source}"
-            BYPRODUCTS
-                "${header_placement_dir}/${cxx_header}"
-                "${source_placement_dir}/${cxx_source}"
-            DEPENDS ${cxxbridge}
+                ${cxxbridge} ${rust_source_path}
+                    --output "${source_placement_dir}/${cxx_source}"
+                    --include "${header_placement_dir}/${cxx_header}"
+            DEPENDS "cxxbridge_v${cxx_required_version}" "${rust_source_path}"
             COMMENT Generating cxx bindings for crate ${_arg_CRATE}
         )
 
