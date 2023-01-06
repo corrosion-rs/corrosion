@@ -1563,7 +1563,15 @@ function(corrosion_add_cxxbridge cxx_target)
             $<BUILD_INTERFACE:${generated_dir}/include>
             $<INSTALL_INTERFACE:include>
     )
-    target_link_libraries(${cxx_target} PRIVATE ${_arg_CRATE})
+    # Todo: target_link_libraries is only necessary for rust2c projects.
+    # It is possible that checking if the rust crate is an executable is a sufficient check,
+    # but some more thought may be needed here.
+    # Maybe we should also let the user do this, since for c2rust, the user also has to call
+    # corrosion_link_libraries() themselves.
+    get_target_property(crate_target_type ${_arg_CRATE} TYPE)
+    if (NOT crate_target_type STREQUAL "EXECUTABLE")
+        target_link_libraries(${cxx_target} PRIVATE ${_arg_CRATE})
+    endif()
 
     foreach(filepath ${_arg_FILES})
         get_filename_component(filename ${filepath} NAME_WE)
