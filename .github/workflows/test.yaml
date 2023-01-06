@@ -205,25 +205,33 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-2019
+          # - windows-2019  # Excluded for now until I have time to fix CI for windows-gnu
           - ubuntu-latest
           - macos-12
+        include:
+          - abi: default
+        #  - os: windows-2019
+        #    abi: gnu
     steps:
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
         id: cache_cxxbridge
         with:
           path: "~/.cargo/bin/cxxbridge*"
-          key: ${{ runner.os }}-cxxbridge_1_0_80
+          key: ${{ runner.os }}-cxxbridge_1_0_86
       - name: Install cxxbridge
         if: steps.cache_cxxbridge.outputs.cache-hit != 'true'
-        run: cargo install cxxbridge-cmd@1.0.80
+        run: cargo install cxxbridge-cmd@1.0.86
+      - name: Install lld
+        run: sudo apt update && sudo apt install -y lld
+        if: ${{ 'Linux' == runner.os }}
       - name: Setup Environment and Configure CMake
         uses: "./.github/actions/setup_test"
         with:
           target_arch: x86_64
           cmake: 3.15.7
-          rust: 1.54.0
+          rust: 1.64.0
+          abi: ${{ matrix.abi }}
           generator: ninja
           build_dir: build
           configure_params: -DCORROSION_TESTS_CXXBRIDGE=ON
