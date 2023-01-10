@@ -1,3 +1,20 @@
+# 0.3.2 (2023-01-11)
+
+## New features (Only available on CMake >= 3.19)
+
+- Add new `CRATE_TYPES` flag to `corrosion_import_crate()` to restrict which
+  crate types should be imported ([#269](https://github.com/corrosion-rs/corrosion/pull/269)).
+- Add `NO_LINKER_OVERRIDE` flag to let Rust choose the default linker for the target
+  instead of what Corrosion thinks is the appropriate linker driver ([#272](https://github.com/corrosion-rs/corrosion/pull/272)).
+
+## Fixes
+
+- Fix clean target when cross-compiling ([#291](https://github.com/corrosion-rs/corrosion/pull/291)).
+- Don't set the linker for Rust static libraries ([#275](https://github.com/corrosion-rs/corrosion/pull/275)).
+- Minor fixes in FindRust [#297](https://github.com/corrosion-rs/corrosion/pull/297): 
+  - fix a logic error in the version detection
+  - fix a logic error in `QUIET` mode when rustup is not found.
+
 # 0.3.1 (2022-12-13)
 
 ### Fixes
