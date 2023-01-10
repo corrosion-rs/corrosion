@@ -182,7 +182,8 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
             set(_TOOLCHAIN_TYPE "${CMAKE_MATCH_2}")
             list(APPEND _DISCOVERED_TOOLCHAINS "${_TOOLCHAIN}")
 
-            set(${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
+            set(_TOOLCHAIN_PATH "${CMAKE_MATCH_3}")
+            set(_TOOLCHAIN_${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
 
             if (_TOOLCHAIN_TYPE MATCHES ".*\\(default\\).*")
                 set(_TOOLCHAIN_DEFAULT "${_TOOLCHAIN}")
@@ -194,7 +195,7 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
 
             execute_process(
                     COMMAND
-                    "${_TOOLCHAIN}/bin/rustc" --version
+                    "${_TOOLCHAIN_PATH}/bin/rustc" --version
                     OUTPUT_VARIABLE _TOOLCHAIN_RAW_VERSION
             )
             if (_TOOLCHAIN_RAW_VERSION MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?")
@@ -278,7 +279,7 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
         set(_RUSTUP_TOOLCHAIN_FULL "${Rust_TOOLCHAIN}")
     endif()
 
-    set(_RUST_TOOLCHAIN_PATH "${${_RUSTUP_TOOLCHAIN_FULL}_PATH}")
+    set(_RUST_TOOLCHAIN_PATH "${_TOOLCHAIN_${_RUSTUP_TOOLCHAIN_FULL}_PATH}")
     if(NOT "${Rust_FIND_QUIETLY}")
         message(VERBOSE "Rust toolchain ${_RUSTUP_TOOLCHAIN_FULL}")
         message(VERBOSE "Rust toolchain path ${_RUST_TOOLCHAIN_PATH}")
