@@ -175,12 +175,15 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
     )
 
     string(REPLACE "\n" ";" _TOOLCHAINS_RAW "${_TOOLCHAINS_RAW}")
+    set(_DISCOVERED_TOOLCHAINS "")
+    set(_DISCOVERED_TOOLCHAINS_RUSTC_PATH "")
+    set(_DISCOVERED_TOOLCHAINS_CARGO_PATH "")
+    set(_DISCOVERED_TOOLCHAINS_VERSION "")
 
     foreach(_TOOLCHAIN_RAW ${_TOOLCHAINS_RAW})
         if (_TOOLCHAIN_RAW MATCHES "([a-zA-Z0-9\\._\\-]+)[ \t\r\n]?(\\(default\\) \\(override\\)|\\(default\\)|\\(override\\))?[ \t\r\n]+(.+)")
             set(_TOOLCHAIN "${CMAKE_MATCH_1}")
             set(_TOOLCHAIN_TYPE "${CMAKE_MATCH_2}")
-            list(APPEND _DISCOVERED_TOOLCHAINS "${_TOOLCHAIN}")
 
             set(_TOOLCHAIN_PATH "${CMAKE_MATCH_3}")
             set(_TOOLCHAIN_${_TOOLCHAIN}_PATH "${CMAKE_MATCH_3}")
@@ -199,19 +202,72 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
                     OUTPUT_VARIABLE _TOOLCHAIN_RAW_VERSION
             )
             if (_TOOLCHAIN_RAW_VERSION MATCHES "rustc ([0-9]+)\\.([0-9]+)\\.([0-9]+)(-nightly)?")
-                # todo: maybe needs to be advanced cache variable...
+                list(APPEND _DISCOVERED_TOOLCHAINS "${_TOOLCHAIN}")
+                list(APPEND _DISCOVERED_TOOLCHAINS_RUSTC_PATH "${_TOOLCHAIN_PATH}/bin/rustc")
+                list(APPEND _DISCOVERED_TOOLCHAINS_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
+
+                # We need this variable to determine the default toolchain, since `foreach(... IN ZIP_LISTS ...)`
+                # requires CMake 3.17. As a workaround we define this variable to lookup the version when iterating
+                # through the `_DISCOVERED_TOOLCHAINS` lists.
                 set(_TOOLCHAIN_${_TOOLCHAIN}_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
                 if(CMAKE_MATCH_4)
                     set(_TOOLCHAIN_${_TOOLCHAIN}_IS_NIGHTLY "TRUE")
                 else()
                     set(_TOOLCHAIN_${_TOOLCHAIN}_IS_NIGHTLY "FALSE")
                 endif()
+                if(EXISTS "${_TOOLCHAIN_PATH}/bin/cargo")
+                    list(APPEND _DISCOVERED_TOOLCHAINS_CARGO_PATH "${_TOOLCHAIN_PATH}/bin/cargo")
+                else()
+                    list(APPEND _DISCOVERED_TOOLCHAINS_CARGO_PATH "NOTFOUND")
+                endif()
+            else()
+                message(AUTHOR_WARNING "Unexpected output from `rustc --version` for Toolchain `${_TOOLCHAIN}`: "
+                        "`${_TOOLCHAIN_RAW_VERSION}`.\n"
+                        "Ignoring this toolchain."
+                )
             endif()
-
         else()
-            message(WARNING "Didn't recognize toolchain: ${_TOOLCHAIN_RAW}")
+            message(AUTHOR_WARNING "Didn't recognize toolchain: ${_TOOLCHAIN_RAW}. Ignoring this toolchain.\n"
+                "Rustup toolchain list output( `${Rust_RUSTUP} toolchain list --verbose`):\n"
+                "${_TOOLCHAINS_RAW}"
+            )
         endif()
     endforeach()
+
+    # Expose a list of available rustup toolchains.
+    list(LENGTH _DISCOVERED_TOOLCHAINS _toolchain_len)
+    list(LENGTH _DISCOVERED_TOOLCHAINS_RUSTC_PATH _toolchain_rustc_len)
+    list(LENGTH _DISCOVERED_TOOLCHAINS_CARGO_PATH _toolchain_cargo_len)
+    list(LENGTH _DISCOVERED_TOOLCHAINS_VERSION _toolchain_version_len)
+    if(NOT
+        (_toolchain_len EQUAL _toolchain_rustc_len
+            AND _toolchain_cargo_len EQUAL _toolchain_version_len
+            AND _toolchain_len EQUAL _toolchain_cargo_len)
+        )
+        message(FATAL_ERROR "Internal error - list length mismatch."
+            "List lengths: ${_toolchain_len} toolchains, ${_toolchain_rustc_len} rustc, ${_toolchain_cargo_len} cargo,"
+            " ${_toolchain_version_len} version. The lengths should be the same."
+        )
+    endif()
+
+    set(Rust_RUSTUP_TOOLCHAINS CACHE INTERNAL "List of available Rustup toolchains" "${_DISCOVERED_TOOLCHAINS}")
+    set(Rust_RUSTUP_TOOLCHAINS_RUSTC_PATH
+        CACHE INTERNAL
+        "List of the rustc paths corresponding to the toolchain at the same index in `Rust_RUSTUP_TOOLCHAINS`."
+        "${_DISCOVERED_TOOLCHAINS_RUSTC_PATH}"
+    )
+    set(Rust_RUSTUP_TOOLCHAINS_CARGO_PATH
+        CACHE INTERNAL
+        "List of the cargo paths corresponding to the toolchain at the same index in `Rust_RUSTUP_TOOLCHAINS`. \
+        May also be `NOTFOUND` if the toolchain does not have a cargo executable."
+        "${_DISCOVERED_TOOLCHAINS_CARGO_PATH}"
+    )
+    set(Rust_RUSTUP_TOOLCHAINS_VERSION
+        CACHE INTERNAL
+        "List of the rust toolchain version corresponding to the toolchain at the same index in \
+        `Rust_RUSTUP_TOOLCHAINS`."
+        "${_DISCOVERED_TOOLCHAINS_VERSION}"
+    )
 
     # Rust_TOOLCHAIN is preferred over a requested version if it is set.
     if (NOT DEFINED Rust_TOOLCHAIN)
