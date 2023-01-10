@@ -29,6 +29,16 @@
 - Get metadata with `--locked` (requires a lock-file). This might cause issues, reports are welcome.
 - Experimental cxxbridge integration.
 - Add a helper function to parse the package version from a Cargo.toml file
+- Expose rustup toolchains discovered by `FindRust` in the following cache variables
+  which contain a list.
+  - `Rust_RUSTUP_TOOLCHAINS`: List of toolchains names
+  - `Rust_RUSTUP_TOOLCHAINS_VERSION`: List of `rustc` version of the toolchains
+  - `Rust_RUSTUP_TOOLCHAINS_RUSTC_PATH`: List of the path to `rustc`
+  - `Rust_RUSTUP_TOOLCHAINS_CARGO_PATH`: List of the path to `cargo`. Entries may be `NOTFOUND` if cargo
+    is not available for that toolchain.
+- Add target properties `INTERFACE_CORROSION_RUSTC` and `INTERFACE_CORROSION_CARGO`, which may
+  be set to paths to `rustc` and `cargo` respectively to override the toolchain for a specific
+  target.
 
 # 0.3.3 (2023-02-17)
 

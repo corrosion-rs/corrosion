@@ -842,6 +842,12 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     set(cargo_profile_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_PROFILE>>")
 
+    # Option to override the rustc/cargo binary to something other than the global default
+    set(rustc_override "$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTC>")
+    set(cargo_override "$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO>")
+    set(rustc_bin "$<IF:$<BOOL:${rustc_override}>,${rustc_override},${_CORROSION_RUSTC}>")
+    set(cargo_bin "$<IF:$<BOOL:${cargo_override}>,${cargo_override},${_CORROSION_CARGO}>")
+
 
     # Rust will add `-lSystem` as a flag for the linker on macOS. Adding the -L flag via RUSTFLAGS only fixes the
     # problem partially - buildscripts still break, since they won't receive the RUSTFLAGS. This seems to only be a
@@ -978,8 +984,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 "${corrosion_cc_rs_flags}"
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
-                "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
-            "${_CORROSION_CARGO}"
+                "CARGO_BUILD_RUSTC=${rustc_bin}"
+            "${cargo_bin}"
                 rustc
                 ${cargo_rustc_filter}
                 ${cargo_target_option}
@@ -1036,7 +1042,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     add_custom_target(
         cargo-clean_${target_name}
         COMMAND
-            $<TARGET_FILE:Rust::Cargo> clean ${cargo_target_option}
+            "${cargo_bin}" clean ${cargo_target_option}
             -p ${package_name} --manifest-path ${path_to_toml}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${build_dir}
         USES_TERMINAL
