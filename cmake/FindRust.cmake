@@ -72,12 +72,15 @@ endif()
 if (DEFINED Rust_TOOLCHAIN)
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
     find_program(Rust_RUSTUP rustup PATHS "$ENV{HOME}/.cargo/bin")
-    if (NOT Rust_RUSTUP AND NOT "${Rust_FIND_QUIETLY}")
-        message(
-            WARNING "CMake variable `Rust_TOOLCHAIN` specified, but `rustup` was not found. "
-            "Ignoring toolchain and looking for a Rust toolchain not managed by rustup.")
-    else()
+    if(Rust_RUSTUP)
         set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
+    else()
+        set(_RESOLVE_RUSTUP_TOOLCHAINS OFF)
+        if(NOT "${Rust_FIND_QUIETLY}")
+            message(
+                WARNING "CMake variable `Rust_TOOLCHAIN` specified, but `rustup` was not found. "
+                "Ignoring toolchain and looking for a Rust toolchain not managed by rustup.")
+        endif()
     endif()
 else()
     # If we aren't definitely using a rustup toolchain, look for rustc first - the user may have
