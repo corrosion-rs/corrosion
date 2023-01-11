@@ -104,7 +104,7 @@ endfunction()
 # Please keep this in alphabetical order.
 add_subdirectory(cargo_flags)
 add_subdirectory(cpp2rust)
-if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0")
+if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.19.0")
     # Flag `--crate-type` is only supported since Rust 1.64.0
     add_subdirectory(crate_type)
 endif()
