@@ -29,8 +29,8 @@ inputs:
     default: ""
   compiler:
     required: false
-    description: Compiler to use. Valid options are clang, gcc and cl.
-    default: ""
+    description: Compiler to use. Valid options are clang, gcc, cl, default, or an empty string.
+    default: "default"
 
 runs:
   using: composite

@@ -16,7 +16,7 @@ if [[ -z "${runner_os}" || -z "${target_abi}" || -z  "${target_arch}" ]]; then
   echo "Error: Not all required parameters where set"
   exit 1
 fi
-if [[ -z "${compiler_kind}" ]]; then
+if [[ -z "${compiler_kind}" || "${compiler_kind}" == "default" ]]; then
   echo "compiler option was not set. Determining default compiler."
   if [[ "${runner_os}" == "Windows" ]]; then
     if [[ "${target_abi}" == "msvc" ]]; then
