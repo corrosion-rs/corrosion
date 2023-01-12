@@ -1120,12 +1120,8 @@ function(corrosion_import_crate)
 endfunction(corrosion_import_crate)
 
 function(corrosion_set_linker_language target_name language)
-    message(DEPRECATION "corrosion_set_linker_language is deprecated."
+    message(FATAL_ERROR "corrosion_set_linker_language was deprecated and removed."
             "Please use corrosion_set_linker and set a specific linker.")
-    set_property(
-        TARGET _cargo-build_${target_name}
-        PROPERTY LINKER_LANGUAGE ${language}
-    )
 endfunction()
 
 function(corrosion_set_linker target_name linker)
