@@ -56,6 +56,7 @@ jobs:
         generator:
           - default # This is just whatever the platform default is
           - ninja
+        compiler: [default]
         include:
           - rust: nightly
             cmake: 3.19.0
@@ -75,6 +76,13 @@ jobs:
             arch: x86_64
             abi: darwin
             os: macos-12
+          - rust: stable
+            cmake: 3.19.0
+            generator: ninja
+            arch: x86_64
+            abi: msvc
+            os: windows-2019
+            compiler: clang
           - os: ubuntu-latest
             arch: x86_64
             abi: gnu
@@ -133,6 +141,7 @@ jobs:
           rust: ${{matrix.rust}}
           generator: ${{matrix.generator}}
           build_dir: build
+          compiler: ${{matrix.compiler}}
       - name: Run Tests
         id: run_tests
         working-directory: build
