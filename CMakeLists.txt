@@ -50,10 +50,9 @@ option(
 mark_as_advanced(CORROSION_INSTALL_EXECUTABLE)
 
 if (_CORROSION_TOP_LEVEL)
-    # TODO: If we don't have a language enabled, corrosion_import_crate will
-    # attempt to enable a C compiler. Ideally, we could delay this somehow until
-    # after we've set link libraries.
-    enable_language(CXX)
+    # We need to enable a language for corrosions test to work.
+    # For projects using corrosion this is not needed
+    enable_language(C)
 endif()
 
 # This little bit self-hosts the Corrosion toolchain to build the generator

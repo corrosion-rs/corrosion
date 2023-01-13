@@ -766,12 +766,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
             endif()
         endforeach()
 
-        # When cross-compiling a Rust crate, at the very least we need a C linker
-        if (NOT has_compiler AND CMAKE_CROSSCOMPILING)
-            message(STATUS "Enabling the C compiler for linking Rust programs")
-            enable_language(C)
-        endif()
-
         # Determine the linker CMake prefers based on the enabled languages.
         set(_CORROSION_LINKER_PREFERENCE_SCORE "0")
         foreach(language ${languages})
