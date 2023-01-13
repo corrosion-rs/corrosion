@@ -1,15 +1,20 @@
-corrosion_tests_add_test(custom_profiles "custom-profile-exe")
+# The tests in this folder test specifying the cargo profile name via the --profile option.
+# The built-in `test` and `bench` profiles are _not_ supported, because they output
+# artifacts to a different location and add a hash to the artifact name.
+if(Rust_VERSION VERSION_GREATER_EQUAL 1.57.0)
 
-set_tests_properties("custom_profiles_run_custom-profile-exe" PROPERTIES PASS_REGULAR_EXPRESSION
+    corrosion_tests_add_test(custom_profiles "custom-profile-exe")
+    corrosion_tests_add_test(dev_profile "dev_bin" TEST_SRC_DIR basic_profiles CARGO_PROFILE dev)
+    corrosion_tests_add_test(release_profile "release_bin" TEST_SRC_DIR basic_profiles CARGO_PROFILE release)
+
+    set_tests_properties("custom_profiles_run_custom-profile-exe" PROPERTIES PASS_REGULAR_EXPRESSION
         "^Hello, Cpp! I'm Rust!\r?\n$"
         )
-if(Rust_VERSION VERSION_LESS 1.57.0)
-        set_tests_properties(custom_profiles_build custom_profiles_run_custom-profile-exe PROPERTIES
-                DISABLED TRUE
+    set_tests_properties("dev_profile_run_dev_bin" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^Hello, Cpp! I'm Rust!\r?\n$"
         )
-        if(TEST custom_profiles_cleanup_artifacts)
-                set_tests_properties(custom_profiles_cleanup_artifacts PROPERTIES
-                    DISABLED TRUE
-            )
-        endif()
+    set_tests_properties("release_profile_run_release_bin" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^Hello, Cpp! I'm Rust!\r?\n$"
+        )
+
 endif()
