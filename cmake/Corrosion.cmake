@@ -861,8 +861,21 @@ function(_add_cargo_build out_cargo_build_out_dir)
     endif()
 
     if(cargo_profile_name)
+        # The profile name could be part of a Generator expression, so this won't catch all occurences.
+        # Since it is hard to add an error message for genex, we don't do that here.
+        if(cargo_profile_name STREQUAL "test" OR cargo_profile_name STREQUAL "bench")
+            message(FATAL_ERROR "Corrosion does not support building Rust crates with the cargo profiles"
+                " `test` or `bench`. These profiles add a hash to the output artifact name that we"
+                " cannot predict. Please consider using a custom cargo profile which inherits from the"
+                " built-in profile instead."
+                )
+        endif()
+
         set(cargo_profile "--profile=${cargo_profile_name}")
-        set(build_type_dir "${cargo_profile_name}")
+        set(is_dev_profile "$<STREQUAL:${cargo_profile_name},dev>")
+        set(profile_dir_override "$<${is_dev_profile}:debug>")
+        set(profile_dir_is_overridden "$<BOOL:${profile_dir_override}>")
+        set(build_type_dir "$<IF:${profile_dir_is_overridden},${profile_dir_override},${cargo_profile_name}>")
     else()
         set(cargo_profile $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>)
     endif()
