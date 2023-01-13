@@ -745,10 +745,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     # Corrosions currently attempts to select a correct linker, based on the enabled languages.
     # This approach is flawed and should be revisited in the future.
-    # Currently we disable this approach for the MSVC abi, because it just doesn't work
-    # and for static libraries, because the linker shouldn't be invoked for those, but
-    # potentially could be if Rust side build scripts or proc macros etc. happened to be involved.
-    # Overriding the linker in those cases is probably unwanted.
+    # For the MSVC abi Rust only supports linking directly via `link` or `lld-link` but nut via
+    # e.g. `cl`, so we skip msvc abi targets, since choosing the compiler as the linker driver as
+    # CMake does would be wrong.
     if(is_windows_msvc)
         set(determine_linker_preference FALSE)
     elseif("staticlib" IN_LIST target_kinds AND NOT "cdylib" IN_LIST target_kinds)
@@ -1127,9 +1126,17 @@ endfunction()
 function(corrosion_set_linker target_name linker)
     if(NOT linker)
         message(FATAL_ERROR "The linker passed to `corrosion_set_linker` may not be empty")
+    elseif(NOT TARGET "${target_name}")
+        message(FATAL_ERROR "The target `${target_name}` does not exist.")
     endif()
     if(MSVC)
         message(WARNING "Explicitly setting the linker with the MSVC toolchain is currently not supported and ignored")
+    endif()
+
+    if(TARGET "${target_name}-static" AND NOT TARGET "${target_name}-shared")
+        message(WARNING "The target ${target_name} builds a static library."
+            "The linker is never invoked for a static library so specifying a linker has no effect."
+        )
     endif()
 
     set_property(
@@ -1227,6 +1234,12 @@ function(corrosion_set_features target_name)
 endfunction()
 
 function(corrosion_link_libraries target_name)
+    if(TARGET "${target_name}-static" AND NOT TARGET "${target_name}-shared")
+        message(WARNING "The target ${target_name} builds a static library."
+            "The linker is never invoked for a static libraries to link has effect "
+            " aside from establishing a build dependency."
+            )
+    endif()
     add_dependencies(_cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
         set_property(
