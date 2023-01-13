@@ -698,7 +698,7 @@ endif()
 #
 # A target may be either a specific bin
 function(_add_cargo_build out_cargo_build_out_dir)
-    set(options NO_LINKER_OVERRIDE)
+    set(options "")
     set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE WORKSPACE_MANIFEST_PATH)
     set(multi_value_args BYPRODUCTS TARGET_KINDS)
     cmake_parse_arguments(
@@ -743,11 +743,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
     unset(is_windows_msvc)
     get_source_file_property(is_windows_msvc "${workspace_manifest_path}" CORROSION_PLATFORM_IS_WINDOWS_MSVC)
 
-    # Corrosions currently attempts to select a correct linker, based on the enabled languages.
-    # This approach is flawed and should be revisited in the future.
-    # For the MSVC abi Rust only supports linking directly via `link` or `lld-link` but nut via
-    # e.g. `cl`, so we skip msvc abi targets, since choosing the compiler as the linker driver as
-    # CMake does would be wrong.
+    # todo: probably we can remove this block, since specifying -lc++ for a staticlib should do no harm,
+    # since the linker is anyway not invoked. need to confirm the windows msvc case though in case there is
+    # another strange edge case there.
     if(is_windows_msvc)
         set(determine_linker_preference FALSE)
     elseif("staticlib" IN_LIST target_kinds AND NOT "cdylib" IN_LIST target_kinds)
@@ -757,29 +755,12 @@ function(_add_cargo_build out_cargo_build_out_dir)
     endif()
 
     if(determine_linker_preference)
-        set(languages C CXX Fortran)
-
-        set(has_compiler OFF)
-        foreach(language ${languages})
-            if (CMAKE_${language}_COMPILER)
-                set(has_compiler ON)
-            endif()
-        endforeach()
-
-        # Determine the linker CMake prefers based on the enabled languages.
-        set(_CORROSION_LINKER_PREFERENCE_SCORE "0")
-        foreach(language ${languages})
-            if( ${CMAKE_${language}_LINKER_PREFERENCE} )
-                if(NOT CORROSION_LINKER_PREFERENCE
-                    OR (${CMAKE_${language}_LINKER_PREFERENCE} GREATER ${_CORROSION_LINKER_PREFERENCE_SCORE}))
-                    set(CORROSION_LINKER_PREFERENCE "${CMAKE_${language}_COMPILER}")
-                    set(CORROSION_LINKER_PREFERENCE_TARGET "${CMAKE_${language}_COMPILER_TARGET}")
-                    set(CORROSION_LINKER_PREFERENCE_LANGUAGE "${language}")
-                    set(_CORROSION_LINKER_PREFERENCE_SCORE "${CMAKE_${language}_LINKER_PREFERENCE}")
-                endif()
-            endif()
-        endforeach()
-        message(VERBOSE "CORROSION_LINKER_PREFERENCE for target ${target_name}: ${CORROSION_LINKER_PREFERENCE}")
+        set(deps_link_languages_prop "$<TARGET_PROPERTY:_cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>"
+        )
+        set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
+        set(target_uses_cxx  "$<IN_LIST:CXX,${deps_link_languages}>")
+    else()
+        unset(target_uses_cxx)
     endif()
 
     if (NOT CMAKE_CONFIGURATION_TYPES)
@@ -923,38 +904,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
 
     # Used to set a linker for a specific target-triple.
+    # Todo: Fix the target triple for a host-build target
     set(cargo_target_linker_var "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER")
-    if(NOT ACB_NO_LINKER_OVERRIDE)
-        if(CORROSION_LINKER_PREFERENCE)
-            set(cargo_target_linker_arg "$<IF:$<BOOL:${explicit_linker_property}>,${explicit_linker_property},${CORROSION_LINKER_PREFERENCE}>")
-            set(cargo_target_linker "${cargo_target_linker_var}=${cargo_target_linker_arg}")
-            if(CMAKE_CROSSCOMPILING)
-                # CMake does not offer a host compiler we could select when configured for cross-compiling. This
-                # effectively means that by default cc will be selected for builds targeting host. The user can still
-                # override this by manually adding the appropriate rustflags to select the compiler for the target!
-                set(cargo_target_linker "$<${if_not_host_build_condition}:${cargo_target_linker}>")
-            endif()
-            # Will be only set for cross-compilers like clang, c.f. `CMAKE_<LANG>_COMPILER_TARGET`.
-            if(CORROSION_LINKER_PREFERENCE_TARGET)
-                set(rustflag_linker_arg "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
-                # Skip adding the linker argument, if the linker is explicitly set, since the
-                # explicit_linker_property will not be set when this function runs.
-                # Passing this rustflag is necessary for clang.
-                corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:$<BOOL:${explicit_linker_property}>>:${rustflag_linker_arg}>")
-            endif()
-        else()
-            message(DEBUG "No linker preference for target ${target_name} could be detected.")
-            # Note: Adding quotes here introduces wierd errors when using MSVC. Since there are no spaces here at
-            # configure time, we can omit the quotes without problems
-            set(cargo_target_linker $<$<BOOL:${explicit_linker_property}>:${cargo_target_linker_var}=${explicit_linker_property}>)
-        endif()
-    else()
-        # Disable the linker override by setting it to an empty string.
-        set(cargo_target_linker "")
-    endif()
+    set(cargo_target_linker_arg $<$<BOOL:${explicit_linker_property}>:${cargo_target_linker_var}=${explicit_linker_property}>)
 
     message(DEBUG "TARGET ${target_name} produces byproducts ${byproducts}")
-
     add_custom_target(
         _cargo-build_${target_name}
         # Build crate
@@ -1002,6 +956,21 @@ function(_add_cargo_build out_cargo_build_out_dir)
         VERBATIM
     )
 
+    # Automatically link in c++ if the target depends on C++ libraries.
+    if(determine_linker_preference)
+        if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+            set(cpp_stdlib_name "c++")
+        elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+            set(cpp_stdlib_name "stdc++")
+        else()
+            unset(cpp_stdlib_name)
+        endif()
+        # Todo: We could additionally guard this behind either `NO_STD` or a new `NO_CXX_STD` flag.
+        if(DEFINED cpp_stdlib_name)
+            corrosion_add_target_local_rustflags("${target_name}" "$<${target_uses_cxx}:-Clink-arg=-l${cpp_stdlib_name}>")
+        endif()
+    endif()
+
     # User exposed custom target, that depends on the internal target.
     # Corrosion post build steps are added on the internal target, which
     # ensures that they run before any user defined post build steps on this
@@ -1041,6 +1010,12 @@ function(corrosion_import_crate)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
+
+    if(DEFINED ACB_NO_LINKER_OVERRIDE)
+        message(DEPRECATION "The NO_LINKER_OVERRIDE flag is deprecated and has no effect."
+            "Corrosion by default does not specify a linker anymore, so the flag is not needed anymore."
+            )
+    endif()
 
     if (NOT DEFINED COR_MANIFEST_PATH)
         message(FATAL_ERROR "MANIFEST_PATH is a required keyword to corrosion_add_crate")
@@ -1112,7 +1087,6 @@ function(corrosion_import_crate)
         include(${generated_cmake})
     else()
         _generator_add_cargo_targets(
-            COR_NO_LINKER_OVERRIDE
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
             CRATES
