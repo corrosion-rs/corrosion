@@ -3,9 +3,12 @@ on:
   push:
     branches:
       - master
+      - staging
+      - trying
   pull_request:
     branches:
-      - '**'
+      - 'master'
+      - 'stable/**'
 jobs:
 
   test_legacy_linux:
@@ -285,3 +288,20 @@ jobs:
           cd build
 
           ctest --output-on-failure -C Release -j 3
+  # We need some "accumulation" job here because bors fails (timeouts) to
+  # listen on matrix builds.
+  # Hence, we have some kind of dummy here that bors can listen on
+  ci-success:
+    name: bors-ci-status
+    needs:
+      - test_legacy_linux
+      - test_legacy_mac
+      - test_legacy_windows
+      - test
+      - test_msvc
+      - test_cxxbridge
+      - install
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI succeeded
+        run: exit 0
