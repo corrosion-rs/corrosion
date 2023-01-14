@@ -72,8 +72,20 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
 endif()
 
 function(corrosion_tests_add_test test_name bin_names)
+    set(options "")
+    set(one_value_kewords "TEST_SRC_DIR")
+    set(multi_value_keywords "")
+    cmake_parse_arguments(PARSE_ARGV 2 TST "${options}" "${one_value_kewords}" "${multi_value_kewords}")
+    set(pass_through_arguments "${TST_UNPARSED_ARGUMENTS}")
+
 # In the future we could add multiple tests here for different configurations (generator, build mode, rust version ...)
 # which would allow us to simplify the github job matrix
+    if(TST_TEST_SRC_DIR)
+        set(test_dir "${TST_TEST_SRC_DIR}")
+    else()
+        set(test_dir "${test_name}")
+    endif()
+
 
     if(CMAKE_C_COMPILER)
         set(TEST_C_COMPILER "C_COMPILER" "${CMAKE_C_COMPILER}")
@@ -96,7 +108,7 @@ function(corrosion_tests_add_test test_name bin_names)
             COMMAND
             ${CMAKE_COMMAND}
             -P "${CMAKE_SOURCE_DIR}/test/ConfigureAndBuild.cmake"
-            SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/${test_name}"
+            SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/${test_dir}"
             BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}"
             GENERATOR "${CMAKE_GENERATOR}"
             RUST_TOOLCHAIN "${Rust_TOOLCHAIN}"
@@ -106,6 +118,7 @@ function(corrosion_tests_add_test test_name bin_names)
             "${TEST_CXX_COMPILER}"
             "${TEST_GENERATOR_PLATFORM}"
             "${TEST_GENERATOR_BIN}"
+            ${pass_through_arguments}
 
             COMMAND_EXPAND_LISTS
             )

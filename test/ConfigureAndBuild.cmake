@@ -19,6 +19,7 @@ set(oneValueArgs
     CXX_COMPILER
     SYSTEM_NAME
     EXTERNAL_CORROSION_GENERATOR
+    CARGO_PROFILE
 )
 set(multiValueArgs "")
 cmake_parse_arguments(TEST "${options}" "${oneValueArgs}"
@@ -47,6 +48,9 @@ if(TEST_EXTERNAL_CORROSION_GENERATOR)
         "-DCORROSION_GENERATOR_EXECUTABLE=${TEST_EXTERNAL_CORROSION_GENERATOR}"
     )
 endif()
+if(TEST_CARGO_PROFILE)
+    set(TEST_CARGO_PROFILE "-DCARGO_PROFILE=${TEST_CARGO_PROFILE}")
+endif()
 
 # Remove old binary directory
 file(REMOVE_RECURSE "${TEST_BINARY_DIR}")
@@ -68,6 +72,7 @@ execute_process(
             ${TEST_CXX_COMPILER}
             ${TEST_SYSTEM_NAME}
             ${TEST_EXTERNAL_CORROSION_GENERATOR}
+            ${TEST_CARGO_PROFILE}
             -S "${TEST_SOURCE_DIR}"
             -B "${TEST_BINARY_DIR}"
         COMMAND_ECHO STDOUT
