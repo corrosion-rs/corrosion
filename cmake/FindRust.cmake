@@ -427,6 +427,8 @@ elseif(NOT Rust_FIND_QUIETLY)
 endif()
 
 if (NOT Rust_CARGO_TARGET_CACHED)
+    unset(_CARGO_ARCH)
+    unset(_CARGO_ABI)
     if (WIN32)
         if (CMAKE_VS_PLATFORM_NAME)
             if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
@@ -438,30 +440,65 @@ if (NOT Rust_CARGO_TARGET_CACHED)
             else()
                 message(WARNING "VS Platform '${CMAKE_VS_PLATFORM_NAME}' not recognized")
             endif()
-        else ()
-            if (NOT DEFINED CMAKE_SIZEOF_VOID_P)
-                # todo: this should only be best effort instead of failure
-                message(
-                    FATAL_ERROR "Compiler hasn't been enabled yet - can't determine the target architecture")
-            endif()
-
-            if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+        endif()
+        # Fallback path
+        if(NOT DEFINED _CARGO_ARCH)
+            # Possible values for windows when not cross-compiling taken from here:
+            # https://learn.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details
+            # When cross-compiling the user is expected to supply the value, so we match more variants.
+            if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
                 set(_CARGO_ARCH x86_64)
-            else()
+            elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|arm64|aarch64)$")
+                set(_CARGO_ARCH aarch64)
+            elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(X86|x86|i686)$")
                 set(_CARGO_ARCH i686)
+            elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "i586")
+                set(_CARGO_ARCH i586)
+            elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "IA64")
+                message(FATAL_ERROR "No rust target for Intel Itanium.")
+            elseif(NOT "${CMAKE_SYSTEM_PROCESSOR}")
+                message(WARNING "Failed to detect target architecture. Please set `CMAKE_SYSTEM_PROCESSOR`"
+                    " to your target architecture or set `Rust_CARGO_TARGET` to your cargo target triple."
+                )
+            else()
+                message(WARNING "Failed to detect target architecture. Please set "
+                    "`Rust_CARGO_TARGET` to your cargo target triple."
+                )
             endif()
         endif()
 
         set(_CARGO_VENDOR "pc-windows")
 
-        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-            set(_CARGO_ABI gnu)
-        else()
+        # The MSVC Generators will always target the msvc ABI.
+        # For other generators we check the compiler ID and compiler target (if present)
+        # If no compiler is set and we are not cross-compiling then we just choose the
+        # default rust host target.
+        if(DEFINED MSVC
+            OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"
+            OR "${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC"
+            OR "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "-msvc$"
+            OR "${CMAKE_C_COMPILER_TARGET}" MATCHES "-msvc$"
+        )
             set(_CARGO_ABI msvc)
+        elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"
+            OR "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU"
+            OR "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "-gnu$"
+            OR "${CMAKE_C_COMPILER_TARGET}" MATCHES "-gnu$"
+            OR (NOT CMAKE_CROSSCOMPILING AND "${Rust_DEFAULT_HOST_TARGET}" MATCHES "-gnu$")
+            )
+            set(_CARGO_ABI gnu)
+        elseif(NOT "${CMAKE_CROSSCOMPILING}" AND "${Rust_DEFAULT_HOST_TARGET}" MATCHES "-msvc$")
+            # We first check if the gnu branch matches to ensure this fallback is only used
+            # if no compiler is enabled.
+            set(_CARGO_ABI msvc)
+        else()
+            message(WARNING "Could not determine the target ABI. Please specify `Rust_CARGO_TARGET` manually.")
         endif()
 
-        set(Rust_CARGO_TARGET_CACHED "${_CARGO_ARCH}-${_CARGO_VENDOR}-${_CARGO_ABI}"
-            CACHE STRING "Target triple")
+        if(DEFINED _CARGO_ARCH AND DEFINED _CARGO_VENDOR AND DEFINED _CARGO_ABI)
+            set(Rust_CARGO_TARGET_CACHED "${_CARGO_ARCH}-${_CARGO_VENDOR}-${_CARGO_ABI}"
+                CACHE STRING "Target triple")
+        endif()
     elseif (ANDROID)
         if (CMAKE_ANDROID_ARCH_ABI STREQUAL armeabi-v7a)
             if (CMAKE_ANDROID_ARM_MODE)
@@ -480,7 +517,14 @@ if (NOT Rust_CARGO_TARGET_CACHED)
         if (_Rust_ANDROID_TARGET)
             set(Rust_CARGO_TARGET_CACHED "${_Rust_ANDROID_TARGET}" CACHE STRING "Target triple")
         endif()
-    else()
+    endif()
+    # Fallback to the default host target
+    if(NOT Rust_CARGO_TARGET_CACHED)
+        if(CMAKE_CROSSCOMPILING)
+            message(WARNING "CMake is in cross-compiling mode, but the cargo target-triple could not be inferred."
+                "Falling back to the default host target. Please consider manually setting `Rust_CARGO_TARGET`."
+            )
+        endif()
         set(Rust_CARGO_TARGET_CACHED "${Rust_DEFAULT_HOST_TARGET}" CACHE STRING "Target triple")
     endif()
 
