@@ -1,3 +1,35 @@
+# Unreleased
+
+## Breaking Changes
+
+- The Visual Studio Generators now require at least CMake 3.20.
+  This was previously announced in the 0.3.0 release notes.
+- The previously deprecated function `corrosion_set_linker_language()`
+  will now raise an error when called and may be removed without further
+  notice in future stable releases. Use `corrosion_set_linker()` instead.
+- Improved the FindRust target triple detection, which may cause different behavior in some cases.
+  The detection does not require an enabled language anymore and will always fall back
+  to the default host target triple. A warning is issued if target triple detection failed.
+
+
+## Other changes
+
+- When installing Corrosion with CMake >= 3.19, the legacy Generator tool is
+  no longer built and installed by default.
+- Corrosion now issues a warning when setting the linker or setting linker
+  options for a Rust static library.
+- Corrosion no longer enables the `C` language when CMake is in crosscompiling mode and
+  no languages where previously enabled. This is not considered a breaking change.
+
+## Fixes
+
+- Fix building when the `dev` profile is explicitly set by the user.
+
+## Experimental status (may be changed or removed before a stable release)
+- Get metadata with `--locked` (requires a lock-file). This might cause issues, reports are welcome.
+- Experimental cxxbridge integration.
+- Add a helper function to parse the package version from a Cargo.toml file
+
 # 0.3.2 (2023-01-11)
 
 ## New features (Only available on CMake >= 3.19)
