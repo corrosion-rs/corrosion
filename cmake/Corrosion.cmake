@@ -1067,6 +1067,11 @@ function(corrosion_import_crate)
     _corrosion_parse_platform(${COR_MANIFEST_PATH} ${Rust_VERSION} ${_CORROSION_RUST_CARGO_TARGET})
 
     if (CORROSION_NATIVE_TOOLING)
+        if(COR_IMPORTED_CRATES)
+            message(FATAL_ERROR "corrosion_import_crate option `IMPORTED_CRATES` may not be selected when "
+                "CORROSION_NATIVE_TOOLING is ON."
+            )
+        endif()
         execute_process(
             COMMAND
                 ${_CORROSION_GENERATOR}
@@ -1125,6 +1130,8 @@ function(corrosion_import_crate)
                 "${COR_CRATE_TYPES}"
             PROFILE
                 "${COR_PROFILE}"
+            IMPORTED_CRATES
+                imported_crates
         )
 
         if (DEFINED COR_IMPORTED_CRATES)
