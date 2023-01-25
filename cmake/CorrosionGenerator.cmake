@@ -180,7 +180,7 @@ endfunction()
 
 function(_generator_add_cargo_targets no_linker_override)
     set(options "")
-    set(one_value_args MANIFEST_PATH PROFILE)
+    set(one_value_args MANIFEST_PATH PROFILE IMPORTED_CRATES)
     set(multi_value_args CRATES CRATE_TYPES)
     cmake_parse_arguments(
         GGC
@@ -227,7 +227,9 @@ function(_generator_add_cargo_targets no_linker_override)
         message(DEBUG "Corrosion created the following CMake targets: ${curr_created_targets}")
     endif()
 
-    set(imported_crates ${created_targets} PARENT_SCOPE)
+    if(GGC_IMPORTED_CRATES)
+        set(${GGC_IMPORTED_CRATES} "${created_targets}" PARENT_SCOPE)
+    endif()
 
     foreach(target_name ${created_targets})
         foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
