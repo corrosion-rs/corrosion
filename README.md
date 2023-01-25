@@ -196,6 +196,8 @@ corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
         [NO_LINKER_OVERRIDE]
         # Specify  cargo build profile (e.g. release or a custom profile)
         [PROFILE <cargo-profile>]
+        # Retrieve the list of imported crates in the current scope
+        [IMPORTED_CRATES <variable-name>]
         # Build only the specified crate types (Ignored with CMake < 3.19)
         [CRATE_TYPES <crate_type1> ... <crate_typeN>]
         # Only import the specified crates from a workspace
