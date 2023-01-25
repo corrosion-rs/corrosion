@@ -784,14 +784,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     if (NOT CMAKE_CONFIGURATION_TYPES)
         set(target_dir ${CMAKE_CURRENT_BINARY_DIR})
-        if (CMAKE_BUILD_TYPE STREQUAL "" OR CMAKE_BUILD_TYPE STREQUAL Debug)
-            set(build_type_dir debug)
-        else()
-            set(build_type_dir release)
-        endif()
     else()
         set(target_dir ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>)
-        set(build_type_dir $<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>)
     endif()
 
     # If a CMake sysroot is specified, forward it to the linker rustc invokes, too. CMAKE_SYSROOT is documented
@@ -838,6 +832,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     set(explicit_linker_property "$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_LINKER>")
 
+    set(cargo_profile_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_PROFILE>>")
+
 
     # Rust will add `-lSystem` as a flag for the linker on macOS. Adding the -L flag via RUSTFLAGS only fixes the
     # problem partially - buildscripts still break, since they won't receive the RUSTFLAGS. This seems to only be a
@@ -854,25 +850,33 @@ function(_add_cargo_build out_cargo_build_out_dir)
         endif()
     endif()
 
-    if(cargo_profile_name)
-        # The profile name could be part of a Generator expression, so this won't catch all occurences.
-        # Since it is hard to add an error message for genex, we don't do that here.
-        if(cargo_profile_name STREQUAL "test" OR cargo_profile_name STREQUAL "bench")
-            message(FATAL_ERROR "Corrosion does not support building Rust crates with the cargo profiles"
-                " `test` or `bench`. These profiles add a hash to the output artifact name that we"
-                " cannot predict. Please consider using a custom cargo profile which inherits from the"
-                " built-in profile instead."
-                )
-        endif()
-
-        set(cargo_profile "--profile=${cargo_profile_name}")
-        set(is_dev_profile "$<STREQUAL:${cargo_profile_name},dev>")
-        set(profile_dir_override "$<${is_dev_profile}:debug>")
-        set(profile_dir_is_overridden "$<BOOL:${profile_dir_override}>")
-        set(build_type_dir "$<IF:${profile_dir_is_overridden},${profile_dir_override},${cargo_profile_name}>")
-    else()
-        set(cargo_profile $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>)
+    # The profile name could be part of a Generator expression, so this won't catch all occurences.
+    # Since it is hard to add an error message for genex, we don't do that here.
+    if(cargo_profile_name STREQUAL "test" OR cargo_profile_name STREQUAL "bench")
+        message(FATAL_ERROR "Corrosion does not support building Rust crates with the cargo profiles"
+            " `test` or `bench`. These profiles add a hash to the output artifact name that we"
+            " cannot predict. Please consider using a custom cargo profile which inherits from the"
+            " built-in profile instead."
+            )
     endif()
+
+    set(cargo_profile_prop_set "$<BOOL:${cargo_profile_target_property}>")
+    set(cargo_custom_profile_name "$<IF:${cargo_profile_prop_set},${cargo_profile_target_property},${cargo_profile_name}>")
+    set(cargo_profile_set "$<BOOL:${cargo_custom_profile_name}>")
+    # In the default case just specify --release or nothing to stay compatible with
+    # older rust versions.
+    set(default_profile_option "$<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>")
+    # evaluates to either `--profile=<custom_profile>`, `--release` or nothing (for debug).
+    set(cargo_profile "$<IF:${cargo_profile_set},--profile=${cargo_custom_profile_name},${default_profile_option}>")
+
+    # If the profile name is `dev` change the dir name to `debug`.
+    set(is_dev_profile "$<STREQUAL:${cargo_custom_profile_name},dev>")
+    set(profile_dir_override "$<${is_dev_profile}:debug>")
+    set(profile_dir_is_overridden "$<BOOL:${profile_dir_override}>")
+    set(custom_profile_build_type_dir "$<IF:${profile_dir_is_overridden},${profile_dir_override},${cargo_custom_profile_name}>")
+
+    set(default_build_type_dir "$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>")
+    set(build_type_dir "$<IF:${cargo_profile_set},${custom_profile_build_type_dir},${default_build_type_dir}>")
 
     set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build")
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
