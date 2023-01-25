@@ -29,7 +29,7 @@
 - Get metadata with `--locked` (requires a lock-file). This might cause issues, reports are welcome.
 - Experimental cxxbridge integration.
 - Add a helper function to parse the package version from a Cargo.toml file
-- Add new `IMPORTED_CRATES` flag to `corrosion_import_crate()` to retrieve the list of imported crates in the current scope ([#218](https://github.com/corrosion-rs/corrosion/pull/218)).
+- Add new `IMPORTED_CRATES` flag to `corrosion_import_crate()` to retrieve the list of imported crates in the current scope ([#312](https://github.com/corrosion-rs/corrosion/pull/312)).
 
 # 0.3.2 (2023-01-11)
 
