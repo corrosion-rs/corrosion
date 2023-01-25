@@ -227,6 +227,8 @@ function(_generator_add_cargo_targets no_linker_override)
         message(DEBUG "Corrosion created the following CMake targets: ${curr_created_targets}")
     endif()
 
+    set(imported_crates ${created_targets} PARENT_SCOPE)
+
     foreach(target_name ${created_targets})
         foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
             get_target_property(output_dir ${target_name} "${output_var}")
