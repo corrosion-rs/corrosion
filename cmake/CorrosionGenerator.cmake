@@ -224,7 +224,7 @@ function(_generator_add_cargo_targets no_linker_override)
     if(NOT created_targets)
         message(FATAL_ERROR "found no targets in ${pkgs_len} packages")
     else()
-        message(DEBUG "Corrosion created the following CMake targets: ${curr_created_targets}")
+        message(DEBUG "Corrosion created the following CMake targets: ${created_targets}")
     endif()
 
     if(GGC_IMPORTED_CRATES)
