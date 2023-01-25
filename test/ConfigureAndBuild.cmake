@@ -21,7 +21,7 @@ set(oneValueArgs
     EXTERNAL_CORROSION_GENERATOR
     CARGO_PROFILE
 )
-set(multiValueArgs "")
+set(multiValueArgs "PASS_THROUGH_ARGS")
 cmake_parse_arguments(TEST "${options}" "${oneValueArgs}"
                       "${multiValueArgs}" ${TEST_ARG_LIST} )
 
@@ -73,6 +73,7 @@ execute_process(
             ${TEST_SYSTEM_NAME}
             ${TEST_EXTERNAL_CORROSION_GENERATOR}
             ${TEST_CARGO_PROFILE}
+            ${TEST_PASS_THROUGH_ARGS}
             -S "${TEST_SOURCE_DIR}"
             -B "${TEST_BINARY_DIR}"
         COMMAND_ECHO STDOUT
