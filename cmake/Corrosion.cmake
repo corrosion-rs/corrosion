@@ -362,19 +362,24 @@ function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build
     endif()
 endfunction()
 
+function(_corrosion_strip_target_triple input_triple_or_path output_triple)
+    # If the target_triple is a path to a custom target specification file, then strip everything
+    # except the filename from `target_triple`.
+    get_filename_component(target_triple_ext "${input_triple_or_path}" EXT)
+    set(target_triple "${input_triple_or_path}")
+    if(target_triple_ext)
+        if(target_triple_ext STREQUAL ".json")
+            get_filename_component(target_triple "${input_triple_or_path}"  NAME_WE)
+        endif()
+    endif()
+    set(${output_triple} "${target_triple}" PARENT_SCOPE)
+endfunction()
+
 # The Rust target triple and C target may mismatch (slightly) in some rare usecases.
 # So instead of relying on CMake to provide System information, we parse the Rust target triple,
 # since that is relevant for determining which libraries the Rust code requires for linking.
 function(_corrosion_parse_platform manifest rust_version target_triple)
-
-    # If the target_triple is a path to a custom target specification file, then strip everything
-    # except the filename from `target_triple`.
-    get_filename_component(target_triple_ext "${target_triple}" EXT)
-    if(target_triple_ext)
-        if(target_triple_ext STREQUAL ".json")
-            get_filename_component(target_triple "${target_triple}"  NAME_WE)
-        endif()
-    endif()
+    _corrosion_strip_target_triple(${target_triple} target_triple)
 
     # The vendor part may be left out from the target triple, and since `env` is also optional,
     # we determine if vendor is present by matching against a list of known vendors.
@@ -869,7 +874,10 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
     set(cargo_target_option "$<IF:${if_not_host_build_condition},--target=${_CORROSION_RUST_CARGO_TARGET},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
-    set(target_artifact_dir "$<IF:${if_not_host_build_condition},${_CORROSION_RUST_CARGO_TARGET},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
+
+    # The target may be a filepath to custom target json file. For host targets we assume that they are built-in targets.
+    _corrosion_strip_target_triple(${_CORROSION_RUST_CARGO_TARGET} stripped_target_triple)
+    set(target_artifact_dir "$<IF:${if_not_host_build_condition},${stripped_target_triple},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
 
     set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
 
