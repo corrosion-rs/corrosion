@@ -311,7 +311,7 @@ That's it! You're now linking your Rust library to your C++ library.
 
 Currently, you must manually declare bindings in your C or C++ program to the exported routines and
 types in your Rust project. You can see boths sides of this in
-[the Rust code](test/rust2cpp/rust/src/lib.rs) and in [the C++ code](test/rust2cpp/main.cpp).
+[the Rust code](test/rust2cpp/rust2cpp/rust/src/lib.rs) and in [the C++ code](test/rust2cpp/rust2cpp/main.cpp).
 
 Integration with [cbindgen](https://github.com/eqrion/cbindgen) is
 planned for the future.
