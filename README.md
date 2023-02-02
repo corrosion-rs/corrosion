@@ -235,7 +235,7 @@ Some configuration options can be specified individually for each target. You ca
   For a given target, enable specific features via `FEATURES`, toggle `ALL_FEATURES` on or off or disable all features
   via `NO_DEFAULT_FEATURES`. For more information on features, please see also the
   [cargo reference](https://doc.rust-lang.org/cargo/reference/features.html).
-- `corrosion_set_flags(<target_name> <flag1> ...])`:
+- `corrosion_set_cargo_flags(<target_name> <flag1> ...])`:
   For a given target, add options and flags at the end of `cargo build` invocation. This will be appended after any
   arguments passed through the `FLAGS` during the crate import.
 - `corrosion_set_linker(target_name linker)`: Use `linker` to link the target.
