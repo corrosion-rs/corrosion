@@ -301,6 +301,7 @@ jobs:
   # Hence, we have some kind of dummy here that bors can listen on
   ci-success:
     name: bors-ci-status
+    if: ${{ always() }}
     needs:
       - test_legacy_linux
       - test_legacy_mac
@@ -310,6 +311,13 @@ jobs:
       - test_cxxbridge
       - install
     runs-on: ubuntu-latest
+    # Step copied from: https://github.com/cross-rs/cross/blob/80c9f9109a719ffb0f694060ddc6e371d5b3a540/.github/workflows/ci.yml#L361
     steps:
-      - name: CI succeeded
-        run: exit 0
+      - name: Result
+        run: |
+          jq -C <<< "${needs}"
+          # Check if all needs were successful or skipped.
+          "$(jq -r 'all(.result as $result | (["success", "skipped"] | contains([$result])))' <<< "${needs}")"
+        env:
+          needs: ${{ toJson(needs) }}
+
