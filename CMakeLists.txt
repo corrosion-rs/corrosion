@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
-project(Corrosion VERSION 0.3.3 LANGUAGES NONE)
+project(Corrosion
+    VERSION 0.3.3
+    LANGUAGES NONE
+    HOMEPAGE_URL "https://corrosion-rs.github.io/corrosion/"
+)
 
 # Default behavior:
 # - If the project is being used as a subdirectory, then don't build tests and
