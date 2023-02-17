@@ -1,3 +1,16 @@
+# 0.3.3 (2023-02-17)
+
+## New features (Only available on CMake >= 3.19)
+
+- Add new `IMPORTED_CRATES` flag to `corrosion_import_crate()` to retrieve the list of imported crates in the current
+  scope ([#312](https://github.com/corrosion-rs/corrosion/pull/312)).
+
+## Fixes
+
+- Fix imported location target property when the rust target name contains dashes
+  and a custom OUTPUT_DIRECTORY was specified by the user ([#322](https://github.com/corrosion-rs/corrosion/pull/322)).
+- Fix building for custom rust target-triples ([#316](https://github.com/corrosion-rs/corrosion/pull/316))
+
 # 0.3.2 (2023-01-11)
 
 ## New features (Only available on CMake >= 3.19)
