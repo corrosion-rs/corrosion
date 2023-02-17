@@ -128,7 +128,7 @@ endfunction()
 function(_corrosion_set_imported_location_deferred target_name base_property output_directory_property filename)
     # The output directory property is expected to be set on the exposed target (without postfix),
     # but we need to set the imported location on the actual library target with postfix.
-    if("${target_name}" MATCHES "^([^-]+)-(static|shared)$")
+    if("${target_name}" MATCHES "^(.+)-(static|shared)$")
         set(output_dir_prop_target_name "${CMAKE_MATCH_1}")
     else()
         set(output_dir_prop_target_name "${target_name}")
