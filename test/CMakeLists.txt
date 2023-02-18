@@ -165,6 +165,7 @@ if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0" AND CMAKE_VERSION VERSION_GREATER
     add_subdirectory(crate_type)
 endif()
 add_subdirectory(custom_profiles)
+add_subdirectory(cbindgen)
 add_subdirectory(cxxbridge)
 add_subdirectory(envvar)
 add_subdirectory(external_corrosion_generator)
