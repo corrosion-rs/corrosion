@@ -230,7 +230,7 @@ jobs:
         with:
           target_arch: x86_64
           cmake: 3.15.7
-          rust: 1.64.0
+          rust: stable minus 2 releases
           abi: ${{ matrix.abi }}
           generator: ninja
           build_dir: build
