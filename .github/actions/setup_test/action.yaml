@@ -143,6 +143,7 @@ runs:
         cmake: ${{inputs.cmake}}
         ninja: 1.10.0
     - name: Install Rust
+      id: install_rust
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{inputs.rust}}
@@ -179,5 +180,5 @@ runs:
         "${{steps.determine_cross_compile.outputs.system_name}}"
         "${{steps.pick_generator.outputs.generator}}"
         ${{steps.install_prefix.outputs.install_path}}
-        "-DRust_TOOLCHAIN=${{inputs.rust}}"
+        "-DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}}"
         ${{ inputs.configure_params }}
