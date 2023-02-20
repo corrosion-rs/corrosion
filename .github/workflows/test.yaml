@@ -237,7 +237,7 @@ jobs:
           configure_params: -DCORROSION_TESTS_CXXBRIDGE=ON
       - name: Run Tests
         working-directory: build
-        run: ctest --output-on-failure --build-config Debug -j 3
+        run: ctest --output-on-failure --build-config Debug -j 3 -R "^cxxbridge"
   install:
     name: Test Corrosion as a Library
     runs-on: ${{ matrix.os }}
