@@ -21,6 +21,8 @@ function(_cargo_metadata out manifest)
                     metadata
                         --manifest-path "${manifest}"
                         --format-version 1
+                        # We don't care about non-workspace dependencies
+                        --no-deps
                         ${cargo_locked}
 
         OUTPUT_VARIABLE json

@@ -52,6 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_matches();
 
     let mut cmd = cargo_metadata::MetadataCommand::new();
+    cmd.no_deps();
 
     let manifest_path = matches.value_of(MANIFEST_PATH).unwrap();
     let cargo_executable = matches.value_of(CARGO_EXECUTABLE).unwrap();
