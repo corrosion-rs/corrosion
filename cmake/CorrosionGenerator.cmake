@@ -13,8 +13,11 @@ function(_cargo_metadata out manifest)
                 CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
                 ${CARGO_EXECUTABLE}
                     metadata
-                        --manifest-path ${manifest}
+                        --manifest-path "${manifest}"
                         --format-version 1
+                        # We don't care about non-workspace dependencies
+                        --no-deps
+
         OUTPUT_VARIABLE json
         COMMAND_ERROR_IS_FATAL ANY
     )
