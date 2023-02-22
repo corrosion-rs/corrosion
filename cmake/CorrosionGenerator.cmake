@@ -29,32 +29,45 @@ function(_cargo_metadata out manifest)
         COMMAND_ERROR_IS_FATAL ANY
     )
 
-    set(${out} ${json} PARENT_SCOPE)
+    set(${out} "${json}" PARENT_SCOPE)
 endfunction()
 
 # Add targets (crates) of one package
-function(_generator_add_package_targets workspace_manifest_path package_manifest_path package_name targets profile no_linker_override out_created_targets crate_types)
+function(_generator_add_package_targets)
+    set(OPTIONS NO_LINKER_OVERRIDE)
+    set(ONE_VALUE_KEYWORDS WORKSPACE_MANIFEST_PATH PACKAGE_MANIFEST_PATH PACKAGE_NAME PACKAGE_VERSION TARGETS_JSON PROFILE OUT_CREATED_TARGETS)
+    set(MULTI_VALUE_KEYWORDS CRATE_TYPES)
+    cmake_parse_arguments(PARSE_ARGV 0 GAPT "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
+
+    if(DEFINED GAPT_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "Internal error - unexpected arguments: ${GAPT_UNPARSED_ARGUMENTS}")
+    elseif(DEFINED GAPT_KEYWORDS_MISSING_VALUES)
+        message(FATAL_ERROR "Internal error - the following keywords had no associated value(s):"
+                    "${GAPT_KEYWORDS_MISSING_VALUES}")
+    endif()
+
+    _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE COR no_linker_override)
+    _corrosion_arg_passthrough_helper(PROFILE COR profile)
+
+    set(workspace_manifest_path "${GAPT_WORKSPACE_MANIFEST_PATH}")
+    set(package_manifest_path "${GAPT_PACKAGE_MANIFEST_PATH}")
+    set(package_name "${GAPT_PACKAGE_NAME}")
+    set(package_version "${GAPT_PACKAGE_VERSION}")
+    set(targets "${GAPT_TARGETS_JSON}")
+    set(out_created_targets "${GAPT_OUT_CREATED_TARGETS}")
+    set(crate_types "${GAPT_CRATE_TYPES}")
+
     # target types
     set(has_staticlib FALSE)
     set(has_cdylib FALSE)
     set(corrosion_targets "")
 
-
-    # Add a custom target with the package (crate) name, as a convenience to build everything in a
-    # crate.
-    # Note: may cause problems if package_name == bin_name...
-    #add_custom_target("${package_name}")
-    # todo: verify on windows if this actually needs to be done...
-    string(REPLACE "\\" "/" manifest_path "${package_manifest_path}")
+    file(TO_CMAKE_PATH "${package_manifest_path}" manifest_path)
 
     string(JSON targets_len LENGTH "${targets}")
     math(EXPR targets_len-1 "${targets_len} - 1")
 
-    if(${no_linker_override})
-        set(_NO_LINKER_OVERRIDE "NO_LINKER_OVERRIDE")
-    else()
-        set(_NO_LINKER_OVERRIDE "")
-    endif()
+    message(DEBUG "Found ${targets_len} targets in package ${package_name}")
 
     foreach(ix RANGE ${targets_len-1})
         #
@@ -109,14 +122,15 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
             set(cargo_build_out_dir "")
             _add_cargo_build(
                 cargo_build_out_dir
-                ${_NO_LINKER_OVERRIDE}
                 PACKAGE ${package_name}
                 TARGET ${target_name}
                 MANIFEST_PATH "${manifest_path}"
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
-                PROFILE "${profile}"
                 TARGET_KINDS "${kinds}"
                 BYPRODUCTS "${byproducts}"
+                # Optional
+                ${profile}
+                ${no_linker_override}
             )
             if(archive_byproducts)
                 _corrosion_copy_byproducts(
@@ -147,14 +161,15 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
             set(cargo_build_out_dir "")
             _add_cargo_build(
                 cargo_build_out_dir
-                ${_NO_LINKER_OVERRIDE}
                 PACKAGE "${package_name}"
                 TARGET "${target_name}"
                 MANIFEST_PATH "${manifest_path}"
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
-                PROFILE "${profile}"
                 TARGET_KINDS "bin"
                 BYPRODUCTS "${byproducts}"
+                # Optional
+                ${profile}
+                ${no_linker_override}
             )
             _corrosion_copy_byproducts(
                     ${target_name} RUNTIME_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${bin_byproduct}"
@@ -179,9 +194,10 @@ function(_generator_add_package_targets workspace_manifest_path package_manifest
 
 endfunction()
 
-
-function(_generator_add_cargo_targets no_linker_override)
-    set(options "")
+# Add all cargo targets defined in the packages defined in the Cargo.toml manifest at
+# `MANIFEST_PATH`.
+function(_generator_add_cargo_targets)
+    set(options NO_LINKER_OVERRIDE)
     set(one_value_args MANIFEST_PATH PROFILE IMPORTED_CRATES)
     set(multi_value_args CRATES CRATE_TYPES)
     cmake_parse_arguments(
@@ -192,7 +208,11 @@ function(_generator_add_cargo_targets no_linker_override)
         ${ARGN}
     )
 
-    _cargo_metadata(json ${GGC_MANIFEST_PATH})
+    _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GGC no_linker_override)
+    _corrosion_arg_passthrough_helper(CRATE_TYPES GGC crate_types)
+    _corrosion_arg_passthrough_helper(PROFILE GGC cargo_profile)
+
+    _cargo_metadata(json "${GGC_MANIFEST_PATH}")
     string(JSON packages GET "${json}" "packages")
     string(JSON workspace_members GET "${json}" "workspace_members")
 
@@ -208,19 +228,52 @@ function(_generator_add_cargo_targets no_linker_override)
         string(JSON pkg_id GET "${pkg}" "id")
         string(JSON pkg_name GET "${pkg}" "name")
         string(JSON pkg_manifest_path GET "${pkg}" "manifest_path")
-        string(JSON targets GET "${pkg}" "targets")
+        string(JSON pkg_version GET "${pkg}" "version")
 
-        string(JSON targets_len LENGTH "${targets}")
-        math(EXPR targets_len-1 "${targets_len} - 1")
+        if(DEFINED GGC_CRATES)
+            if(NOT pkg_name IN_LIST GGC_CRATES)
+                message(DEBUG "Package `${pkg_name}` was not in the `CRATES` allowlist passed to "
+                    "corrosion_import_crate. Ignoring the package."
+                )
+                continue()
+            endif()
+        endif()
+
+        # probably this loop is not necessary at all, since when using --no-deps, the
+        # contents of packages should already be only workspace members!
+        unset(pkg_is_ws_member)
         foreach(ix RANGE ${ws_mems_len-1})
             string(JSON ws_mem GET "${workspace_members}" ${ix})
-            if(ws_mem STREQUAL pkg_id AND ((NOT GGC_CRATES) OR (pkg_name IN_LIST GGC_CRATES)))
-                message(DEBUG "Found ${targets_len} targets in package ${pkg_name}")
-
-                _generator_add_package_targets("${GGC_MANIFEST_PATH}" "${pkg_manifest_path}" "${pkg_name}" "${targets}" "${GGC_PROFILE}" "${no_linker_override}" curr_created_targets "${GGC_CRATE_TYPES}")
-                list(APPEND created_targets "${curr_created_targets}")
+            if(ws_mem STREQUAL pkg_id)
+                set(pkg_is_ws_member YES)
+                break()
             endif()
         endforeach()
+
+        if(NOT DEFINED pkg_is_ws_member)
+            # Since we pass `--no-deps` to cargo metadata now,  I think this situation can't happen, but lets check for
+            # it anyway, just to discover any potential issues.
+            # If nobody complains for a while, it should be safe to remove this check and the previous loop, which
+            # should speed up the configuration process.
+            message(WARNING "The package `${pkg_name}` unexpectedly is not part of the workspace."
+                "Please open an issue at corrosion with some background information on the package"
+            )
+        endif()
+
+        string(JSON targets GET "${pkg}" "targets")
+
+        _generator_add_package_targets(
+            WORKSPACE_MANIFEST_PATH "${GGC_MANIFEST_PATH}"
+            PACKAGE_MANIFEST_PATH "${pkg_manifest_path}"
+            PACKAGE_NAME "${pkg_name}"
+            PACKAGE_VERSION "${pkg_version}"
+            TARGETS_JSON "${targets}"
+            OUT_CREATED_TARGETS curr_created_targets
+            ${no_linker_override}
+            ${cargo_profile}
+            ${crate_types}
+        )
+        list(APPEND created_targets "${curr_created_targets}")
     endforeach()
 
     if(NOT created_targets)

@@ -714,6 +714,14 @@ function(_add_cargo_build out_cargo_build_out_dir)
         ${ARGN}
     )
 
+    if(DEFINED ACB_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "Internal error - unexpected arguments: "
+            ${ACB_UNPARSED_ARGUMENTS})
+    elseif(DEFINED ACB_KEYWORDS_MISSING_VALUES)
+        message(FATAL_ERROR "Internal error - missing values for the following arguments: "
+                ${ACB_KEYWORDS_MISSING_VALUES})
+    endif()
+
     set(package_name "${ACB_PACKAGE}")
     set(target_name "${ACB_TARGET}")
     set(path_to_toml "${ACB_MANIFEST_PATH}")
@@ -1060,9 +1068,23 @@ function(corrosion_import_crate)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
+    if(DEFINED COR_UNPARSED_ARGUMENTS)
+        message(AUTHOR_WARNING "Unexpected arguments: " ${COR_UNPARSED_ARGUMENTS}
+            "\nCorrosion will ignore these unexpected arguments."
+            )
+    endif()
+    if(DEFINED COR_KEYWORDS_MISSING_VALUES)
+        message(FATAL_ERROR "Invalid arguments: the following keywords had no associated value(s): "
+            ${COR_KEYWORDS_MISSING_VALUES}
+        )
+    endif()
     if (NOT DEFINED COR_MANIFEST_PATH)
         message(FATAL_ERROR "MANIFEST_PATH is a required keyword to corrosion_add_crate")
     endif()
+    _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE COR no_linker_override)
+    _corrosion_arg_passthrough_helper(CRATES COR crate_allowlist)
+    _corrosion_arg_passthrough_helper(CRATE_TYPES COR crate_types)
+    _corrosion_arg_passthrough_helper(PROFILE COR cargo_profile)
 
     if(COR_PROFILE)
         if(Rust_VERSION VERSION_LESS 1.57.0)
@@ -1070,7 +1092,7 @@ function(corrosion_import_crate)
                         "have ${Rust_VERSION}."
         )
         else()
-            set(cargo_profile --profile=${COR_PROFILE})
+            set(cargo_profile_native_generator --profile=${COR_PROFILE})
         endif()
     endif()
 
@@ -1123,7 +1145,7 @@ function(corrosion_import_crate)
                     gen-cmake
                         ${_CORROSION_CONFIGURATION_ROOT}
                         ${crates_args}
-                        ${cargo_profile}
+                        ${cargo_profile_native_generator}
                         -o ${generated_cmake}
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             RESULT_VARIABLE ret)
@@ -1135,24 +1157,21 @@ function(corrosion_import_crate)
         include(${generated_cmake})
     else()
         _generator_add_cargo_targets(
-            COR_NO_LINKER_OVERRIDE
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
-            CRATES
-                "${COR_CRATES}"
-            CRATE_TYPES
-                "${COR_CRATE_TYPES}"
-            PROFILE
-                "${COR_PROFILE}"
             IMPORTED_CRATES
                 imported_crates
+            ${crate_allowlist}
+            ${crate_types}
+            ${cargo_profile}
+            ${no_linker_override}
         )
 
-        if (DEFINED COR_IMPORTED_CRATES)
+        if(DEFINED COR_IMPORTED_CRATES)
             set(${COR_IMPORTED_CRATES} ${imported_crates} PARENT_SCOPE)
         endif()
     endif()
-endfunction(corrosion_import_crate)
+endfunction()
 
 function(corrosion_set_linker_language target_name language)
     message(FATAL_ERROR "corrosion_set_linker_language was deprecated and removed."
@@ -1760,3 +1779,27 @@ function(corrosion_parse_package_version package_manifest_path out_package_versi
         )
     endif()
 endfunction()
+
+# Helper macro to pass through an optional `OPTION` argument parsed via `cmake_parse_arguments`
+# to another function that takes the same OPTION.
+# If the option was set, then the variable <var_name> will be set to the same option name again,
+# otherwise <var_name> will be unset.
+macro(_corrosion_option_passthrough_helper option_name prefix var_name)
+    if(${${prefix}_${option_name}})
+        set("${var_name}" "${option_name}")
+    else()
+        unset("${var_name}")
+    endif()
+endmacro()
+
+# Helper macro to pass through an optional argument with value(s), parsed via `cmake_parse_arguments`,
+# to another function that takes the same keyword + associated values.
+# If the argument was given, then the variable <var_name> will be a list of the argument name and the values,
+# which will be expanded, when calling the function (assuming no quotes).
+macro(_corrosion_arg_passthrough_helper arg_name prefix var_name)
+    if(DEFINED "${prefix}_${arg_name}")
+        set("${var_name}" "${arg_name}" "${${prefix}_${arg_name}}")
+    else()
+        unset("${var_name}")
+    endif()
+endmacro()
