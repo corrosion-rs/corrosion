@@ -585,6 +585,9 @@ function(_corrosion_add_library_target)
                 "LIBRARY_OUTPUT_DIRECTORY"
                 "${dynamic_lib_name}"
         )
+        # In the future we would probably prefer to let Rust set the soname for packages >= 1.0.
+        # This is tracked in issue #333.
+        set_target_properties(${target_name}-shared PROPERTIES IMPORTED_NO_SONAME TRUE)
 
         if(is_windows)
             _corrosion_set_imported_location("${target_name}-shared" "IMPORTED_IMPLIB"

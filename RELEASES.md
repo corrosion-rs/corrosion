@@ -11,6 +11,13 @@
   The detection does not require an enabled language anymore and will always fall back
   to the default host target triple. A warning is issued if target triple detection failed.
 
+# Potentially Breaking Changes
+
+- Corrosion now sets the `IMPORTED_NO_SONAME` property for shared rust libraries, since by
+  default they won't have an `soname` field.
+  If you add a rustflag like `-Clink-arg=-Wl,-soname,libmycrate.so` in your project,
+  you should set this property to false on the shared rust library.
+
 
 ## Other changes
 
