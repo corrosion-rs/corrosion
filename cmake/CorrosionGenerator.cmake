@@ -57,9 +57,6 @@ function(_generator_add_package_targets)
     set(out_created_targets "${GAPT_OUT_CREATED_TARGETS}")
     set(crate_types "${GAPT_CRATE_TYPES}")
 
-    # target types
-    set(has_staticlib FALSE)
-    set(has_cdylib FALSE)
     set(corrosion_targets "")
 
     file(TO_CMAKE_PATH "${package_manifest_path}" manifest_path)
@@ -70,7 +67,6 @@ function(_generator_add_package_targets)
     message(DEBUG "Found ${targets_len} targets in package ${package_name}")
 
     foreach(ix RANGE ${targets_len-1})
-        #
         string(JSON target GET "${targets}" ${ix})
         string(JSON target_name GET "${target}" "name")
         string(JSON target_kind GET "${target}" "kind")
@@ -102,19 +98,18 @@ function(_generator_add_package_targets)
         endif()
 
         if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds)
-            if("staticlib" IN_LIST kinds)
-                set(has_staticlib TRUE)
-            endif()
-
-            if("cdylib" IN_LIST kinds)
-                set(has_cdylib TRUE)
-            endif()
             set(archive_byproducts "")
             set(shared_lib_byproduct "")
             set(pdb_byproduct "")
 
-            _corrosion_add_library_target("${workspace_manifest_path}" "${target_name}" "${has_staticlib}" "${has_cdylib}"
-                archive_byproducts shared_lib_byproduct pdb_byproduct)
+            _corrosion_add_library_target(
+                WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
+                TARGET_NAME "${target_name}"
+                LIB_KINDS ${kinds}
+                OUT_ARCHIVE_OUTPUT_BYPRODUCTS archive_byproducts
+                OUT_SHARED_LIB_BYPRODUCTS shared_lib_byproduct
+                OUT_PDB_BYPRODUCT pdb_byproduct
+            )
 
             set(byproducts "")
             list(APPEND byproducts "${archive_byproducts}" "${shared_lib_byproduct}" "${pdb_byproduct}")
@@ -148,8 +143,9 @@ function(_generator_add_package_targets)
                 )
             endif()
             list(APPEND corrosion_targets ${target_name})
-
+        # Note: "bin" is mutually exclusive with "staticlib/cdylib", since `bin`s are seperate crates from libraries.
         elseif("bin" IN_LIST kinds)
+            set(bin_byproduct "")
             set(pdb_byproduct "")
             _corrosion_add_bin_target("${workspace_manifest_path}" "${target_name}"
                 "bin_byproduct" "pdb_byproduct"

@@ -106,17 +106,24 @@ impl CargoTarget {
                     .to_str()
                     .expect("Non-utf8 path encountered")
                     .replace("\\", "/");
+                let mut lib_kinds = if has_staticlib { "staticlib" } else {""}.to_string();
+                if has_cdylib {
+                    if has_staticlib {
+                        lib_kinds.push(' ');
+                    }
+                    lib_kinds.push_str("cdylib")
+                }
 
                 writeln!(
                     out_file,
                     "
-                    _corrosion_add_library_target(\"{workspace_manifest_path}\"
-                            \"{target_name}\"
-                            \"{has_staticlib}\"
-                            \"{has_cdylib}\"
-                            archive_byproducts
-                            shared_lib_byproduct
-                            pdb_byproduct
+                    _corrosion_add_library_target(
+                            WORKSPACE_MANIFEST_PATH \"{workspace_manifest_path}\"
+                            TARGET_NAME \"{target_name}\"
+                            LIB_KINDS {lib_kinds}
+                            OUT_ARCHIVE_OUTPUT_BYPRODUCTS archive_byproducts
+                            OUT_SHARED_LIB_BYPRODUCTS shared_lib_byproduct
+                            OUT_PDB_BYPRODUCT pdb_byproduct
                     )
                     list(APPEND byproducts
                             \"${{archive_byproducts}}\"
@@ -126,8 +133,7 @@ impl CargoTarget {
                     ",
                     workspace_manifest_path = ws_manifest,
                     target_name = self.cargo_target.name,
-                    has_staticlib = has_staticlib,
-                    has_cdylib = has_cdylib,
+                    lib_kinds = lib_kinds,
                 )?;
             }
             CargoTargetType::Executable => {
