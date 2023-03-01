@@ -969,6 +969,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
             # Will be only set for cross-compilers like clang, c.f. `CMAKE_<LANG>_COMPILER_TARGET`.
             if(CORROSION_LINKER_PREFERENCE_TARGET)
                 set(rustflag_linker_arg "-Clink-args=--target=${CORROSION_LINKER_PREFERENCE_TARGET}")
+                set(rustflag_linker_arg "$<${if_not_host_build_condition}:${rustflag_linker_arg}>")
                 # Skip adding the linker argument, if the linker is explicitly set, since the
                 # explicit_linker_property will not be set when this function runs.
                 # Passing this rustflag is necessary for clang.
