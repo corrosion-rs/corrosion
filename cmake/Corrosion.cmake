@@ -827,14 +827,17 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(no_default_features_arg "$<IF:${no_default_features_property_exists_condition},${no_default_features_property_arg},${no_default_features_arg}>")
 
     set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_ENV_VARS}>>")
-    set(if_not_host_build_condition "$<NOT:$<BOOL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_HOST_BUILD}>>>")
+    set(hostbuild_override "$<BOOL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_HOST_BUILD}>>")
+    set(if_not_host_build_condition "$<NOT:${hostbuild_override}>")
 
     set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
-    set(cargo_target_option "$<IF:${if_not_host_build_condition},--target=${_CORROSION_RUST_CARGO_TARGET},--target=${_CORROSION_RUST_CARGO_HOST_TARGET}>")
+    # We always set `--target`, so that cargo always places artifacts into a directory with the
+    # target triple.
+    set(cargo_target_option "--target=$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${_CORROSION_RUST_CARGO_TARGET}>")
 
     # The target may be a filepath to custom target json file. For host targets we assume that they are built-in targets.
     _corrosion_strip_target_triple(${_CORROSION_RUST_CARGO_TARGET} stripped_target_triple)
-    set(target_artifact_dir "$<IF:${if_not_host_build_condition},${stripped_target_triple},${_CORROSION_RUST_CARGO_HOST_TARGET}>")
+    set(target_artifact_dir "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${stripped_target_triple}>")
 
     set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
 
@@ -860,7 +863,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         endif()
     elseif(CMAKE_CROSSCOMPILING AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
         if(${CMAKE_HOST_SYSTEM_VERSION} VERSION_LESS 22)
-            set(cargo_library_path "$<IF:${if_not_host_build_condition},,LIBRARY_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib>")
+            set(cargo_library_path "$<${hostbuild_override}:LIBRARY_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib>")
         endif()
     endif()
 
