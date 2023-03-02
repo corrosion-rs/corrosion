@@ -1,3 +1,17 @@
+# 0.3.4 (2023-03-02)
+
+## Fixes 
+
+- Fix hostbuild (when CMake/Cargo is configured for cross-compiling) if clang is used ([#338]).
+
+## Other
+
+- Pass `--no-deps` to cargo metadata ([#334]).
+- Bump the legacy generator dependencies
+
+[#334]: https://github.com/corrosion-rs/corrosion/pull/334
+[#338]: https://github.com/corrosion-rs/corrosion/pull/338
+
 # 0.3.3 (2023-02-17)
 
 ## New features (Only available on CMake >= 3.19)
