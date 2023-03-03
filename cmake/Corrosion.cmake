@@ -361,6 +361,7 @@ function(_corrosion_parse_platform manifest rust_version target_triple)
         "nintendo"
         "nvidia"
         "openwrt"
+        "alpine"
         "unknown"
         "uwp" # aarch64-uwp-windows-msvc
         "wrs" # e.g. aarch64-wrs-vxworks
