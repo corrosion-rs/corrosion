@@ -5,7 +5,6 @@ use clap::{App, Arg};
 
 mod subcommands {
     pub mod gen_cmake;
-    pub mod print_root;
 }
 
 use subcommands::*;
@@ -47,7 +46,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("verbose")
                 .help("Request verbose output"),
         )
-        .subcommand(print_root::subcommand())
         .subcommand(gen_cmake::subcommand())
         .get_matches();
 
@@ -70,7 +68,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     match matches.subcommand() {
-        (print_root::PRINT_ROOT, _) => print_root::invoke(&shared_args)?,
         (gen_cmake::GEN_CMAKE, Some(matches)) => gen_cmake::invoke(&shared_args, matches)?,
         _ => unreachable!(),
     };

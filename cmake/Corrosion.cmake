@@ -1155,21 +1155,8 @@ function(corrosion_import_crate)
                 "CORROSION_NATIVE_TOOLING is ON."
             )
         endif()
-        execute_process(
-            COMMAND
-                ${_CORROSION_GENERATOR}
-                    --manifest-path ${COR_MANIFEST_PATH}
-                    print-root
-            OUTPUT_VARIABLE toml_dir
-            RESULT_VARIABLE ret)
-
-        if (NOT ret EQUAL "0")
-            message(FATAL_ERROR "corrosion-generator failed: ${ret}")
-        endif()
-
-        string(STRIP "${toml_dir}" toml_dir)
-
-        get_filename_component(toml_dir_name ${toml_dir} NAME)
+        get_filename_component(manifest_directory "${COR_MANIFEST_PATH}" DIRECTORY)
+        get_filename_component(toml_dir_name ${manifest_directory} NAME)
 
         set(
             generated_cmake
