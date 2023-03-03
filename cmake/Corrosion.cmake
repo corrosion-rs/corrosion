@@ -951,6 +951,12 @@ function(_add_cargo_build out_cargo_build_out_dir)
     foreach(flag ${COR_FLAGS})
         list(APPEND flag_args ${flag})
     endforeach()
+    if(COR_LOCKED AND NOT "--locked" IN_LIST flag_args)
+        list(APPEND flag_args  "--locked")
+    endif()
+    if(COR_FROZEN AND NOT "--frozen" IN_LIST flag_args)
+        list(APPEND flag_args  "--frozen")
+    endif()
 
     set(corrosion_cc_rs_flags)
 
@@ -1102,7 +1108,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
 endfunction()
 
 function(corrosion_import_crate)
-    set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD NO_LINKER_OVERRIDE)
+    set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD NO_LINKER_OVERRIDE LOCKED FROZEN)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
@@ -1121,6 +1127,8 @@ function(corrosion_import_crate)
         message(FATAL_ERROR "MANIFEST_PATH is a required keyword to corrosion_add_crate")
     endif()
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE COR no_linker_override)
+    _corrosion_option_passthrough_helper(LOCKED COR locked)
+    _corrosion_option_passthrough_helper(FROZEN COR frozen)
     _corrosion_arg_passthrough_helper(CRATES COR crate_allowlist)
     _corrosion_arg_passthrough_helper(CRATE_TYPES COR crate_types)
     _corrosion_arg_passthrough_helper(PROFILE COR cargo_profile)
@@ -1204,6 +1212,8 @@ function(corrosion_import_crate)
             ${crate_types}
             ${cargo_profile}
             ${no_linker_override}
+            ${locked}
+            ${frozen}
         )
 
         if(DEFINED COR_IMPORTED_CRATES)

@@ -11,13 +11,17 @@
   The detection does not require an enabled language anymore and will always fall back
   to the default host target triple. A warning is issued if target triple detection failed.
 
-# Potentially Breaking Changes
+## Potentially Breaking Changes
 
 - Corrosion now sets the `IMPORTED_NO_SONAME` property for shared rust libraries, since by
   default they won't have an `soname` field.
   If you add a rustflag like `-Clink-arg=-Wl,-soname,libmycrate.so` in your project,
   you should set this property to false on the shared rust library.
 
+## New features
+
+- `corrosion_import_crate()` has two new options `LOCKED` and `FROZEN` which pass the 
+  `--locked` and `--frozen` flags to all invocations of cargo. Only with CMake >= 3.19.
 
 ## Other changes
 
@@ -34,7 +38,6 @@
 - Fix building when the `dev` profile is explicitly set by the user.
 
 ## Experimental status (may be changed or removed before a stable release)
-- Get metadata with `--locked` (requires a lock-file). This might cause issues, reports are welcome.
 - Experimental cxxbridge and cbindgen integration.
 - Add a helper function to parse the package version from a Cargo.toml file
 - Expose rustup toolchains discovered by `FindRust` in the following cache variables

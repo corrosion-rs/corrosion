@@ -1,29 +1,36 @@
 function(_cargo_metadata out manifest)
-    get_property(
-        RUSTC_EXECUTABLE
-        TARGET Rust::Rustc PROPERTY IMPORTED_LOCATION
-    )
-    get_property(
-        CARGO_EXECUTABLE
-        TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
-    )
-    get_filename_component(manifest_dir "${manifest}" DIRECTORY)
-    if(EXISTS "${manifest_dir}/Cargo.lock")
+    set(OPTIONS LOCKED FROZEN)
+    set(ONE_VALUE_KEYWORDS "")
+    set(MULTI_VALUE_KEYWORDS "")
+    cmake_parse_arguments(PARSE_ARGV 2 CM "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
+
+    if(DEFINED CM_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "Internal error - unexpected arguments: ${CM_UNPARSED_ARGUMENTS}")
+    elseif(DEFINED CM_KEYWORDS_MISSING_VALUES)
+        message(FATAL_ERROR "Internal error - the following keywords had no associated value(s):"
+            "${CM_KEYWORDS_MISSING_VALUES}")
+    endif()
+
+    set(cargo_locked "")
+    set(cargo_frozen "")
+    if(LOCKED)
         set(cargo_locked "--locked")
-    else()
-        set(cargo_locked "")
+    endif()
+    if(FROZEN)
+        set(cargo_frozen "--frozen")
     endif()
     execute_process(
         COMMAND
             ${CMAKE_COMMAND} -E env
-                CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
-                ${CARGO_EXECUTABLE}
+                "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
+                "${_CORROSION_CARGO}"
                     metadata
                         --manifest-path "${manifest}"
                         --format-version 1
                         # We don't care about non-workspace dependencies
                         --no-deps
                         ${cargo_locked}
+                        ${cargo_frozen}
 
         OUTPUT_VARIABLE json
         COMMAND_ERROR_IS_FATAL ANY
@@ -193,7 +200,7 @@ endfunction()
 # Add all cargo targets defined in the packages defined in the Cargo.toml manifest at
 # `MANIFEST_PATH`.
 function(_generator_add_cargo_targets)
-    set(options NO_LINKER_OVERRIDE)
+    set(options NO_LINKER_OVERRIDE LOCKED FROZEN)
     set(one_value_args MANIFEST_PATH PROFILE IMPORTED_CRATES)
     set(multi_value_args CRATES CRATE_TYPES)
     cmake_parse_arguments(
