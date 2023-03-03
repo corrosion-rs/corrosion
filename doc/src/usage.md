@@ -62,13 +62,13 @@ corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
         [NO_DEFAULT_FEATURES]
         # Disable linking of standard libraries (required for no_std crates).
         [NO_STD]
-        # Will let Rust/Cargo determine which linker to use instead of corrosion (when linking is invoked by Rust) (Ignored with CMake < 3.19)
+        # Will let Rust/Cargo determine which linker to use instead of corrosion (when linking is invoked by Rust)
         [NO_LINKER_OVERRIDE]
         # Specify  cargo build profile (e.g. release or a custom profile)
         [PROFILE <cargo-profile>]
-        # Retrieve the list of imported crates in the current scope
+        # Save the list of imported crates into the variable with the provided name in the current scope.
         [IMPORTED_CRATES <variable-name>]
-        # Build only the specified crate types (Ignored with CMake < 3.19)
+        # Only import the specified crate types. Valid values: `staticlib`, `cdylib`, `bin`.
         [CRATE_TYPES <crate_type1> ... <crate_typeN>]
         # Only import the specified crates from a workspace
         [CRATES <crate1> ... <crateN>]

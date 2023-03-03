@@ -741,7 +741,7 @@ endif()
 function(_add_cargo_build out_cargo_build_out_dir)
     set(options NO_LINKER_OVERRIDE)
     set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE WORKSPACE_MANIFEST_PATH)
-    set(multi_value_args BYPRODUCTS TARGET_KINDS)
+    set(multi_value_args BYPRODUCTS TARGET_KINDS ADDITIONAL_CARGO_FLAGS)
     cmake_parse_arguments(
         ACB
         "${options}"
@@ -944,20 +944,10 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 
     set(features_args)
+    # FIXME
     foreach(feature ${COR_FEATURES})
         list(APPEND features_args --features ${feature})
     endforeach()
-
-    set(flag_args)
-    foreach(flag ${COR_FLAGS})
-        list(APPEND flag_args ${flag})
-    endforeach()
-    if(COR_LOCKED AND NOT "--locked" IN_LIST flag_args)
-        list(APPEND flag_args  "--locked")
-    endif()
-    if(COR_FROZEN AND NOT "--frozen" IN_LIST flag_args)
-        list(APPEND flag_args  "--frozen")
-    endif()
 
     set(corrosion_cc_rs_flags)
 
@@ -1054,7 +1044,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 --manifest-path "${path_to_toml}"
                 --target-dir "${cargo_target_dir}"
                 ${cargo_profile}
-                ${flag_args}
+                ${ACB_ADDITIONAL_CARGO_FLAGS}
                 ${flags_genex}
                 # Any arguments to cargo must be placed before this line
                 ${local_rustflags_delimiter}
@@ -1148,14 +1138,18 @@ function(corrosion_import_crate)
         set(COR_MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${COR_MANIFEST_PATH})
     endif()
 
-    _corrosion_parse_platform(${COR_MANIFEST_PATH} ${Rust_VERSION} ${_CORROSION_RUST_CARGO_TARGET})
+    set(additional_cargo_flags ${COR_FLAGS})
 
+    if(COR_LOCKED AND NOT "--locked" IN_LIST additional_cargo_flags)
+        list(APPEND additional_cargo_flags  "--locked")
+    endif()
+    if(COR_FROZEN AND NOT "--frozen" IN_LIST additional_cargo_flags)
+        list(APPEND additional_cargo_flags  "--frozen")
+    endif()
+
+    _corrosion_parse_platform(${COR_MANIFEST_PATH} ${Rust_VERSION} ${_CORROSION_RUST_CARGO_TARGET})
+    set(imported_crates "")
     if (CORROSION_NATIVE_TOOLING)
-        if(COR_IMPORTED_CRATES)
-            message(FATAL_ERROR "corrosion_import_crate option `IMPORTED_CRATES` may not be selected when "
-                "CORROSION_NATIVE_TOOLING is ON."
-            )
-        endif()
         get_filename_component(manifest_directory "${COR_MANIFEST_PATH}" DIRECTORY)
         get_filename_component(toml_dir_name ${manifest_directory} NAME)
 
@@ -1172,6 +1166,23 @@ function(corrosion_import_crate)
         foreach(crate ${COR_CRATES})
             list(APPEND crates_args --crates ${crate})
         endforeach()
+        if(DEFINED COR_CRATE_TYPES)
+            set(crate_types "--crate-type=${COR_CRATE_TYPES}")
+        endif()
+        set(additional_cargo_flags_arg)
+        # We treat FLAGS slightly different from CRATE_TYPES, since FLAGS can be arbitrary flags to cargo, so
+        # potentially they could contain a semicolon. Passing the arguments 1 by 1 should preserve any semicolons
+        # and whitespace.
+        foreach(flag ${COR_FLAGS})
+            list(APPEND additional_cargo_flags_arg "--cargo-flag=${flag}")
+        endforeach()
+        list(APPEND passthrough_to_acb_args ${no_linker_override})
+        if(passthrough_to_acb_args)
+            # 31 == 0x1f
+            string(ASCII 31 unit_seperator)
+            list(JOIN passthrough_to_acb_args "${unit_seperator}" joined_args)
+            set(passthrough_to_acb "--passthrough-acb=${joined_args}")
+        endif()
 
         execute_process(
             COMMAND
@@ -1180,7 +1191,11 @@ function(corrosion_import_crate)
                     gen-cmake
                         ${_CORROSION_CONFIGURATION_ROOT}
                         ${crates_args}
+                        ${crate_types}
                         ${cargo_profile_native_generator}
+                        ${additional_cargo_flags_arg}
+                        --imported-crates=imported_crates
+                        ${passthrough_to_acb}
                         -o ${generated_cmake}
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             RESULT_VARIABLE ret)
@@ -1191,6 +1206,9 @@ function(corrosion_import_crate)
 
         include(${generated_cmake})
     else()
+        if(additional_cargo_flags)
+            set(acf_arg ADDITIONAL_CARGO_FLAGS ${additional_cargo_flags})
+        endif()
         _generator_add_cargo_targets(
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
@@ -1200,13 +1218,11 @@ function(corrosion_import_crate)
             ${crate_types}
             ${cargo_profile}
             ${no_linker_override}
-            ${locked}
-            ${frozen}
+            ${acf_arg}
         )
-
-        if(DEFINED COR_IMPORTED_CRATES)
-            set(${COR_IMPORTED_CRATES} ${imported_crates} PARENT_SCOPE)
-        endif()
+    endif()
+    if(DEFINED COR_IMPORTED_CRATES)
+        set(${COR_IMPORTED_CRATES} ${imported_crates} PARENT_SCOPE)
     endif()
 endfunction()
 

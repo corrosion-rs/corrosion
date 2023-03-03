@@ -13,10 +13,14 @@ mod target;
 pub const GEN_CMAKE: &str = "gen-cmake";
 
 // Options
+const ADDITIONAL_CARGO_FLAGS: &str = "cargo-flag";
 const OUT_FILE: &str = "out-file";
 const CONFIGURATION_ROOT: &str = "configuration-root";
 const PROFILE: &str = "profile";
 const CRATES: &str = "crates";
+const IMPORTED_CRATES: &str = "imported-crates";
+const CRATE_TYPE: &str = "crate-type";
+const PASSTHROUGH_ADD_CARGO_BUILD: &str = "passthrough-acb";
 
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(GEN_CMAKE)
@@ -40,6 +44,15 @@ pub fn subcommand() -> App<'static, 'static> {
                 .help("Specifies which crates of the workspace to import"),
         )
         .arg(
+            Arg::with_name(CRATE_TYPE)
+                .long(CRATE_TYPE)
+                .value_name("kind")
+                .possible_values(&["staticlib", "cdylib", "bin"])
+                .multiple(true)
+                .value_delimiter(";")
+                .help("Only import the specified crate types")
+        )
+        .arg(
             Arg::with_name(PROFILE)
                 .long(PROFILE)
                 .value_name("PROFILE")
@@ -52,6 +65,29 @@ pub fn subcommand() -> App<'static, 'static> {
                 .long("out-file")
                 .value_name("FILE")
                 .help("Output CMake file name. Defaults to stdout."),
+        )
+        .arg(
+            Arg::with_name(IMPORTED_CRATES)
+                .long(IMPORTED_CRATES)
+                .value_name("variable_name")
+                .takes_value(true)
+                .help("Save a list of the imported target names into c CMake variable with the given name"),
+        )
+        .arg(
+            Arg::with_name(ADDITIONAL_CARGO_FLAGS)
+                .long(ADDITIONAL_CARGO_FLAGS)
+                .value_name("flag")
+                .takes_value(true)
+                .multiple(true)
+                .help("A CMake list of additional flags to import"),
+        )
+        .arg(
+            Arg::with_name(PASSTHROUGH_ADD_CARGO_BUILD)
+                .long(PASSTHROUGH_ADD_CARGO_BUILD)
+                .takes_value(true)
+                .multiple(true)
+                .value_delimiter(std::char::from_u32(0x1f).unwrap().to_string().as_str())
+                .help("Passthrough arguments to the _add_cargo_build invocation(s) in CMake")
         )
 }
 
@@ -80,6 +116,7 @@ cmake_minimum_required(VERSION 3.15)
     let crates = matches
         .values_of(CRATES)
         .map_or(Vec::new(), |c| c.collect());
+    let crate_kinds: Option<Vec<&str>> = matches.values_of(CRATE_TYPE).map(|c| c.collect());
     let workspace_manifest_path = Rc::new(args.manifest_path.clone());
     let targets: Vec<_> = args
         .metadata
@@ -92,20 +129,64 @@ cmake_minimum_required(VERSION 3.15)
         .cloned()
         .map(Rc::new)
         .flat_map(|package| {
-            let package2 = package.clone();
-            let ws_manifest_path = workspace_manifest_path.clone();
-            package.targets.clone().into_iter().filter_map(move |t| {
-                target::CargoTarget::from_metadata(package2.clone(), t, ws_manifest_path.clone())
-            })
+            package
+                .targets
+                .iter()
+                .filter_map(|t| {
+                    target::CargoTarget::from_metadata(
+                        package.clone(),
+                        t.clone(),
+                        workspace_manifest_path.clone(),
+                        &crate_kinds,
+                    )
+                })
+                .collect::<Vec<_>>()
         })
         .collect();
 
     let cargo_profile = matches.value_of(PROFILE);
 
+    let mut additional_args = if let Some(values) = matches.values_of(ADDITIONAL_CARGO_FLAGS) {
+        values.collect()
+    } else {
+        Vec::default()
+    };
+    if matches.is_present(crate::LOCKED) {
+        additional_args.push("--locked");
+    }
+    if matches.is_present(crate::FROZEN) {
+        additional_args.push("--frozen");
+    }
+    let passthrough_args: Vec<String> = matches
+        .values_of(PASSTHROUGH_ADD_CARGO_BUILD)
+        .map(|values| {
+            // Add quotes around each argument for CMake to preserve which arguments belong together.
+            values
+                .filter(|val| !val.is_empty())
+                .map(|val| format!("\"{}\"", val))
+                .collect()
+        })
+        .unwrap_or_default();
+    let passthrough_str = passthrough_args.join(" ");
+
     for target in &targets {
         target
-            .emit_cmake_target(&mut out_file, cargo_profile)
+            .emit_cmake_target(
+                &mut out_file,
+                cargo_profile,
+                &additional_args,
+                &passthrough_str,
+            )
             .unwrap();
+    }
+    if let Some(imported_crate_list_name) = matches.value_of(IMPORTED_CRATES) {
+        let imported_targets: Vec<_> = targets.iter().map(|target| target.target_name()).collect();
+        let imported_targets_list = imported_targets.join(";");
+        writeln!(
+            out_file,
+            "set({} \"{}\")",
+            imported_crate_list_name, imported_targets_list
+        )?;
     }
 
     writeln!(out_file)?;

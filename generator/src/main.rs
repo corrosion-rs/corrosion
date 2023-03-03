@@ -13,6 +13,8 @@ use subcommands::*;
 const MANIFEST_PATH: &str = "manifest-path";
 const CARGO_EXECUTABLE: &str = "cargo-executable";
 const VERBOSE: &str = "verbose";
+const LOCKED: &str = "locked";
+const FROZEN: &str = "frozen";
 
 pub struct GeneratorSharedArgs {
     pub manifest_path: PathBuf,
@@ -46,11 +48,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("verbose")
                 .help("Request verbose output"),
         )
+        .arg(
+            Arg::with_name(LOCKED)
+                .long("locked")
+                .help("Pass --locked to cargo invocations"),
+        )
+        .arg(
+            Arg::with_name(FROZEN)
+                .long("frozen")
+                .help("Pass --frozen to cargo invocations"),
+        )
         .subcommand(gen_cmake::subcommand())
         .get_matches();
 
     let mut cmd = cargo_metadata::MetadataCommand::new();
     cmd.no_deps();
+    if matches.is_present(LOCKED) {
+        cmd.other_options(["--locked".into()]);
+    }
+    if matches.is_present(FROZEN) {
+        cmd.other_options(["--frozen".into()]);
+    }
 
     let manifest_path = matches.value_of(MANIFEST_PATH).unwrap();
     let cargo_executable = matches.value_of(CARGO_EXECUTABLE).unwrap();
