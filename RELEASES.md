@@ -27,6 +27,7 @@
   options for a Rust static library.
 - Corrosion no longer enables the `C` language when CMake is in crosscompiling mode and
   no languages where previously enabled. This is not considered a breaking change.
+- `corrosion_import_crate()` now warns about unexpected arguments.
 
 ## Fixes
 
@@ -34,7 +35,7 @@
 
 ## Experimental status (may be changed or removed before a stable release)
 - Get metadata with `--locked` (requires a lock-file). This might cause issues, reports are welcome.
-- Experimental cxxbridge integration.
+- Experimental cxxbridge and cbindgen integration.
 - Add a helper function to parse the package version from a Cargo.toml file
 - Expose rustup toolchains discovered by `FindRust` in the following cache variables
   which contain a list.
@@ -46,6 +47,21 @@
 - Add target properties `INTERFACE_CORROSION_RUSTC` and `INTERFACE_CORROSION_CARGO`, which may
   be set to paths to `rustc` and `cargo` respectively to override the toolchain for a specific
   target.
+
+# 0.3.4 (2023-03-02)
+
+## Fixes
+
+- Fix hostbuild (when CMake/Cargo is configured for cross-compiling) if clang is used ([#338]).
+
+## Other
+
+- Pass `--no-deps` to cargo metadata ([#334]).
+- Bump the legacy generator dependencies
+
+[#334]: https://github.com/corrosion-rs/corrosion/pull/334
+[#338]: https://github.com/corrosion-rs/corrosion/pull/338
+
 
 # 0.3.3 (2023-02-17)
 
