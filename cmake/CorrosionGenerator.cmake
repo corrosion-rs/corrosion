@@ -43,7 +43,7 @@ endfunction()
 function(_generator_add_package_targets)
     set(OPTIONS NO_LINKER_OVERRIDE)
     set(ONE_VALUE_KEYWORDS WORKSPACE_MANIFEST_PATH PACKAGE_MANIFEST_PATH PACKAGE_NAME PACKAGE_VERSION TARGETS_JSON PROFILE OUT_CREATED_TARGETS)
-    set(MULTI_VALUE_KEYWORDS CRATE_TYPES)
+    set(MULTI_VALUE_KEYWORDS CRATE_TYPES ADDITIONAL_CARGO_FLAGS)
     cmake_parse_arguments(PARSE_ARGV 0 GAPT "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
     if(DEFINED GAPT_UNPARSED_ARGUMENTS)
@@ -53,8 +53,9 @@ function(_generator_add_package_targets)
                     "${GAPT_KEYWORDS_MISSING_VALUES}")
     endif()
 
-    _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE COR no_linker_override)
-    _corrosion_arg_passthrough_helper(PROFILE COR profile)
+    _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GAPT no_linker_override)
+    _corrosion_arg_passthrough_helper(PROFILE GAPT profile)
+    _corrosion_arg_passthrough_helper(ADDITIONAL_CARGO_FLAGS GAPT additional_cargo_flags)
 
     set(workspace_manifest_path "${GAPT_WORKSPACE_MANIFEST_PATH}")
     set(package_manifest_path "${GAPT_PACKAGE_MANIFEST_PATH}")
@@ -133,6 +134,7 @@ function(_generator_add_package_targets)
                 # Optional
                 ${profile}
                 ${no_linker_override}
+                ${additional_cargo_flags}
             )
             if(archive_byproducts)
                 _corrosion_copy_byproducts(
@@ -173,6 +175,7 @@ function(_generator_add_package_targets)
                 # Optional
                 ${profile}
                 ${no_linker_override}
+                ${additional_cargo_flags}
             )
             _corrosion_copy_byproducts(
                     ${target_name} RUNTIME_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${bin_byproduct}"
@@ -200,9 +203,9 @@ endfunction()
 # Add all cargo targets defined in the packages defined in the Cargo.toml manifest at
 # `MANIFEST_PATH`.
 function(_generator_add_cargo_targets)
-    set(options NO_LINKER_OVERRIDE LOCKED FROZEN)
+    set(options NO_LINKER_OVERRIDE)
     set(one_value_args MANIFEST_PATH PROFILE IMPORTED_CRATES)
-    set(multi_value_args CRATES CRATE_TYPES)
+    set(multi_value_args CRATES CRATE_TYPES ADDITIONAL_CARGO_FLAGS)
     cmake_parse_arguments(
         GGC
         "${options}"
@@ -214,6 +217,7 @@ function(_generator_add_cargo_targets)
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GGC no_linker_override)
     _corrosion_arg_passthrough_helper(CRATE_TYPES GGC crate_types)
     _corrosion_arg_passthrough_helper(PROFILE GGC cargo_profile)
+    _corrosion_arg_passthrough_helper(ADDITIONAL_CARGO_FLAGS GGC additional_cargo_flags)
 
     _cargo_metadata(json "${GGC_MANIFEST_PATH}")
     string(JSON packages GET "${json}" "packages")
@@ -275,6 +279,7 @@ function(_generator_add_cargo_targets)
             ${no_linker_override}
             ${cargo_profile}
             ${crate_types}
+            ${additional_cargo_flags}
         )
         list(APPEND created_targets "${curr_created_targets}")
     endforeach()

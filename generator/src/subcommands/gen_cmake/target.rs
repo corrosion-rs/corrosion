@@ -25,8 +25,11 @@ impl CargoTargetType {
         match self {
             Self::Executable => {
                 s.push_str("bin");
-            },
-            Self::Library { has_staticlib, has_cdylib} => {
+            }
+            Self::Library {
+                has_staticlib,
+                has_cdylib,
+            } => {
                 if *has_staticlib {
                     s.push_str("staticlib")
                 }
@@ -44,17 +47,28 @@ impl CargoTarget {
         cargo_package: Rc<cargo_metadata::Package>,
         cargo_target: cargo_metadata::Target,
         workspace_manifest_path: Rc<PathBuf>,
+        // If Some, only import crates if the kind variant is given in crate_kinds.
+        crate_kinds: &Option<Vec<&str>>,
     ) -> Option<Self> {
-        let target_type = if cargo_target
+        let filtered_kinds: Vec<String> = cargo_target
             .kind
+            .clone()
+            .into_iter()
+            .filter(|kind| match crate_kinds {
+                None => true,
+                Some(allowed_kinds_subset) => allowed_kinds_subset.contains(&&**kind),
+            })
+            .collect();
+
+        let target_type = if filtered_kinds
             .iter()
-            .any(|k| k == "staticlib" || k == "cdylib")
+            .any(|k| k.as_str() == "staticlib" || k.as_str() == "cdylib")
         {
             CargoTargetType::Library {
-                has_staticlib: cargo_target.kind.iter().any(|k| k == "staticlib"),
-                has_cdylib: cargo_target.kind.iter().any(|k| k == "cdylib"),
+                has_staticlib: filtered_kinds.iter().any(|k| k == "staticlib"),
+                has_cdylib: filtered_kinds.iter().any(|k| k == "cdylib"),
             }
-        } else if cargo_target.kind.iter().any(|k| k == "bin") {
+        } else if filtered_kinds.iter().any(|k| k == "bin") {
             CargoTargetType::Executable
         } else {
             return None;
@@ -68,15 +82,27 @@ impl CargoTarget {
         })
     }
 
+    pub(crate) fn target_name(&self) -> &str {
+        &self.cargo_target.name
+    }
+
     pub fn emit_cmake_target(
         &self,
         out_file: &mut dyn std::io::Write,
         cargo_profile: Option<&str>,
+        additional_cargo_flags: &Vec<&str>,
+        passthrough_add_cargo_build: &str,
     ) -> Result<(), Box<dyn Error>> {
         let cargo_build_profile_option = if let Some(profile) = cargo_profile {
             format!("PROFILE \"{}\"", profile)
         } else {
             String::default()
+        };
+
+        let additional_cargo_flags_kw = if additional_cargo_flags.is_empty() {
+            ""
+        } else {
+            "ADDITIONAL_CARGO_FLAGS"
         };
 
         writeln!(
@@ -106,7 +132,7 @@ impl CargoTarget {
                     .to_str()
                     .expect("Non-utf8 path encountered")
                     .replace("\\", "/");
-                let mut lib_kinds = if has_staticlib { "staticlib" } else {""}.to_string();
+                let mut lib_kinds = if has_staticlib { "staticlib" } else { "" }.to_string();
                 if has_cdylib {
                     if has_staticlib {
                         lib_kinds.push(' ');
@@ -164,6 +190,8 @@ impl CargoTarget {
                 {profile_option}
                 TARGET_KINDS {target_kinds}
                 BYPRODUCTS \"${{byproducts}}\"
+                {additional_cargo_flags_kw} {additional_cargo_flags}
+                {passthrough_add_cargo_build}
             )
 
             set_target_properties({target_name} PROPERTIES
@@ -197,6 +225,9 @@ impl CargoTarget {
             workspace_manifest_path = ws_manifest,
             profile_option = cargo_build_profile_option,
             target_kinds = target_kinds,
+            additional_cargo_flags = additional_cargo_flags.join(" "),
+            additional_cargo_flags_kw = additional_cargo_flags_kw,
+            passthrough_add_cargo_build = passthrough_add_cargo_build,
 
         )?;
         Ok(())
