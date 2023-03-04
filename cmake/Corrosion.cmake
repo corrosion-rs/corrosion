@@ -1715,9 +1715,9 @@ function(corrosion_experimental_cbindgen)
         set(cbindgen "${installed_cbindgen}")
     else()
         if(NOT TARGET "_corrosion_cbindgen")
-            add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cbindgen/bin/cbindgen"
-                COMMAND
-                ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/corrosion/cbindgen"
+            set(local_cbindgen_install_dir "${CMAKE_BINARY_DIR}/corrosion/cbindgen")
+            file(MAKE_DIRECTORY "${local_cbindgen_install_dir}")
+            add_custom_command(OUTPUT "${local_cbindgen_install_dir}/bin/cbindgen"
                 COMMAND ${_CORROSION_CARGO} install
                 cbindgen
                 --root "${CMAKE_BINARY_DIR}/corrosion/cbindgen"
@@ -1728,7 +1728,7 @@ function(corrosion_experimental_cbindgen)
                 DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cbindgen/bin/cbindgen"
                 )
         endif()
-        set(cbindgen "${CMAKE_BINARY_DIR}/corrosion/cbindgen/bin/cbindgen")
+        set(cbindgen "${local_cbindgen_install_dir}/bin/cbindgen")
     endif()
 
     set(corrosion_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated")
@@ -1759,6 +1759,14 @@ function(corrosion_experimental_cbindgen)
         COMMAND_EXPAND_LISTS
         WORKING_DIRECTORY "${crate_directory}"
     )
+
+    if(NOT installed_cbindgen)
+        add_custom_command(
+            OUTPUT "${generated_header}"
+            APPEND
+            DEPENDS _corrosion_cbindgen
+        )
+    endif()
 
     add_custom_target(_corrosion_cbindgen_${rust_target}_bindings
         DEPENDS "${generated_header}"
