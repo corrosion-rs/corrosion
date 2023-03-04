@@ -278,23 +278,23 @@ jobs:
           -GNinja
           -DCORROSION_VERBOSE_OUTPUT=ON
           -DCORROSION_TESTS_INSTALL_CORROSION=OFF
-
+          &&
           cd build
-
+          &&
           ctest --output-on-failure -C Debug -j 3
       - name: Test Corrosion as installed module
         run: >
           cmake -E remove_directory build
-
+          &&
           cmake
           -S.
           -Bbuild
           -DCORROSION_VERBOSE_OUTPUT=ON
           -DCMAKE_BUILD_TYPE=Release
           -DCORROSION_TESTS_INSTALL_CORROSION=ON
-
+          &&
           cd build
-
+          &&
           ctest --output-on-failure -C Release -j 3
   # We need some "accumulation" job here because bors fails (timeouts) to
   # listen on matrix builds.
