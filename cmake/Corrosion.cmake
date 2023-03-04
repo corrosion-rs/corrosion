@@ -671,8 +671,32 @@ endif()
 
 if(CORROSION_NATIVE_TOOLING)
     if (NOT TARGET Corrosion::Generator )
-        set(_CORROSION_GENERATOR_EXE
-            ${CARGO_EXECUTABLE} run --quiet --manifest-path "${CMAKE_CURRENT_LIST_DIR}/../generator/Cargo.toml" --)
+        set(generator_destination "${CMAKE_CURRENT_BINARY_DIR}/corrosion/legacy_generator")
+        message(STATUS "Building CMake Generator for Corrosion - This may take a while")
+        set(generator_build_quiet "")
+        if(NOT _CORROSION_VERBOSE_OUTPUT_FLAG)
+            set(generator_build_quiet "--quiet")
+        endif()
+        # Using cargo install has the advantage of caching the build in the user .cargo directory,
+        # so likely the rebuild will be very cheap even after deleting the build directory.
+        execute_process(
+                COMMAND "${CARGO_EXECUTABLE}" install
+                    --path "."
+                    --root "${generator_destination}"
+                    ${generator_build_quiet}
+                WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../generator"
+                RESULT_VARIABLE generator_build_failed
+        )
+        if(generator_build_failed)
+            message(FATAL_ERROR "Building CMake Generator for Corrosion - failed")
+        else()
+            message(STATUS "Building CMake Generator for Corrosion - done")
+        endif()
+        set(host_executable_suffix "")
+        if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+            set(host_executable_suffix ".exe")
+        endif()
+        set(_CORROSION_GENERATOR_EXE "${generator_destination}/bin/corrosion-generator${host_executable_suffix}")
         if (CORROSION_DEV_MODE)
             # If you're developing Corrosion, you want to make sure to re-configure whenever the
             # generator changes.
