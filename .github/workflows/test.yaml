@@ -289,6 +289,7 @@ jobs:
           cmake
           -S.
           -Bbuild
+          -GNinja
           -DCORROSION_VERBOSE_OUTPUT=ON
           -DCMAKE_BUILD_TYPE=Release
           -DCORROSION_TESTS_INSTALL_CORROSION=ON
