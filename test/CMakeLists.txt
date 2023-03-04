@@ -42,6 +42,7 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
             -DCORROSION_VERBOSE_OUTPUT=ON
             -DCORROSION_TESTS=OFF
             -DCMAKE_BUILD_TYPE=Release
+            -G${CMAKE_GENERATOR}
             "-DCMAKE_INSTALL_PREFIX=${test_install_path}"
     )
     add_test(NAME "install_corrosion_build"
@@ -75,7 +76,7 @@ function(corrosion_tests_add_test test_name bin_names)
     set(options "")
     set(one_value_kewords "TEST_SRC_DIR")
     set(multi_value_keywords "")
-    cmake_parse_arguments(PARSE_ARGV 2 TST "${options}" "${one_value_kewords}" "${multi_value_kewords}")
+    cmake_parse_arguments(PARSE_ARGV 2 TST "${options}" "${one_value_kewords}" "${multi_value_keywords}")
     set(pass_through_arguments "${TST_UNPARSED_ARGUMENTS}")
 
 # In the future we could add multiple tests here for different configurations (generator, build mode, rust version ...)
@@ -160,7 +161,7 @@ endfunction()
 # Please keep this in alphabetical order.
 add_subdirectory(cargo_flags)
 add_subdirectory(cpp2rust)
-if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.19.0")
+if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0")
     # Flag `--crate-type` is only supported since Rust 1.64.0
     add_subdirectory(crate_type)
 endif()
