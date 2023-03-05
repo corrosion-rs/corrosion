@@ -9,3 +9,8 @@ corrosion_add_cxxbridge(cxxbridge-cpp CRATE cxxbridge-crate MANIFEST_PATH rust F
 
 add_executable(cxxbridge-exe main.cpp)
 target_link_libraries(cxxbridge-exe PUBLIC cxxbridge-cpp)
+
+if(MSVC)
+    # Note: This is required because we use `cxx` which uses `cc` to compile and link C++ code.
+    corrosion_set_env_vars(cxxbridge-crate "CFLAGS=-MDd" "CXXFLAGS=-MDd")
+endif()
