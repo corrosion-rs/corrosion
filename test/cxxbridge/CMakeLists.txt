@@ -1,11 +1,4 @@
 if(CORROSION_TESTS_CXXBRIDGE)
-    # There seems to be an upstream cxx issue, where the libcxx.rlib on the rust side uses
-    # MD_DynamicRelease regardless of the actual profile. I don't know if it is possible to setup
-    # cxx to use the correct version of the Runtimelibrary for MSVC, so for now we just don't support
-    # this usecase. If someone is interested, please feel free to investigate and fix.
-    if(Rust_CARGO_TARGET MATCHES "-msvc$")
-        return()
-    endif()
     corrosion_tests_add_test(cxxbridge_cpp2rust_1 "rust_bin"
         TEST_SRC_DIR cxxbridge_cpp2rust
         TEST_PASS_THROUGH_ARGS -DTEST_CXXBRIDGE_VARIANT1=ON

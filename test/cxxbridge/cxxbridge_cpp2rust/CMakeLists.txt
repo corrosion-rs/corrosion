@@ -15,6 +15,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux"
     corrosion_add_target_local_rustflags(rust_bin "-Clink-arg=-fuse-ld=lld")
 endif()
 
+if(MSVC)
+    set_target_properties(cxxbridge-cpp PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+endif()
+
 if(TEST_CXXBRIDGE_VARIANT1)
     # Variant 1: Merge the C++ User sources into the generated library target.
     target_sources(cxxbridge-cpp PRIVATE cpplib.cpp)
@@ -25,4 +29,7 @@ else()
     add_library(cpp_lib STATIC cpplib.cpp)
     target_link_libraries(cpp_lib PUBLIC cxxbridge-cpp)
     corrosion_link_libraries(rust_bin cpp_lib cxxbridge-cpp)
+    if(MSVC)
+        set_target_properties(cpp_lib PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+    endif()
 endif()

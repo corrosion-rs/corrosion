@@ -39,9 +39,14 @@ By default you will probably want to select the `MultiThreadedDLL` variant, unle
 This issue is quite similar to the previous one, except that this time it's a Rust library being linked
 into a C/C++ target. If it's 100% only Rust code you likely won't even have any issues.
 However, if somewhere in the dependency graph C/C++ code is built and linked into your Rust library,
-you will likely encounter this issue.
+you will likely encounter this issue. Please note, that using [cxx] counts as using C++ code and will
+lead to this issue.
+
 The previous solution should also work for this case, but additionally you [may also
 have success](https://github.com/rust-lang/rust/issues/39016#issuecomment-853964918) by using 
-`corrosion_set_env_vars(your_rust_lib "CFLAGS=-MDd" "CXXFLAGS=-MDd")`.
+`corrosion_set_env_vars(your_rust_lib "CFLAGS=-MDd" "CXXFLAGS=-MDd")` (or `-MTd` for a statically linked
+runtime).
 For debug builds, this is likely to be the preferable solution. It assumes that downstream C/C++ code
 is built by the `cc` crate, which respects the `CFLAGS` and `CXXFLAGS` environment variables.
+
+[cxx]: https://github.com/dtolnay/cxx
