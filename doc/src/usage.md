@@ -1,5 +1,73 @@
 ## Usage
-### Corrosion Options
+
+### Automatically import crate targets with `corrosion_import_crate`
+
+In order to integrate a Rust crate into CMake, you first need to import Rust crates from
+a [package] or [workspace]. Corrosion provides `corrosion_import_crate()` to automatically import
+crates defined in a Cargo.toml Manifest file:
+
+{{#include ../../cmake/Corrosion.cmake:corrosion-import-crate}}
+
+Corrosion will use `cargo metadata` to add a cmake target for each crate defined in the Manifest file
+and add the necessary rules to build the targets.
+For Rust executables an [`IMPORTED`] executable target is created with the same name as defined in the `[[bin]]`
+section of the Manifest corresponding to this target.
+If no such name was defined the target name defaults to the Rust package name.
+For Rust library targets an [`INTERFACE`] library target is created with the same name as defined in the `[lib]`
+section of the Manifest. This `INTERFACE` library links an internal corrosion target, which is either a
+`SHARED` or `STATIC` `IMPORTED` library, depending on the Rust crate type (`cdylib` vs `staticlib`).
+
+The created library targets can be linked into other CMake targets by simply using [target_link_libraries].
+
+Corrosion will by default copy the produced Rust artifacts into `${CMAKE_CURRENT_BINARY_DIR}`. The target location
+can be changed by setting the CMake `OUTPUT_DIRECTORY` target properties on the imported Rust targets.
+See the [OUTPUT_DIRECTORY](#cmake-output_directory-target-properties-and-imported_location) section for more details.
+
+Many of the options available for `corrosion_import_crate` can also be individually set per
+target, see [Per Target options](#per-target-options) for details.
+
+[package]: https://doc.rust-lang.org/book/ch07-01-packages-and-crates.html
+[workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
+[`IMPORTED`]: https://cmake.org/cmake/help/latest/prop_tgt/IMPORTED.html
+[`INTERFACE`]: https://cmake.org/cmake/help/latest/command/add_library.html#interface-libraries
+[target_link_libraries]: https://cmake.org/cmake/help/latest/command/target_link_libraries.html
+
+### Per Target options
+
+Some configuration options can be specified individually for each target. You can set them via the
+`corrosion_set_xxx()` functions specified below:
+
+- `corrosion_set_env_vars(<target_name> <key1=value1> [... <keyN=valueN>])`: Define environment variables
+  that should be set during the invocation of `cargo build` for the specified target. Please note that
+  the environment variable will only be set for direct builds of the target via cmake, and not for any
+  build where cargo built the crate in question as a dependency for another target.
+  The environment variables may contain generator expressions.
+- `corrosion_add_target_rustflags(<target_name> <rustflag> [... <rustflagN>])`: When building the target,
+  the `RUSTFLAGS` environment variable will contain the flags added via this function. Please note that any
+  dependencies (built by cargo) will also see these flags. See also: `corrosion_add_target_local_rustflags`.
+- `corrosion_add_target_local_rustflags(target_name rustc_flag [more_flags ...])`: Support setting
+  rustflags for only the main target (crate) and none of its dependencies.
+  This is useful in cases where you only need rustflags on the main-crate, but need to set different
+  flags for different targets. Without "local" Rustflags this would require rebuilds of the
+  dependencies when switching targets.
+- `corrosion_set_hostbuild(<target_name>)`: The target should be compiled for the Host target and ignore any
+  cross-compile configuration.
+- `corrosion_set_features(<target_name> [ALL_FEATURES <Bool>] [NO_DEFAULT_FEATURES] [FEATURES <feature1> ... ])`:
+  For a given target, enable specific features via `FEATURES`, toggle `ALL_FEATURES` on or off or disable all features
+  via `NO_DEFAULT_FEATURES`. For more information on features, please see also the
+  [cargo reference](https://doc.rust-lang.org/cargo/reference/features.html).
+- `corrosion_set_cargo_flags(<target_name> <flag1> ...])`:
+  For a given target, add options and flags at the end of `cargo build` invocation. This will be appended after any
+  arguments passed through the `FLAGS` during the crate import.
+- `corrosion_set_linker(target_name linker)`: Use `linker` to link the target.
+  Please note that this only has an effect for targets where the final linker invocation is done
+  by cargo, i.e. targets where foreign code is linked into rust code and not the other way around.
+  Please also note that if you are cross-compiling and specify a linker such as `clang`, you are
+  responsible for also adding a rustflag which adds the necessary `--target=` argument for the
+  linker.
+
+
+### Global Corrosion Options
 All of the following variables are evaluated automatically in most cases. In typical cases you
 shouldn't need to alter any of these. If you do want to specify them manually, make sure to set
 them **before** `find_package(Corrosion REQUIRED)`.
@@ -51,71 +119,7 @@ versions individually.
 - `Rust_IS_NIGHTLY` - 1 if a nightly toolchain is used, otherwise 0. Useful for selecting an unstable feature for a
   crate, that is only available on nightly toolchains.
 
-### Adding crate targets
 
-In order to integrate a Rust crate into CMake, you first need to import a crate or Workspace:
-```cmake
-corrosion_import_crate(MANIFEST_PATH <path/to/cargo.toml>
-        # Equivalent to --all-features passed to cargo build
-        [ALL_FEATURES]
-        # Equivalent to --no-default-features passed to cargo build
-        [NO_DEFAULT_FEATURES]
-        # Disable linking of standard libraries (required for no_std crates).
-        [NO_STD]
-        # Will let Rust/Cargo determine which linker to use instead of corrosion (when linking is invoked by Rust)
-        [NO_LINKER_OVERRIDE]
-        # Specify  cargo build profile (e.g. release or a custom profile)
-        [PROFILE <cargo-profile>]
-        # Save the list of imported crates into the variable with the provided name in the current scope.
-        [IMPORTED_CRATES <variable-name>]
-        # Only import the specified crate types. Valid values: `staticlib`, `cdylib`, `bin`.
-        [CRATE_TYPES <crate_type1> ... <crate_typeN>]
-        # Only import the specified crates from a workspace
-        [CRATES <crate1> ... <crateN>]
-        # Enable the specified features
-        [FEATURES <feature1> ... <featureN>]
-        # Pass additional arguments to `cargo build`
-        [FLAGS <flag1> ... <flagN>]
-)
-```
-
-This will add a cmake target for each imported crate. Many of the options can also be set per
-target, see [Per Target options](#per-target-options) for details.
-
-### Per Target options
-
-Some configuration options can be specified individually for each target. You can set them via the
-`corrosion_set_xxx()` functions specified below:
-
-- `corrosion_set_env_vars(<target_name> <key1=value1> [... <keyN=valueN>])`: Define environment variables
-  that should be set during the invocation of `cargo build` for the specified target. Please note that
-  the environment variable will only be set for direct builds of the target via cmake, and not for any
-  build where cargo built the crate in question as a dependency for another target.
-  The environment variables may contain generator expressions.
-- `corrosion_add_target_rustflags(<target_name> <rustflag> [... <rustflagN>])`: When building the target,
-  the `RUSTFLAGS` environment variable will contain the flags added via this function. Please note that any
-  dependencies (built by cargo) will also see these flags. In the future corrosion may offer a second function
-  to allow specifying flags only for the target in question, utilizing `cargo rustc` instead of `cargo build`.
-- `corrosion_add_target_local_rustflags(target_name rustc_flag [more_flags ...])`: Support setting
-  rustflags for only the main target (crate ) and none of it's dependencies.
-  This is useful in cases where you only need rustflags on the main-crate, but need to set different
-  flags for different targets. Without "local" Rustflags this would require rebuilds of the
-  dependencies when switching targets.
-- `corrosion_set_hostbuild(<target_name>)`: The target should be compiled for the Host target and ignore any
-  cross-compile configuration.
-- `corrosion_set_features(<target_name> [ALL_FEATURES <Bool>] [NO_DEFAULT_FEATURES] [FEATURES <feature1> ... ])`:
-  For a given target, enable specific features via `FEATURES`, toggle `ALL_FEATURES` on or off or disable all features
-  via `NO_DEFAULT_FEATURES`. For more information on features, please see also the
-  [cargo reference](https://doc.rust-lang.org/cargo/reference/features.html).
-- `corrosion_set_cargo_flags(<target_name> <flag1> ...])`:
-  For a given target, add options and flags at the end of `cargo build` invocation. This will be appended after any
-  arguments passed through the `FLAGS` during the crate import.
-- `corrosion_set_linker(target_name linker)`: Use `linker` to link the target.
-  Please note that this only has an effect for targets where the final linker invocation is done
-  by cargo, i.e. targets where foreign code is linked into rust code and not the other way around.
-  Please also note that if you are cross-compiling and specify a linker such as `clang`, you are
-  responsible for also adding a rustflag which adds the necessary `--target=` argument for the
-  linker.
 
 ### Selecting a custom cargo profile
 
@@ -283,7 +287,6 @@ which requires a minimum of CMake 3.15. If you're using Android Studio to build 
 follow the instructions in the Android Studio documentation for
 [using a specific version of CMake](https://developer.android.com/studio/projects/install-ndk#vanilla_cmake).
 
-## Limitations
 
 ### CMake `OUTPUT_DIRECTORY` target properties and `IMPORTED_LOCATION`
 
@@ -293,9 +296,12 @@ Corrosion respects the following `OUTPUT_DIRECTORY` target properties on CMake >
 -   [RUNTIME_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html)
 -   [PDB_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/PDB_OUTPUT_DIRECTORY.html)
 
+If the target property is set (e.g. by defining the `CMAKE_XYZ_OUTPUT_DIRECTORY` variable before calling 
+`corrosion_import_crate()`), corrosion will copy the built rust artifacts to the location defined in the
+target property.
 Due to limitations in CMake these target properties are evaluated in a deferred manner, to
 support the user setting the target properties after the call to `corrosion_import_crate()`.
-This has the side effect that `IMPORTED_LOCATION` will be set late, and users should not
+This has the side effect that the `IMPORTED_LOCATION` property will be set late, and users should not
 use `get_property` to read `IMPORTED_LOCATION` at configure time. Instead, generator expressions
 should be used to get the location of the target artifact.
 If `IMPORTED_LOCATION` is needed at configure time users may use `cmake_language(DEFER CALL ...)` to defer
