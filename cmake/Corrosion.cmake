@@ -1122,6 +1122,49 @@ function(_add_cargo_build out_cargo_build_out_dir)
     add_dependencies(cargo-clean cargo-clean_${target_name})
 endfunction()
 
+#[=======================================================================[.md:
+ANCHOR: corrosion-import-crate
+```cmake
+corrosion_import_crate(
+        MANIFEST_PATH <path/to/cargo.toml>
+        [ALL_FEATURES]
+        [NO_DEFAULT_FEATURES]
+        [NO_STD]
+        [NO_LINKER_OVERRIDE]
+        [LOCKED]
+        [FROZEN]
+        [PROFILE <cargo-profile>]
+        [IMPORTED_CRATES <variable-name>]
+        [CRATE_TYPES <crate_type1> ... <crate_typeN>]
+        [CRATES <crate1> ... <crateN>]
+        [FEATURES <feature1> ... <featureN>]
+        [FLAGS <flag1> ... <flagN>]
+)
+```
+* **MANIFEST_PATH**: Path to a [Cargo.toml Manifest] file.
+* **ALL_FEATURES**: Equivalent to [--all-features] passed to cargo build
+* **NO_DEFAULT_FEATURES**: Equivalent to [--no-default-features] passed to cargo build
+* **NO_STD**:  Disable linking of standard libraries (required for no_std crates).
+* **NO_LINKER_OVERRIDE**: Will let Rust/Cargo determine which linker to use instead of corrosion (when linking is invoked by Rust)
+* **LOCKED**: Pass [`--locked`] to cargo build and cargo metadata.
+* **FROZEN**: Pass [`--frozen`] to cargo build and cargo metadata.
+* **PROFILE**: Specify cargo build profile (`dev`/`release` or a [custom profile]; `bench` and `test` are not supported)
+* **IMPORTED_CRATES**: Save the list of imported crates into the variable with the provided name in the current scope.
+* **CRATE_TYPES**: Only import the specified crate types. Valid values: `staticlib`, `cdylib`, `bin`.
+* **CRATES**: Only import the specified crates from a workspace. Values: Crate names.
+* **FEATURES**: Enable the specified features. Equivalent to [--features] passed to `cargo build`.
+* **FLAGS**:  Arbitrary flags to `cargo build`.
+
+[custom profile]: https://doc.rust-lang.org/cargo/reference/profiles.html#custom-profiles
+[--all-features]: https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options
+[--no-default-features]: https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options
+[--features]: https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options
+[`--locked`]: https://doc.rust-lang.org/cargo/commands/cargo.html#manifest-options
+[`--frozen`]: https://doc.rust-lang.org/cargo/commands/cargo.html#manifest-options
+[Cargo.toml Manifest]: https://doc.rust-lang.org/cargo/appendix/glossary.html#manifest
+
+ANCHOR_END: corrosion-import-crate
+#]=======================================================================]
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD NO_LINKER_OVERRIDE LOCKED FROZEN)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
