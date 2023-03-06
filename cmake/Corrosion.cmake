@@ -677,6 +677,9 @@ if(CORROSION_NATIVE_TOOLING)
         if(NOT _CORROSION_VERBOSE_OUTPUT_FLAG)
             set(generator_build_quiet "--quiet")
         endif()
+        if(Rust_CARGO_TARGET)
+            set(cargo_target_option "--target" ${Rust_CARGO_TARGET})
+        endif()
         # Using cargo install has the advantage of caching the build in the user .cargo directory,
         # so likely the rebuild will be very cheap even after deleting the build directory.
         execute_process(
@@ -684,6 +687,7 @@ if(CORROSION_NATIVE_TOOLING)
                     --path "."
                     --root "${generator_destination}"
                     ${generator_build_quiet}
+                    ${cargo_target_option}
                 WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../generator"
                 RESULT_VARIABLE generator_build_failed
         )
