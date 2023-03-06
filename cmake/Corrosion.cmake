@@ -680,7 +680,10 @@ if(CORROSION_NATIVE_TOOLING)
         # Using cargo install has the advantage of caching the build in the user .cargo directory,
         # so likely the rebuild will be very cheap even after deleting the build directory.
         execute_process(
-                COMMAND "${CARGO_EXECUTABLE}" install
+                # If RUSTFLAGS is set in the environment, assume it is intended to affect the
+                # final outputs, not Corrosion's internal code running at build-time.
+                COMMAND ${CMAKE_COMMAND} -E env --unset=RUSTFLAGS
+                    "${CARGO_EXECUTABLE}" install
                     --path "."
                     --root "${generator_destination}"
                     ${generator_build_quiet}
