@@ -680,13 +680,16 @@ if(CORROSION_NATIVE_TOOLING)
         # Using cargo install has the advantage of caching the build in the user .cargo directory,
         # so likely the rebuild will be very cheap even after deleting the build directory.
         execute_process(
-                # If RUSTFLAGS is set in the environment, assume it is intended to affect the
-                # final outputs, not Corrosion's internal code running at configure-time.
-                COMMAND ${CMAKE_COMMAND} -E env --unset=RUSTFLAGS
+                COMMAND ${CMAKE_COMMAND}
+                    -E env
+                        # If the Generator is built at configure of a project (instead of being pre-installed)
+                        # We don't want environment variables like `RUSTFLAGS` affecting the Generator build.
+                        --unset=RUSTFLAGS
+                        "CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}"
                     "${CARGO_EXECUTABLE}" install
-                    --path "."
-                    --root "${generator_destination}"
-                    ${generator_build_quiet}
+                        --path "."
+                        --root "${generator_destination}"
+                        ${generator_build_quiet}
                 WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../generator"
                 RESULT_VARIABLE generator_build_failed
         )
