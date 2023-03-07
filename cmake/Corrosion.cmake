@@ -681,7 +681,7 @@ if(CORROSION_NATIVE_TOOLING)
         # so likely the rebuild will be very cheap even after deleting the build directory.
         execute_process(
                 # If RUSTFLAGS is set in the environment, assume it is intended to affect the
-                # final outputs, not Corrosion's internal code running at build-time.
+                # final outputs, not Corrosion's internal code running at configure-time.
                 COMMAND ${CMAKE_COMMAND} -E env --unset=RUSTFLAGS
                     "${CARGO_EXECUTABLE}" install
                     --path "."
