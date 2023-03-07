@@ -665,8 +665,13 @@ if (NOT CORROSION_NATIVE_TOOLING)
     include(CorrosionGenerator)
 endif()
 
+# Note: `cmake_language(GET_MESSAGE_LOG_LEVEL <output_variable>)` requires CMake 3.25,
+# so we offer our own option to control verbosity of downstream commands (e.g. cargo build)
 if (CORROSION_VERBOSE_OUTPUT)
     set(_CORROSION_VERBOSE_OUTPUT_FLAG --verbose)
+else()
+    # We want to silence some less important commands by default.
+    set(_CORROSION_QUIET_OUTPUT_FLAG --quiet)
 endif()
 
 if(CORROSION_NATIVE_TOOLING)
@@ -674,9 +679,6 @@ if(CORROSION_NATIVE_TOOLING)
         set(generator_destination "${CMAKE_CURRENT_BINARY_DIR}/corrosion/legacy_generator")
         message(STATUS "Building CMake Generator for Corrosion - This may take a while")
         set(generator_build_quiet "")
-        if(NOT _CORROSION_VERBOSE_OUTPUT_FLAG)
-            set(generator_build_quiet "--quiet")
-        endif()
         # Using cargo install has the advantage of caching the build in the user .cargo directory,
         # so likely the rebuild will be very cheap even after deleting the build directory.
         execute_process(
@@ -689,7 +691,7 @@ if(CORROSION_NATIVE_TOOLING)
                     "${CARGO_EXECUTABLE}" install
                         --path "."
                         --root "${generator_destination}"
-                        ${generator_build_quiet}
+                        ${_CORROSION_QUIET_OUTPUT_FLAG}
                 WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../generator"
                 RESULT_VARIABLE generator_build_failed
         )
@@ -1760,42 +1762,78 @@ function(corrosion_add_cxxbridge cxx_target)
     endforeach()
 endfunction()
 
-# Attention: This cbindgen integration is still in the experimental stage, which means
-# breaking changes can be introduced in any kind of release.
-# For now this function mostly considers when linking is done on the CMake side.
-# There may be some minor modifications required if the rust_target is a bin, and a C library
-# should be linked in via corrosion_link_libraries.
-# Todos:
-# - --crate could be a crate that CMake doesn't know, because it's just an rlib, that is used in a bin target
-# - add option to specify language c/c++
-# - set the target-triple via the TARGET env variable based on the target triple for the rust crate.
-function(corrosion_experimental_cbindgen)
-    set(OPTIONS)
-    set(ONE_VALUE_KEYWORDS CRATE HEADER_NAME CBINDGEN_CONFIG)
-    set(MULTI_VALUE_KEYWORDS "")
-    cmake_parse_arguments(PARSE_ARGV 0 _arg "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
+#[=======================================================================[.md:
+ANCHOR: corrosion_cbindgen
+```cmake
+corrosion_cbindgen(
+        TARGET <imported_target_name>
+        HEADER_NAME <output_header_name>
+        [MANIFEST_DIRECTORY <package_manifest_directory>]
+        [CBINDGEN_VERSION <version>]
+        [FLAGS <flag1> ... <flagN>]
+)
+```
 
-    set(required_keywords CRATE HEADER_NAME)
+A helper function which uses [cbindgen] to generate C/C++ bindings for a Rust crate.
+If `cbindgen` is not in `PATH` the helper function will automatically try to download
+`cbindgen` and place the built binary into `CMAKE_BINARY_DIR`. The binary is shared
+between multiple invocations of this function.
+
+
+* **TARGET**: The name of an imported Rust library target (crate), for which bindings should be generated.
+              If the target was not previously imported by Corrosion, because the crate only produces an
+              `rlib`, you must additionally specify `MANIFEST_DIRECTORY`.
+
+* **MANIFEST_DIRECTORY**: Directory of the package defining the library crate bindings should be generated for.
+    If you want to avoid specifying `MANIFEST_DIRECTORY` you could add a `staticlib` target to your package
+    manifest as a workaround to make corrosion import the crate.
+
+* **HEADER_NAME**: The name of the generated header file. This will be the name which you include in your C/C++ code
+                    (e.g. `#include "myproject/myheader.h" if you specify `HEADER_NAME "myproject/myheader.h"`.
+* **CBINDGEN_VERSION**: Version requirement for cbindgen. Exact semantics to be specified. Currently not implemented.
+* **FLAGS**: Arbitrary other flags for `cbindgen`. Run `cbindgen --help` to see the possible flags.
+
+[cbindgen]: https://github.com/eqrion/cbindgen
+
+ANCHOR_END: corrosion_cbindgen
+#]=======================================================================]
+function(corrosion_experimental_cbindgen)
+    # Todo:
+    # - set the target-triple via the TARGET env variable based on the target triple for the rust crate.
+    set(OPTIONS "")
+    set(ONE_VALUE_KEYWORDS TARGET MANIFEST_DIRECTORY HEADER_NAME CBINDGEN_VERSION)
+    set(MULTI_VALUE_KEYWORDS "FLAGS")
+    cmake_parse_arguments(PARSE_ARGV 0 CCN "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
+
+    set(required_keywords TARGET HEADER_NAME)
     foreach(keyword ${required_keywords})
-        if(NOT DEFINED "_arg_${keyword}")
+        if(NOT DEFINED "CCN_${keyword}")
             message(FATAL_ERROR "Missing required parameter `${keyword}`.")
-        elseif("${_arg_${keyword}}" STREQUAL "")
+        elseif("${CCN_${keyword}}" STREQUAL "")
             message(FATAL_ERROR "Required parameter `${keyword}` may not be set to an empty string.")
         endif()
     endforeach()
+    set(rust_target "${CCN_TARGET}")
+    unset(package_manifest_dir)
 
-    set(rust_target "${_arg_CRATE}")
-    if(DEFINED _arg_CBINDGEN_CONFIG)
-        set(cbindgen_config "--config" "${_arg_CBINDGEN_CONFIG}")
+    if(TARGET "${rust_target}")
+        get_target_property(package_manifest_path "${rust_target}" INTERFACE_COR_PACKAGE_MANIFEST_PATH)
+        if(NOT EXISTS "${package_manifest_path}")
+            message(FATAL_ERROR "Internal error: No package manifest found at ${package_manifest_path}")
+        endif()
+        get_filename_component(package_manifest_dir "${package_manifest_path}" DIRECTORY)
+        # todo: as an optimization we could cache the cargo metadata output (but --no-deps makes that slightly more complicated)
+    else()
+        if(NOT DEFINED CCN_MANIFEST_DIRECTORY)
+            message(FATAL_ERROR
+                "`${rust_target}` is not a target imported by corrosion and `MANIFEST_DIRECTORY` was not provided."
+            )
+        else()
+            set(package_manifest_dir "${CCN_MANIFEST_DIRECTORY}")
+        endif()
     endif()
-    set(output_header_name "${_arg_HEADER_NAME}")
 
-    get_target_property(manifest_path "${rust_target}" INTERFACE_COR_PACKAGE_MANIFEST_PATH)
-
-    if(NOT EXISTS "${manifest_path}")
-        message(FATAL_ERROR "Internal error: No package manifest found at ${manifest_path}")
-    endif()
-    get_filename_component(crate_directory ${manifest_path} DIRECTORY)
+    set(output_header_name "${CCN_HEADER_NAME}")
 
     find_program(installed_cbindgen cbindgen)
 
@@ -1807,14 +1845,17 @@ function(corrosion_experimental_cbindgen)
             set(local_cbindgen_install_dir "${CMAKE_BINARY_DIR}/corrosion/cbindgen")
             file(MAKE_DIRECTORY "${local_cbindgen_install_dir}")
             add_custom_command(OUTPUT "${local_cbindgen_install_dir}/bin/cbindgen"
-                COMMAND ${_CORROSION_CARGO} install
-                cbindgen
-                --root "${CMAKE_BINARY_DIR}/corrosion/cbindgen"
-                --quiet
+                COMMAND ${CMAKE_COMMAND}
+                -E env
+                "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
+                ${_CORROSION_CARGO} install
+                    cbindgen
+                    --root "${local_cbindgen_install_dir}"
+                    ${_CORROSION_QUIET_OUTPUT_FLAG}
                 COMMENT "Building cbindgen"
                 )
             add_custom_target("_corrosion_cbindgen"
-                DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cbindgen/bin/cbindgen"
+                DEPENDS "${local_cbindgen_install_dir}/bin/cbindgen"
                 )
         endif()
         set(cbindgen "${local_cbindgen_install_dir}/bin/cbindgen")
@@ -1825,33 +1866,48 @@ function(corrosion_experimental_cbindgen)
     set(header_placement_dir "${generated_dir}/include/")
     set(generated_header "${header_placement_dir}/${output_header_name}")
     message(STATUS "rust target is ${rust_target}")
-    target_include_directories(${rust_target}
-        INTERFACE
-        $<BUILD_INTERFACE:${generated_dir}/include>
-        $<INSTALL_INTERFACE:include>
-    )
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.23")
+        target_sources(${rust_target}
+            INTERFACE
+            FILE_SET HEADERS
+            BASE_DIRS "${header_placement_dir}"
+            FILES "${header_placement_dir}/${output_header_name}"
+        )
+    else()
+        # Note: not clear to me how install would best work before CMake 3.23
+        target_include_directories(${rust_target}
+            INTERFACE
+            $<BUILD_INTERFACE:${header_placement_dir}>
+            $<INSTALL_INTERFACE:include>
+            )
+    endif()
 
     # This may be different from $header_placement_dir since the user specified HEADER_NAME may contain
     # relative directories.
     get_filename_component(generated_header_dir "${generated_header}" DIRECTORY)
     file(MAKE_DIRECTORY ${generated_header_dir})
 
+    # Todo: Add dependencies on the source Rust files here to get proper dependency rules (hard).
+    # For now we just specify a dummy file we won't generate as an additional output, so that the rule
+    # always runs.
+    # Future Options: a) upstream depfile creation into cbindgen, b) spider our way through the source-code ourselves.
+    # c) ask the user to specify the dependencies (in order to relax the rules).
     add_custom_command(
         OUTPUT
-        "${generated_header}"
+        "${generated_header}" "${CMAKE_CURRENT_BINARY_DIR}/corrosion/non-existing-file.h"
         COMMAND
-        ${cbindgen}
-                    "${cbindgen_config}"
-                    --crate "${rust_target}"
+        "${cbindgen}"
                     --output "${generated_header}"
+                    --crate "${rust_target}"
+                    ${CCN_FLAGS}
         COMMENT "Generate cbindgen bindings for crate ${rust_target}"
         COMMAND_EXPAND_LISTS
-        WORKING_DIRECTORY "${crate_directory}"
+        WORKING_DIRECTORY "${package_manifest_dir}"
     )
 
     if(NOT installed_cbindgen)
         add_custom_command(
-            OUTPUT "${generated_header}"
+            OUTPUT "${generated_header}" "${CMAKE_CURRENT_BINARY_DIR}/corrosion/non-existing-file.h"
             APPEND
             DEPENDS _corrosion_cbindgen
         )
@@ -1861,10 +1917,7 @@ function(corrosion_experimental_cbindgen)
         DEPENDS "${generated_header}"
         COMMENT "Generate cbindgen bindings for crate ${rust_target}"
     )
-    # When linking is done on the CMake side it is sufficient to generate the bindings after the target was
-    # built. However, if linking is done on the rust side, then the bindings need to be built before cargo build.
-    # The latter is more conservative so we do that for now, and may potentially relax this again in the future.
-    add_dependencies(_cargo-build_${rust_target} _corrosion_cbindgen_${rust_target}_bindings)
+    add_dependencies(${rust_target} _corrosion_cbindgen_${rust_target}_bindings)
 endfunction()
 
 # Parse the version of a Rust package from it's package manifest (Cargo.toml)
