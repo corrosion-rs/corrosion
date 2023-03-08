@@ -1185,7 +1185,7 @@ function(corrosion_import_crate)
             )
     endif()
     if(DEFINED COR_KEYWORDS_MISSING_VALUES)
-        message(FATAL_ERROR "Invalid arguments: the following keywords had no associated value(s): "
+        message(DEBUG "Note: the following keywords passed to corrosion_import_crate had no associated value(s): "
             ${COR_KEYWORDS_MISSING_VALUES}
         )
     endif()
