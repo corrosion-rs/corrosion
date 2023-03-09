@@ -7,3 +7,5 @@ set_tests_properties(cbindgen_rust2cpp_run_cpp-exe PROPERTIES PASS_REGULAR_EXPRE
 # - A rust lib that is used by a rust executable
 # - cbindgen creates bindings for the rust-lib
 # - c++ code uses the rust lib and is used in turn by the rust bin.
+
+# todo: add a test for the DEPFILE and correct regenerating if the sources are touched.
