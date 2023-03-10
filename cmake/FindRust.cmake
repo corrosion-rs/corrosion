@@ -587,6 +587,12 @@ if (NOT Rust_CARGO_TARGET_CACHED)
     message(STATUS "Rust Target: ${Rust_CARGO_TARGET_CACHED}")
 endif()
 
+if(Rust_CARGO_TARGET_CACHED STREQUAL Rust_DEFAULT_HOST_TARGET)
+    set(Rust_CROSSCOMPILING FALSE CACHE INTERNAL "Rust is configured for cross-compiling")
+else()
+    set(Rust_CROSSCOMPILING TRUE  CACHE INTERNAL "Rust is configured for cross-compiling")
+endif()
+
 # Set the input variables as non-cache variables so that the variables are available after
 # `find_package`, even if the values were evaluated to defaults.
 foreach(_VAR ${_Rust_USER_VARS})
