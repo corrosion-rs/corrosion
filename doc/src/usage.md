@@ -118,6 +118,13 @@ versions individually.
 - `Rust_LLVM_VERSION<_MAJOR|_MINOR|_PATCH>` - The LLVM version used by rustc.
 - `Rust_IS_NIGHTLY` - 1 if a nightly toolchain is used, otherwise 0. Useful for selecting an unstable feature for a
   crate, that is only available on nightly toolchains.
+- Cache variables containing information based on the target triple for the selected target 
+  as well as the default host target:
+  - `Rust_CARGO_TARGET_ARCH`, `Rust_CARGO_HOST_TARGET_ARCH`: e.g. `x86_64` or `aarch64`
+  - `Rust_CARGO_TARGET_VENDOR`, `Rust_CARGO_HOST_TARGET_VENDOR`: e.g. `apple`, `pc`, `unknown` etc.
+  - `Rust_CARGO_TARGET_OS`, `Rust_CARGO_HOST_TARGET_OS`:  e.g. `darwin`, `linux`, `windows`, `none`
+  - `Rust_CARGO_TARGET_ENV`, `Rust_CARGO_HOST_TARGET_ENV`: e.g. `gnu`, `musl`
+
 
 
 

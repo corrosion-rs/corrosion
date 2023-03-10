@@ -127,6 +127,60 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
     set("${out_env}" "${CMAKE_MATCH_6}" PARENT_SCOPE)
 endfunction()
 
+function(_corrosion_determine_libs_new target_triple out_libs)
+    # Cleanup on reconfigure to get a cleans state (in case we change something in the future)
+    file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/corrosion/required_libs")
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/corrosion")
+    # Create a staticlib application for testing purposes
+    execute_process(
+            COMMAND "${Rust_CARGO_CACHED}" new --lib required_libs
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/corrosion"
+            RESULT_VARIABLE cargo_new_result
+            ERROR_QUIET
+    )
+    if(cargo_new_result)
+        file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/corrosion/required_libs")
+        message(DEBUG "Determining required link libraries: failed to create test library: ${cargo_new_result}")
+        return()
+    endif()
+    file(APPEND "${CMAKE_BINARY_DIR}/corrosion/required_libs/Cargo.toml"
+            "[lib]\ncrate-type=[\"staticlib\"]")
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E env
+            "CARGO_BUILD_RUST=${Rust_COMPILER_CACHED}"
+        ${Rust_CARGO_CACHED} rustc --verbose --color never --target=${target_triple} -- --print=native-static-libs
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/corrosion/required_libs"
+        RESULT_VARIABLE cargo_build_result
+        ERROR_VARIABLE cargo_build_error_message
+    )
+    if(cargo_build_result)
+        message(DEBUG "Determining required native libraries - failed: ${cargo_build_result}.")
+        message(TRACE "The cargo build error was: ${cargo_build_error_message}")
+        message(DEBUG "Note: This is expected for Rust targets without std support")
+        return()
+    else()
+        # The pattern starts with `native-static-libs:` and goes to the end of the line.
+        if(cargo_build_error_message MATCHES "native-static-libs: ([^\r\n]+)\r?\n")
+            string(REPLACE " " ";" "libs_list" "${CMAKE_MATCH_1}")
+            set(stripped_lib_list "")
+            foreach(lib ${libs_list})
+                # Strip leading `-l` (unix) and potential .lib suffix (windows)
+                string(REGEX REPLACE "^-l" "" "stripped_lib" "${lib}")
+                string(REGEX REPLACE "\.lib$" "" "stripped_lib" "${stripped_lib}")
+                list(APPEND stripped_lib_list "${stripped_lib}")
+            endforeach()
+            set(libs_list "${stripped_lib_list}")
+            # Special case `msvcrt` to link with the debug version in Debug mode.
+            list(TRANSFORM libs_list REPLACE "^msvcrt$" "\$<\$<CONFIG:Debug>:msvcrtd>")
+        else()
+            message(DEBUG "Determining required native libraries - failed: Regex match failure.")
+            message(DEBUG "`native-static-libs` not found in: `${cargo_build_error_message}`")
+            return()
+        endif()
+    endif()
+    set("${out_libs}" "${libs_list}" PARENT_SCOPE)
+endfunction()
+
 # Hardcoded, best effort approach
 function(_corrosion_determine_libs arch vendor os env out_libs)
     if(os STREQUAL "windows")
@@ -689,14 +743,45 @@ else()
 endif()
 
 _corrosion_parse_target_triple("${Rust_CARGO_TARGET_CACHED}" rust_arch rust_vendor rust_os rust_env)
+_corrosion_parse_target_triple("${Rust_CARGO_HOST_TARGET_CACHED}" rust_host_arch rust_host_vendor rust_host_os rust_host_env)
 _corrosion_determine_libs("${rust_arch}" "${rust_vendor}" "${rust_os}" "${rust_env}" rust_libs)
 
 set(Rust_CARGO_TARGET_ARCH "${rust_arch}" CACHE INTERNAL "Target architecture")
 set(Rust_CARGO_TARGET_VENDOR "${rust_vendor}" CACHE INTERNAL "Target vendor")
 set(Rust_CARGO_TARGET_OS "${rust_os}" CACHE INTERNAL "Target Operating System")
 set(Rust_CARGO_TARGET_ENV "${rust_env}" CACHE INTERNAL "Target environment")
-set(Rust_CARGO_TARGET_LINK_NATIVE_LIBS "${rust_libs}" CACHE INTERNAL
-    "Required native libraries when linking Rust static libraries")
+
+set(Rust_CARGO_HOST_TARGET_ARCH "${rust_host_arch}" CACHE INTERNAL "Host architecture")
+set(Rust_CARGO_HOST_TARGET_VENDOR "${rust_host_vendor}" CACHE INTERNAL "Host vendor")
+set(Rust_CARGO_HOST_TARGET_OS "${rust_host_os}" CACHE INTERNAL "Host Operating System")
+set(Rust_CARGO_HOST_TARGET_ENV "${rust_host_env}" CACHE INTERNAL "Host environment")
+
+if(NOT DEFINED CACHE{Rust_CARGO_TARGET_LINK_NATIVE_LIBS})
+    message(STATUS "Determining required link libraries for target ${Rust_CARGO_TARGET_CACHED}")
+    unset(required_native_libs)
+    _corrosion_determine_libs_new("${Rust_CARGO_TARGET_CACHED}" required_native_libs)
+    if(DEFINED required_native_libs)
+        message(STATUS "Required static libs for target ${Rust_CARGO_TARGET_CACHED}: ${required_native_libs}" )
+    endif()
+    # In very recent corrosion versions it is possible to override the rust compiler version
+    # per target, so to be totally correct we would need to determine the libraries for
+    # every installed Rust version, that the user could choose from.
+    # In practice there aren't likely going to be any major differences, so we just do it once
+    # for the target and once for the host target (if cross-compiling).
+    set(Rust_CARGO_TARGET_LINK_NATIVE_LIBS "${required_native_libs}" CACHE INTERNAL
+            "Required native libraries when linking Rust static libraries")
+endif()
+
+if(Rust_CROSSCOMPILING AND NOT DEFINED CACHE{Rust_CARGO_HOST_TARGET_LINK_NATIVE_LIBS})
+    message(STATUS "Determining required link libraries for target ${Rust_CARGO_HOST_TARGET_CACHED}")
+    unset(host_libs)
+    _corrosion_determine_libs_new("${Rust_CARGO_HOST_TARGET_CACHED}" host_libs)
+    if(DEFINED host_libs)
+        message(STATUS "Required static libs for host target ${Rust_CARGO_HOST_TARGET_CACHED}: ${host_libs}" )
+    endif()
+    set(Rust_CARGO_HOST_TARGET_LINK_NATIVE_LIBS "${host_libs}" CACHE INTERNAL
+        "Required native libraries when linking Rust static libraries for the host target")
+endif()
 
 # Set the input variables as non-cache variables so that the variables are available after
 # `find_package`, even if the values were evaluated to defaults.
