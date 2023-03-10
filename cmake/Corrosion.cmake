@@ -406,59 +406,48 @@ function(_corrosion_parse_platform manifest rust_version target_triple)
 
     if(os STREQUAL "windows")
         set(is_windows TRUE)
-
-        if(NOT COR_NO_STD)
-          list(APPEND libs "advapi32" "userenv" "ws2_32")
-        endif()
+        list(APPEND libs "advapi32" "userenv" "ws2_32")
 
         if(env STREQUAL "msvc")
             set(is_windows_msvc TRUE)
 
-            if(NOT COR_NO_STD)
-              list(APPEND libs "$<$<CONFIG:Debug>:msvcrtd>")
-              # CONFIG takes a comma seperated list starting with CMake 3.19, but we still need to
-              # support older CMake versions.
-              set(config_is_release "$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>,$<CONFIG:RelWithDebInfo>>")
-              list(APPEND libs "$<${config_is_release}:msvcrt>")
-            endif()
+            list(APPEND libs "$<$<CONFIG:Debug>:msvcrtd>")
+            # CONFIG takes a comma seperated list starting with CMake 3.19, but we still need to
+            # support older CMake versions.
+            set(config_is_release "$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>,$<CONFIG:RelWithDebInfo>>")
+            list(APPEND libs "$<${config_is_release}:msvcrt>")
         elseif(env STREQUAL "gnu")
             set(is_windows_gnu TRUE)
 
-            if(NOT COR_NO_STD)
-              list(APPEND libs "gcc_eh" "pthread")
-            endif()
+            list(APPEND libs "gcc_eh" "pthread")
         endif()
 
-        if(NOT COR_NO_STD)
-          if(rust_version VERSION_LESS "1.33.0")
-              list(APPEND libs "shell32" "kernel32")
-          endif()
+        if(rust_version VERSION_LESS "1.33.0")
+          list(APPEND libs "shell32" "kernel32")
+        endif()
 
-          if(rust_version VERSION_GREATER_EQUAL "1.57.0")
-              list(APPEND libs "bcrypt")
-          endif()
+        if(rust_version VERSION_GREATER_EQUAL "1.57.0")
+          list(APPEND libs "bcrypt")
         endif()
     elseif(target_vendor STREQUAL "apple" AND os STREQUAL "darwin")
         set(is_macos TRUE)
 
-        if(NOT COR_NO_STD)
-           list(APPEND libs "System" "resolv" "c" "m")
-        endif()
+       list(APPEND libs "System" "resolv" "c" "m")
     elseif(os STREQUAL "linux")
-        if(NOT COR_NO_STD)
-           list(APPEND libs "dl" "rt" "pthread" "gcc_s" "c" "m" "util")
-        endif()
+       list(APPEND libs "dl" "rt" "pthread" "gcc_s" "c" "m" "util")
     endif()
 
+    if(COR_NO_STD)
+        set(libs "")
+    endif()
     set_source_files_properties(
-        ${manifest}
-        PROPERTIES
-            CORROSION_PLATFORM_LIBS "${libs}"
-
-            CORROSION_PLATFORM_IS_WINDOWS "${is_windows}"
-            CORROSION_PLATFORM_IS_WINDOWS_MSVC "${is_windows_msvc}"
-            CORROSION_PLATFORM_IS_WINDOWS_GNU "${is_windows_gnu}"
-            CORROSION_PLATFORM_IS_MACOS "${is_macos}"
+    ${manifest}
+    PROPERTIES
+        CORROSION_PLATFORM_LIBS "${libs}"
+        CORROSION_PLATFORM_IS_WINDOWS "${is_windows}"
+        CORROSION_PLATFORM_IS_WINDOWS_MSVC "${is_windows_msvc}"
+        CORROSION_PLATFORM_IS_WINDOWS_GNU "${is_windows_gnu}"
+        CORROSION_PLATFORM_IS_MACOS "${is_macos}"
     )
 endfunction()
 
