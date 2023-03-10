@@ -79,7 +79,7 @@ jobs:
             arch: x86_64
             abi: darwin
             os: macos-12
-          - rust: stable
+          - rust: 1.54
             cmake: 3.19.0
             generator: ninja
             arch: x86_64
@@ -90,7 +90,7 @@ jobs:
             arch: x86_64
             abi: gnu
             cmake: 3.20.0
-            rust: stable
+            rust: 1.54
             generator: ninja-multiconfig
 
         exclude:
