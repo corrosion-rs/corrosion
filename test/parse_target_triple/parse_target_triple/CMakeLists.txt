@@ -3,11 +3,11 @@ cmake_minimum_required(VERSION 3.15)
 project(test_project VERSION 0.1.0)
 include(../../test_header.cmake)
 
-# Custom json file. The file doesn't need to exist for the test.
-_corrosion_parse_platform("Cargo.toml" "1.55" "../../blah/x86_64-unknown-custom-gnu.json")
-_corrosion_parse_platform("Cargo.toml" "1.55" "x86_64-unknown-custom-gnu.json")
-_corrosion_parse_platform("Cargo.toml" "1.55" "/path/to/x86_64-unknown-custom-gnu.json")
-_corrosion_parse_platform("Cargo.toml" "1.55" "../../blah/x86_64-custom_os.json")
+# Todo: Test if the output matches expectations.
+_corrosion_parse_target_triple("../../blah/x86_64-unknown-custom-gnu.json" arch vendor os env)
+_corrosion_parse_target_triple("x86_64-unknown-custom-gnu.json" arch vendor os env)
+_corrosion_parse_target_triple("/path/to/x86_64-unknown-custom-musl.json" arch vendor os env)
+_corrosion_parse_target_triple("../../blah/x86_64-custom_os.json" arch vendor os env)
 
 # List of builtin targets aquired via `rustup target list` with rust 1.64 on Linux.
 set(rustup_shipped_targets
@@ -101,5 +101,5 @@ set(rustup_shipped_targets
 )
 
 foreach(target ${rustup_shipped_targets})
-    _corrosion_parse_platform("Cargo.toml" "1.55" "${target}")
+    _corrosion_parse_target_triple("${target}"  arch vendor os env)
 endforeach()
