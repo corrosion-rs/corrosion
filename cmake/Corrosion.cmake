@@ -332,124 +332,6 @@ function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build
     endif()
 endfunction()
 
-function(_corrosion_strip_target_triple input_triple_or_path output_triple)
-    # If the target_triple is a path to a custom target specification file, then strip everything
-    # except the filename from `target_triple`.
-    get_filename_component(target_triple_ext "${input_triple_or_path}" EXT)
-    set(target_triple "${input_triple_or_path}")
-    if(target_triple_ext)
-        if(target_triple_ext STREQUAL ".json")
-            get_filename_component(target_triple "${input_triple_or_path}"  NAME_WE)
-        endif()
-    endif()
-    set(${output_triple} "${target_triple}" PARENT_SCOPE)
-endfunction()
-
-# The Rust target triple and C target may mismatch (slightly) in some rare usecases.
-# So instead of relying on CMake to provide System information, we parse the Rust target triple,
-# since that is relevant for determining which libraries the Rust code requires for linking.
-function(_corrosion_parse_platform manifest rust_version target_triple)
-    _corrosion_strip_target_triple(${target_triple} target_triple)
-
-    # The vendor part may be left out from the target triple, and since `env` is also optional,
-    # we determine if vendor is present by matching against a list of known vendors.
-    set(known_vendors "apple"
-        "esp" # riscv32imc-esp-espidf
-        "fortanix"
-        "kmc"
-        "pc"
-        "nintendo"
-        "nvidia"
-        "openwrt"
-        "alpine"
-        "unknown"
-        "uwp" # aarch64-uwp-windows-msvc
-        "wrs" # e.g. aarch64-wrs-vxworks
-        "sony"
-        "sun"
-    )
-    # todo: allow users to add additional vendors to the list via a cmake variable.
-    list(JOIN known_vendors "|" known_vendors_joined)
-    # vendor is optional - We detect if vendor is present by matching against a known list of
-    # vendors. The next field is the OS, which we assume to always be present, while the last field
-    # is again optional and contains the environment.
-    string(REGEX MATCH
-            "^([a-z0-9_\.]+)-((${known_vendors_joined})-)?([a-z0-9_]+)(-([a-z0-9_]+))?$"
-            whole_match
-            "${target_triple}"
-    )
-    if((NOT whole_match) AND (NOT CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED))
-        message(WARNING "Failed to parse target-triple `${target_triple}`."
-                        "Corrosion attempts to link required C libraries depending on the OS "
-                        "specified in the Rust target-triple for Linux, MacOS and windows.\n"
-                        "Note: If you are targeting a different OS you can surpress this warning by"
-                        " setting the CMake cache variable "
-                        "`CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED`."
-                        "Please consider opening an issue on github if you encounter this warning."
-        )
-    endif()
-
-    set(target_arch "${CMAKE_MATCH_1}")
-    set(target_vendor "${CMAKE_MATCH_3}")
-    set(os "${CMAKE_MATCH_4}")
-    set(env "${CMAKE_MATCH_6}")
-
-    message(DEBUG "Parsed Target triple: arch: ${target_arch}, vendor: ${target_vendor}, "
-            "OS: ${os}, env: ${env}")
-
-    set(libs "")
-
-    set(is_windows FALSE)
-    set(is_windows_msvc FALSE)
-    set(is_windows_gnu FALSE)
-    set(is_macos FALSE)
-
-    if(os STREQUAL "windows")
-        set(is_windows TRUE)
-        list(APPEND libs "advapi32" "userenv" "ws2_32")
-
-        if(env STREQUAL "msvc")
-            set(is_windows_msvc TRUE)
-
-            list(APPEND libs "$<$<CONFIG:Debug>:msvcrtd>")
-            # CONFIG takes a comma seperated list starting with CMake 3.19, but we still need to
-            # support older CMake versions.
-            set(config_is_release "$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>,$<CONFIG:RelWithDebInfo>>")
-            list(APPEND libs "$<${config_is_release}:msvcrt>")
-        elseif(env STREQUAL "gnu")
-            set(is_windows_gnu TRUE)
-
-            list(APPEND libs "gcc_eh" "pthread")
-        endif()
-
-        if(rust_version VERSION_LESS "1.33.0")
-          list(APPEND libs "shell32" "kernel32")
-        endif()
-
-        if(rust_version VERSION_GREATER_EQUAL "1.57.0")
-          list(APPEND libs "bcrypt")
-        endif()
-    elseif(target_vendor STREQUAL "apple" AND os STREQUAL "darwin")
-        set(is_macos TRUE)
-
-       list(APPEND libs "System" "resolv" "c" "m")
-    elseif(os STREQUAL "linux")
-       list(APPEND libs "dl" "rt" "pthread" "gcc_s" "c" "m" "util")
-    endif()
-
-    if(COR_NO_STD)
-        set(libs "")
-    endif()
-    set_source_files_properties(
-    ${manifest}
-    PROPERTIES
-        CORROSION_PLATFORM_LIBS "${libs}"
-        CORROSION_PLATFORM_IS_WINDOWS "${is_windows}"
-        CORROSION_PLATFORM_IS_WINDOWS_MSVC "${is_windows_msvc}"
-        CORROSION_PLATFORM_IS_WINDOWS_GNU "${is_windows_gnu}"
-        CORROSION_PLATFORM_IS_MACOS "${is_macos}"
-    )
-endfunction()
 
 # Add targets for the static and/or shared libraries of the rust target.
 # The generated byproduct names are returned via the `OUT_<type>_BYPRODUCTS` arguments.
@@ -492,10 +374,20 @@ function(_corrosion_add_library_target)
     set(workspace_manifest_path "${CALT_WORKSPACE_MANIFEST_PATH}")
     set(target_name "${CALT_TARGET_NAME}")
 
-    get_source_file_property(is_windows ${workspace_manifest_path} CORROSION_PLATFORM_IS_WINDOWS)
-    get_source_file_property(is_windows_msvc ${workspace_manifest_path} CORROSION_PLATFORM_IS_WINDOWS_MSVC)
-    get_source_file_property(is_windows_gnu ${workspace_manifest_path} CORROSION_PLATFORM_IS_WINDOWS_GNU)
-    get_source_file_property(is_macos ${workspace_manifest_path} CORROSION_PLATFORM_IS_MACOS)
+    set(is_windows "")
+    set(is_windows_gnu "")
+    set(is_windows_msvc "")
+    set(is_macos "")
+    if(Rust_CARGO_TARGET_OS STREQUAL "windows")
+        set(is_windows TRUE)
+        if(Rust_CARGO_TARGET_ENV STREQUAL "msvc")
+            set(is_windows_msvc TRUE)
+        elseif(Rust_CARGO_TARGET_ENV STREQUAL "gnu")
+            set(is_windows_gnu TRUE)
+        endif()
+    elseif(Rust_CARGO_TARGET_OS STREQUAL "darwin")
+        set(is_macos TRUE)
+    endif()
 
     # target file names
     string(REPLACE "-" "_" lib_name "${target_name}")
@@ -551,12 +443,11 @@ function(_corrosion_add_library_target)
                 "ARCHIVE_OUTPUT_DIRECTORY"
                 "${static_lib_name}")
 
-        get_source_file_property(libs ${workspace_manifest_path} CORROSION_PLATFORM_LIBS)
-
-        if(libs)
+        # Todo: NO_STD target property?
+        if(NOT COR_NO_STD)
             set_property(
                     TARGET ${target_name}-static
-                    PROPERTY INTERFACE_LINK_LIBRARIES ${libs}
+                    PROPERTY INTERFACE_LINK_LIBRARIES ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS}
             )
             if(is_macos)
                 set_property(TARGET ${target_name}-static
@@ -615,15 +506,11 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
 
     set(pdb_name "${bin_name_underscore}.pdb")
 
-    get_source_file_property(is_windows ${workspace_manifest_path} CORROSION_PLATFORM_IS_WINDOWS)
-    get_source_file_property(is_windows_msvc ${workspace_manifest_path} CORROSION_PLATFORM_IS_WINDOWS_MSVC)
-    get_source_file_property(is_macos ${workspace_manifest_path} CORROSION_PLATFORM_IS_MACOS)
-
-    if(is_windows_msvc)
+    if(Rust_CARGO_TARGET_ENV STREQUAL "msvc")
         set(${out_pdb_byproduct} "${pdb_name}" PARENT_SCOPE)
     endif()
 
-    if(is_windows)
+    if(Rust_CARGO_TARGET_OS STREQUAL "windows")
         set(bin_filename "${bin_name}.exe")
     else()
         set(bin_filename "${bin_name}")
@@ -636,7 +523,7 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
     add_executable(${bin_name} IMPORTED GLOBAL)
     add_dependencies(${bin_name} cargo-build_${bin_name})
 
-    if(is_macos)
+    if(Rust_CARGO_TARGET_OS STREQUAL "darwin")
         set_property(TARGET ${bin_name}
                 PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
                 )
@@ -809,10 +696,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
         set (build_dir .)
     endif()
 
-    unset(is_windows_msvc)
-    get_source_file_property(is_windows_msvc "${workspace_manifest_path}" CORROSION_PLATFORM_IS_WINDOWS_MSVC)
-
-
     # If a CMake sysroot is specified, forward it to the linker rustc invokes, too. CMAKE_SYSROOT is documented
     # to be passed via --sysroot, so we assume that when it's set, the linker supports this option in that style.
     if(CMAKE_CROSSCOMPILING AND CMAKE_SYSROOT)
@@ -939,8 +822,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
     set(target_uses_cxx  "$<IN_LIST:CXX,${deps_link_languages}>")
     unset(default_linker)
-    # On Windows rustc only supports directly invoking the linker - Invoking cl as the linker driver is not supported.
-    if(NOT (is_windows_msvc OR COR_NO_LINKER_OVERRIDE))
+    # With the MSVC ABI rustc only supports directly invoking the linker - Invoking cl as the linker driver is not supported.
+    if(NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
         set(default_linker "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER},${CMAKE_C_COMPILER}>")
     endif()
     # Used to set a linker for a specific target-triple.
@@ -1137,7 +1020,6 @@ function(corrosion_import_crate)
         list(APPEND additional_cargo_flags  "--frozen")
     endif()
 
-    _corrosion_parse_platform(${COR_MANIFEST_PATH} ${Rust_VERSION} ${_CORROSION_RUST_CARGO_TARGET})
     set(imported_crates "")
     if (CORROSION_NATIVE_TOOLING)
         get_filename_component(manifest_directory "${COR_MANIFEST_PATH}" DIRECTORY)
