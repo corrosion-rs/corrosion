@@ -17,11 +17,23 @@
   default they won't have an `soname` field.
   If you add a rustflag like `-Clink-arg=-Wl,-soname,libmycrate.so` in your project,
   you should set this property to false on the shared rust library.
+- Corrosion now uses a mechanism to determine which native libraries need to be linked with
+  Rust `staticlib` targets into C/C++ targets. The previous mechanism contained a hardcoded list.
+  The new mechanism asks `rustc` which libraries are needed at minimum for a given
+  target triple (with `std` support). This should not be a breaking change, but if you
+  do encounter a new linking issue when upgrading with `staticlib` targets, please open an
+  issue.
 
 ## New features
 
 - `corrosion_import_crate()` has two new options `LOCKED` and `FROZEN` which pass the 
   `--locked` and `--frozen` flags to all invocations of cargo. Only with CMake >= 3.19.
+- `FindRust` now provides cache variables containing information on the default host
+  target triple:
+  - `Rust_CARGO_HOST_TARGET_ARCH`
+  - `Rust_CARGO_HOST_TARGET_VENDOR`
+  - `Rust_CARGO_HOST_TARGET_OS`
+  - `Rust_CARGO_HOST_TARGET_ENV`
 
 ## Other changes
 
