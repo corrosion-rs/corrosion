@@ -874,10 +874,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
     if(COR_NO_DEFAULT_FEATURES)
         set(no_default_features_arg --no-default-features)
     endif()
-    if(COR_NO_STD)
-        # todo: variable unused??
-        set(no_default_libraries_arg --no-default-libraries)
-    endif()
 
     set(global_rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTFLAGS>>")
     set(local_rustflags_target_property  "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_LOCAL_RUSTFLAGS>>")
