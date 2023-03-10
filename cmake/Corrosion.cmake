@@ -862,13 +862,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
         message(VERBOSE "CORROSION_LINKER_PREFERENCE for target ${target_name}: ${CORROSION_LINKER_PREFERENCE}")
     endif()
 
-    # todo: variable unused??
-    if (NOT CMAKE_CONFIGURATION_TYPES)
-        set(target_dir ${CMAKE_CURRENT_BINARY_DIR})
-    else()
-        set(target_dir ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>)
-    endif()
-
     # If a CMake sysroot is specified, forward it to the linker rustc invokes, too. CMAKE_SYSROOT is documented
     # to be passed via --sysroot, so we assume that when it's set, the linker supports this option in that style.
     if(CMAKE_CROSSCOMPILING AND CMAKE_SYSROOT)
