@@ -13,10 +13,8 @@ mod target;
 pub const GEN_CMAKE: &str = "gen-cmake";
 
 // Options
-const ADDITIONAL_CARGO_FLAGS: &str = "cargo-flag";
 const OUT_FILE: &str = "out-file";
 const CONFIGURATION_ROOT: &str = "configuration-root";
-const PROFILE: &str = "profile";
 const CRATES: &str = "crates";
 const IMPORTED_CRATES: &str = "imported-crates";
 const CRATE_TYPE: &str = "crate-type";
@@ -53,13 +51,6 @@ pub fn subcommand() -> App<'static, 'static> {
                 .help("Only import the specified crate types")
         )
         .arg(
-            Arg::with_name(PROFILE)
-                .long(PROFILE)
-                .value_name("PROFILE")
-                .required(false)
-                .help("Custom cargo profile to select."),
-        )
-        .arg(
             Arg::with_name(OUT_FILE)
                 .short("o")
                 .long("out-file")
@@ -72,14 +63,6 @@ pub fn subcommand() -> App<'static, 'static> {
                 .value_name("variable_name")
                 .takes_value(true)
                 .help("Save a list of the imported target names into c CMake variable with the given name"),
-        )
-        .arg(
-            Arg::with_name(ADDITIONAL_CARGO_FLAGS)
-                .long(ADDITIONAL_CARGO_FLAGS)
-                .value_name("flag")
-                .takes_value(true)
-                .multiple(true)
-                .help("A CMake list of additional flags to import"),
         )
         .arg(
             Arg::with_name(PASSTHROUGH_ADD_CARGO_BUILD)
@@ -144,19 +127,6 @@ cmake_minimum_required(VERSION 3.15)
         })
         .collect();
 
-    let cargo_profile = matches.value_of(PROFILE);
-
-    let mut additional_args = if let Some(values) = matches.values_of(ADDITIONAL_CARGO_FLAGS) {
-        values.collect()
-    } else {
-        Vec::default()
-    };
-    if matches.is_present(crate::LOCKED) {
-        additional_args.push("--locked");
-    }
-    if matches.is_present(crate::FROZEN) {
-        additional_args.push("--frozen");
-    }
     let passthrough_args: Vec<String> = matches
         .values_of(PASSTHROUGH_ADD_CARGO_BUILD)
         .map(|values| {
@@ -171,12 +141,7 @@ cmake_minimum_required(VERSION 3.15)
 
     for target in &targets {
         target
-            .emit_cmake_target(
-                &mut out_file,
-                cargo_profile,
-                &additional_args,
-                &passthrough_str,
-            )
+            .emit_cmake_target(&mut out_file, &passthrough_str)
             .unwrap();
     }
     if let Some(imported_crate_list_name) = matches.value_of(IMPORTED_CRATES) {

@@ -89,22 +89,8 @@ impl CargoTarget {
     pub fn emit_cmake_target(
         &self,
         out_file: &mut dyn std::io::Write,
-        cargo_profile: Option<&str>,
-        additional_cargo_flags: &Vec<&str>,
         passthrough_add_cargo_build: &str,
     ) -> Result<(), Box<dyn Error>> {
-        let cargo_build_profile_option = if let Some(profile) = cargo_profile {
-            format!("PROFILE \"{}\"", profile)
-        } else {
-            String::default()
-        };
-
-        let additional_cargo_flags_kw = if additional_cargo_flags.is_empty() {
-            ""
-        } else {
-            "ADDITIONAL_CARGO_FLAGS"
-        };
-
         writeln!(
             out_file,
             "set(byproducts \"\")
@@ -187,10 +173,8 @@ impl CargoTarget {
                 TARGET \"{target_name}\"
                 MANIFEST_PATH \"{package_manifest_path}\"
                 WORKSPACE_MANIFEST_PATH \"{workspace_manifest_path}\"
-                {profile_option}
                 TARGET_KINDS {target_kinds}
                 BYPRODUCTS \"${{byproducts}}\"
-                {additional_cargo_flags_kw} {additional_cargo_flags}
                 {passthrough_add_cargo_build}
             )
 
@@ -223,10 +207,7 @@ impl CargoTarget {
             target_name = self.cargo_target.name,
             package_manifest_path = self.cargo_package.manifest_path.as_str().replace("\\", "/"),
             workspace_manifest_path = ws_manifest,
-            profile_option = cargo_build_profile_option,
             target_kinds = target_kinds,
-            additional_cargo_flags = additional_cargo_flags.join(" "),
-            additional_cargo_flags_kw = additional_cargo_flags_kw,
             passthrough_add_cargo_build = passthrough_add_cargo_build,
 
         )?;

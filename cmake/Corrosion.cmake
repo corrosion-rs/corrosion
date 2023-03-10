@@ -772,8 +772,8 @@ endif()
 # A target may be either a specific bin
 function(_add_cargo_build out_cargo_build_out_dir)
     set(options NO_LINKER_OVERRIDE)
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH PROFILE WORKSPACE_MANIFEST_PATH)
-    set(multi_value_args BYPRODUCTS TARGET_KINDS ADDITIONAL_CARGO_FLAGS)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH WORKSPACE_MANIFEST_PATH)
+    set(multi_value_args BYPRODUCTS TARGET_KINDS)
     cmake_parse_arguments(
         ACB
         "${options}"
@@ -793,7 +793,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(package_name "${ACB_PACKAGE}")
     set(target_name "${ACB_TARGET}")
     set(path_to_toml "${ACB_MANIFEST_PATH}")
-    set(cargo_profile_name "${ACB_PROFILE}")
     set(target_kinds "${ACB_TARGET_KINDS}")
     set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
 
@@ -863,6 +862,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         message(VERBOSE "CORROSION_LINKER_PREFERENCE for target ${target_name}: ${CORROSION_LINKER_PREFERENCE}")
     endif()
 
+    # todo: variable unused??
     if (NOT CMAKE_CONFIGURATION_TYPES)
         set(target_dir ${CMAKE_CURRENT_BINARY_DIR})
     else()
@@ -882,25 +882,23 @@ function(_add_cargo_build out_cargo_build_out_dir)
         set(no_default_features_arg --no-default-features)
     endif()
     if(COR_NO_STD)
+        # todo: variable unused??
         set(no_default_libraries_arg --no-default-libraries)
     endif()
 
     set(global_rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTFLAGS>>")
     set(local_rustflags_target_property  "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_LOCAL_RUSTFLAGS>>")
 
+    # todo: this probably should be TARGET_GENEX_EVAL
     set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_FEATURES}>>")
     set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
 
     # target property overrides corrosion_import_crate argument
     set(all_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_ALL_FEATURES}>>")
-    set(all_features_property_exists_condition "$<NOT:$<STREQUAL:${all_features_target_property},>>")
-    set(all_features_property_arg "$<IF:$<BOOL:${all_features_target_property}>,--all-features,>")
-    set(all_features_arg "$<IF:${all_features_property_exists_condition},${all_features_property_arg},${all_features_arg}>")
+    set(all_features_arg "$<$<BOOL:${all_features_target_property}>:--all-features>")
 
     set(no_default_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_NO_DEFAULT_FEATURES}>>")
-    set(no_default_features_property_exists_condition "$<NOT:$<STREQUAL:${no_default_features_target_property},>>")
-    set(no_default_features_property_arg "$<IF:$<BOOL:${no_default_features_target_property}>,--no-default-features,>")
-    set(no_default_features_arg "$<IF:${no_default_features_property_exists_condition},${no_default_features_property_arg},${no_default_features_arg}>")
+    set(no_default_features_arg "$<$<BOOL:${no_default_features_target_property}>:--no-default-features>")
 
     set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_ENV_VARS}>>")
     set(hostbuild_override "$<BOOL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_HOST_BUILD}>>")
@@ -943,30 +941,18 @@ function(_add_cargo_build out_cargo_build_out_dir)
         endif()
     endif()
 
-    # The profile name could be part of a Generator expression, so this won't catch all occurences.
-    # Since it is hard to add an error message for genex, we don't do that here.
-    if(cargo_profile_name STREQUAL "test" OR cargo_profile_name STREQUAL "bench")
-        message(FATAL_ERROR "Corrosion does not support building Rust crates with the cargo profiles"
-            " `test` or `bench`. These profiles add a hash to the output artifact name that we"
-            " cannot predict. Please consider using a custom cargo profile which inherits from the"
-            " built-in profile instead."
-            )
-    endif()
-
-    set(cargo_profile_prop_set "$<BOOL:${cargo_profile_target_property}>")
-    set(cargo_custom_profile_name "$<IF:${cargo_profile_prop_set},${cargo_profile_target_property},${cargo_profile_name}>")
-    set(cargo_profile_set "$<BOOL:${cargo_custom_profile_name}>")
+    set(cargo_profile_set "$<BOOL:${cargo_profile_target_property}>")
     # In the default case just specify --release or nothing to stay compatible with
     # older rust versions.
     set(default_profile_option "$<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>")
     # evaluates to either `--profile=<custom_profile>`, `--release` or nothing (for debug).
-    set(cargo_profile "$<IF:${cargo_profile_set},--profile=${cargo_custom_profile_name},${default_profile_option}>")
+    set(cargo_profile "$<IF:${cargo_profile_set},--profile=${cargo_profile_target_property},${default_profile_option}>")
 
     # If the profile name is `dev` change the dir name to `debug`.
-    set(is_dev_profile "$<STREQUAL:${cargo_custom_profile_name},dev>")
+    set(is_dev_profile "$<STREQUAL:${cargo_profile_target_property},dev>")
     set(profile_dir_override "$<${is_dev_profile}:debug>")
     set(profile_dir_is_overridden "$<BOOL:${profile_dir_override}>")
-    set(custom_profile_build_type_dir "$<IF:${profile_dir_is_overridden},${profile_dir_override},${cargo_custom_profile_name}>")
+    set(custom_profile_build_type_dir "$<IF:${profile_dir_is_overridden},${profile_dir_override},${cargo_profile_target_property}>")
 
     set(default_build_type_dir "$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>")
     set(build_type_dir "$<IF:${cargo_profile_set},${custom_profile_build_type_dir},${default_build_type_dir}>")
@@ -974,12 +960,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build")
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
-
-    set(features_args)
-    # FIXME
-    foreach(feature ${COR_FEATURES})
-        list(APPEND features_args --features ${feature})
-    endforeach()
 
     set(corrosion_cc_rs_flags)
 
@@ -1066,17 +1046,13 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 ${cargo_rustc_filter}
                 ${cargo_target_option}
                 ${_CORROSION_VERBOSE_OUTPUT_FLAG}
-                # Global --features arguments added via corrosion_import_crate()
-                ${features_args}
                 ${all_features_arg}
                 ${no_default_features_arg}
-                # Target specific features added via corrosion_set_features().
                 ${features_genex}
                 --package ${package_name}
                 --manifest-path "${path_to_toml}"
                 --target-dir "${cargo_target_dir}"
                 ${cargo_profile}
-                ${ACB_ADDITIONAL_CARGO_FLAGS}
                 ${flags_genex}
                 # Any arguments to cargo must be placed before this line
                 ${local_rustflags_delimiter}
@@ -1204,6 +1180,14 @@ function(corrosion_import_crate)
             message(FATAL_ERROR "Selecting custom profiles via `PROFILE` requires at least rust 1.57.0, but you "
                         "have ${Rust_VERSION}."
         )
+        # The profile name could be part of a Generator expression, so this won't catch all occurences.
+        # Since it is hard to add an error message for genex, we don't do that here.
+        elseif("${COR_PROFILE}" STREQUAL "test" OR "${COR_PROFILE}" STREQUAL "bench")
+            message(FATAL_ERROR "Corrosion does not support building Rust crates with the cargo profiles"
+                    " `test` or `bench`. These profiles add a hash to the output artifact name that we"
+                    " cannot predict. Please consider using a custom cargo profile which inherits from the"
+                    " built-in profile instead."
+            )
         else()
             set(cargo_profile_native_generator --profile=${COR_PROFILE})
         endif()
@@ -1244,13 +1228,7 @@ function(corrosion_import_crate)
         if(DEFINED COR_CRATE_TYPES)
             set(crate_types "--crate-type=${COR_CRATE_TYPES}")
         endif()
-        set(additional_cargo_flags_arg)
-        # We treat FLAGS slightly different from CRATE_TYPES, since FLAGS can be arbitrary flags to cargo, so
-        # potentially they could contain a semicolon. Passing the arguments 1 by 1 should preserve any semicolons
-        # and whitespace.
-        foreach(flag ${COR_FLAGS})
-            list(APPEND additional_cargo_flags_arg "--cargo-flag=${flag}")
-        endforeach()
+
         list(APPEND passthrough_to_acb_args ${no_linker_override})
         if(passthrough_to_acb_args)
             # 31 == 0x1f
@@ -1268,7 +1246,6 @@ function(corrosion_import_crate)
                         ${crates_args}
                         ${crate_types}
                         ${cargo_profile_native_generator}
-                        ${additional_cargo_flags_arg}
                         --imported-crates=imported_crates
                         ${passthrough_to_acb}
                         -o ${generated_cmake}
@@ -1281,9 +1258,6 @@ function(corrosion_import_crate)
 
         include(${generated_cmake})
     else()
-        if(additional_cargo_flags)
-            set(acf_arg ADDITIONAL_CARGO_FLAGS ${additional_cargo_flags})
-        endif()
         _generator_add_cargo_targets(
             MANIFEST_PATH
                 "${COR_MANIFEST_PATH}"
@@ -1293,9 +1267,26 @@ function(corrosion_import_crate)
             ${crate_types}
             ${cargo_profile}
             ${no_linker_override}
-            ${acf_arg}
         )
     endif()
+
+    # Not target props yet:
+    # NO_STD
+    # NO_LINKER_OVERRIDE # We could simply zero INTERFACE_CORROSION_LINKER if this is set.
+    # LOCKED / FROZEN get merged into FLAGS after cargo metadata.
+
+    # Initialize the target properties with the arguments to corrosion_import_crate.
+    set_target_properties(
+            ${imported_crates}
+            PROPERTIES
+                "${_CORR_PROP_ALL_FEATURES}" "${COR_ALL_FEATURES}"
+                "${_CORR_PROP_NO_DEFAULT_FEATURES}" "${COR_NO_DEFAULT_FEATURES}"
+                "${_CORR_PROP_FEATURES}" "${COR_FEATURES}"
+                INTERFACE_CORROSION_CARGO_PROFILE "${COR_PROFILE}"
+                INTERFACE_CORROSION_CARGO_FLAGS "${additional_cargo_flags}"
+    )
+
+    # _CORR_PROP_ENV_VARS
     if(DEFINED COR_IMPORTED_CRATES)
         set(${COR_IMPORTED_CRATES} ${imported_crates} PARENT_SCOPE)
     endif()
