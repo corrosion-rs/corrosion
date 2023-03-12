@@ -222,18 +222,17 @@ function(_generator_add_cargo_targets)
     math(EXPR ws_mems_len-1 "${ws_mems_len} - 1")
 
     set(created_targets "")
+    set(available_package_names "")
     foreach(ix RANGE ${pkgs_len-1})
         string(JSON pkg GET "${packages}" ${ix})
         string(JSON pkg_id GET "${pkg}" "id")
         string(JSON pkg_name GET "${pkg}" "name")
         string(JSON pkg_manifest_path GET "${pkg}" "manifest_path")
         string(JSON pkg_version GET "${pkg}" "version")
+        list(APPEND available_package_names "${pkg_name}")
 
         if(DEFINED GGC_CRATES)
             if(NOT pkg_name IN_LIST GGC_CRATES)
-                message(DEBUG "Package `${pkg_name}` was not in the `CRATES` allowlist passed to "
-                    "corrosion_import_crate. Ignoring the package."
-                )
                 continue()
             endif()
         endif()
@@ -275,7 +274,20 @@ function(_generator_add_cargo_targets)
     endforeach()
 
     if(NOT created_targets)
-        message(FATAL_ERROR "found no targets in ${pkgs_len} packages")
+        set(crates_error_message "")
+        if(DEFINED GGC_CRATES)
+            set(crates_error_message "\n`corrosion_import_crate()` was called with the `CRATES` "
+                "parameter set to `${GGC_CRATES}`. Corrosion will only attempt to import packages matching "
+                    "names from this list."
+            )
+        endif()
+        message(FATAL_ERROR
+                "Found no targets in ${pkgs_len} packages."
+                ${crates_error_message}.
+                "\nPlease keep in mind that corrosion will only import Rust `bin` targets or"
+                "`staticlib` or `cdylib` library targets."
+                "The following packages were found in the Manifest: ${available_package_names}"
+        )
     else()
         message(DEBUG "Corrosion created the following CMake targets: ${created_targets}")
     endif()
