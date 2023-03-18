@@ -1,9 +1,12 @@
 if(CORROSION_TESTS_CXXBRIDGE)
     corrosion_tests_add_test(cxxbridge_cpp2rust_1 "rust_bin"
         TEST_SRC_DIR cxxbridge_cpp2rust
-        TEST_PASS_THROUGH_ARGS -DTEST_CXXBRIDGE_VARIANT1=ON
+        PASS_THROUGH_ARGS -DTEST_CXXBRIDGE_VARIANT1=ON
     )
-    corrosion_tests_add_test(cxxbridge_cpp2rust_2 "rust_bin" TEST_SRC_DIR cxxbridge_cpp2rust)
+    corrosion_tests_add_test(cxxbridge_cpp2rust_2 "rust_bin"
+            TEST_SRC_DIR cxxbridge_cpp2rust
+            PASS_THROUGH_ARGS -DTEST_CXXBRIDGE_VARIANT2=ON
+    )
     corrosion_tests_add_test(cxxbridge_rust2cpp "cxxbridge-exe")
 
     set_tests_properties("cxxbridge_cpp2rust_1_run_rust_bin"
