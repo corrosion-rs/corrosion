@@ -1502,6 +1502,8 @@ function(corrosion_add_cxxbridge cxx_target)
     #                    include
     #                        <cxx_target>
     #                            <headers>
+    #                        rust
+    #                            cxx.h
     #                    src
     #                        <sourcefiles>
     #            cbindgen
@@ -1530,30 +1532,41 @@ function(corrosion_add_cxxbridge cxx_target)
         target_link_libraries(${cxx_target} PRIVATE ${_arg_CRATE})
     endif()
 
+    file(MAKE_DIRECTORY "${generated_dir}/include/rust")
+    add_custom_command(
+            OUTPUT "${generated_dir}/include/rust/cxx.h"
+            COMMAND
+            ${cxxbridge} --header --output "${generated_dir}/include/rust/cxx.h"
+            DEPENDS "cxxbridge_v${cxx_required_version}"
+            COMMENT "Generating rust/cxx.h header"
+    )
+
     foreach(filepath ${_arg_FILES})
         get_filename_component(filename ${filepath} NAME_WE)
         get_filename_component(directory ${filepath} DIRECTORY)
+        set(directory_component "")
+        if(directory)
+            set(directory_component "${directory}/")
+        endif()
         # todo: convert potentially absolute paths to relative paths..
-        set(cxx_header ${directory}/${filename}.h)
-        set(cxx_source ${directory}/${filename}.cpp)
+        set(cxx_header ${directory_component}${filename}.h)
+        set(cxx_source ${directory_component}${filename}.cpp)
 
         # todo: not all projects may use the `src` directory.
         set(rust_source_path "${manifest_dir}/src/${filepath}")
+
+        file(MAKE_DIRECTORY "${header_placement_dir}/${directory}" "${source_placement_dir}/${directory}")
 
         add_custom_command(
             OUTPUT
             "${header_placement_dir}/${cxx_header}"
             "${source_placement_dir}/${cxx_source}"
             COMMAND
-                "${CMAKE_COMMAND}" -E make_directory ${header_placement_dir}/${directory}
-            COMMAND
-                "${CMAKE_COMMAND}" -E make_directory ${source_placement_dir}/${directory}
-            COMMAND
                 ${cxxbridge} ${rust_source_path} --header --output "${header_placement_dir}/${cxx_header}"
             COMMAND
                 ${cxxbridge} ${rust_source_path}
                     --output "${source_placement_dir}/${cxx_source}"
-                    --include "${header_placement_dir}/${cxx_header}"
+                    --include "${cxx_target}/${cxx_header}"
             DEPENDS "cxxbridge_v${cxx_required_version}" "${rust_source_path}"
             COMMENT "Generating cxx bindings for crate ${_arg_CRATE}"
         )
@@ -1561,6 +1574,7 @@ function(corrosion_add_cxxbridge cxx_target)
         target_sources(${cxx_target}
             PRIVATE
                 "${header_placement_dir}/${cxx_header}"
+                "${generated_dir}/include/rust/cxx.h"
                 "${source_placement_dir}/${cxx_source}"
         )
     endforeach()

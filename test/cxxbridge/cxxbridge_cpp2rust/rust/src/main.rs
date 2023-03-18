@@ -9,5 +9,6 @@ fn main() {
         a: 4.0,
     }};
     let actual = read_image("dummy path");
+    println!("returned from C++");
     assert_eq!(actual, expected)
 }
