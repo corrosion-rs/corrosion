@@ -1,3 +1,9 @@
+# 0.3.5 (2023-03-19)
+
+- Fix building the Legacy Generator on Rust toolchains < 1.56 ([#365])
+
+[#365]: https://github.com/corrosion-rs/corrosion/pull/365
+
 # 0.3.4 (2023-03-02)
 
 ## Fixes 
