@@ -1477,7 +1477,10 @@ function(corrosion_add_cxxbridge cxx_target)
             add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge"
                 COMMAND
                 ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
-                COMMAND ${_CORROSION_CARGO} install
+                COMMAND
+                    ${CMAKE_COMMAND} -E env
+                        "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
+                    ${_CORROSION_CARGO} install
                     cxxbridge-cmd
                     --version "${cxx_required_version}"
                     --root "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
