@@ -445,6 +445,10 @@ function(_corrosion_add_library_target)
 
         # Todo: NO_STD target property?
         if(NOT COR_NO_STD)
+        foreach(lib ${COR_NATIVE_LIBS})
+            list(APPEND Rust_CARGO_TARGET_LINK_NATIVE_LIBS ${lib})
+        endforeach()
+
             set_property(
                     TARGET ${target_name}-static
                     PROPERTY INTERFACE_LINK_LIBRARIES ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS}
@@ -966,7 +970,7 @@ ANCHOR_END: corrosion-import-crate
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD NO_LINKER_OVERRIDE LOCKED FROZEN)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
-    set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
+    set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS NATIVE_LIBS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
 
     if(DEFINED COR_UNPARSED_ARGUMENTS)
