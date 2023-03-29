@@ -1479,7 +1479,7 @@ function(corrosion_add_cxxbridge cxx_target)
 
     get_filename_component(manifest_dir ${manifest_path} DIRECTORY)
 
-    execute_process(COMMAND cargo tree -i cxx --depth=0
+    execute_process(COMMAND ${_CORROSION_CARGO} tree -i cxx --depth=0
         WORKING_DIRECTORY "${manifest_dir}"
         RESULT_VARIABLE cxx_version_result
         OUTPUT_VARIABLE cxx_version_output
