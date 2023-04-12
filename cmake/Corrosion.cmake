@@ -1571,6 +1571,10 @@ function(corrosion_add_cxxbridge cxx_target)
             $<BUILD_INTERFACE:${generated_dir}/include>
             $<INSTALL_INTERFACE:include>
     )
+    
+    # cxx generated code is using c++11 features in headers, so propagate c++11 as minimal requirement
+    target_compile_features(${cxx_target} PUBLIC cxx_std_11)
+    
     # Todo: target_link_libraries is only necessary for rust2c projects.
     # It is possible that checking if the rust crate is an executable is a sufficient check,
     # but some more thought may be needed here.
