@@ -1712,10 +1712,15 @@ function(corrosion_experimental_cbindgen)
     if(installed_cbindgen)
         set(cbindgen "${installed_cbindgen}")
     else()
+        set(local_cbindgen_install_dir "${CMAKE_BINARY_DIR}/corrosion/cbindgen")
+        unset(executable_postfix)
+        if(Rust_CARGO_HOST_TARGET_OS STREQUAL "windows")
+            set(executable_postfix ".exe")
+        endif()
+        set(cbindgen "${local_cbindgen_install_dir}/bin/cbindgen${executable_postfix}")
         if(NOT TARGET "_corrosion_cbindgen")
-            set(local_cbindgen_install_dir "${CMAKE_BINARY_DIR}/corrosion/cbindgen")
             file(MAKE_DIRECTORY "${local_cbindgen_install_dir}")
-            add_custom_command(OUTPUT "${local_cbindgen_install_dir}/bin/cbindgen"
+            add_custom_command(OUTPUT "${cbindgen}"
                 COMMAND ${CMAKE_COMMAND}
                 -E env
                 "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
@@ -1726,10 +1731,9 @@ function(corrosion_experimental_cbindgen)
                 COMMENT "Building cbindgen"
                 )
             add_custom_target("_corrosion_cbindgen"
-                DEPENDS "${local_cbindgen_install_dir}/bin/cbindgen"
+                DEPENDS "${cbindgen}"
                 )
         endif()
-        set(cbindgen "${local_cbindgen_install_dir}/bin/cbindgen")
     endif()
 
     set(corrosion_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated")
