@@ -130,29 +130,25 @@ endfunction()
 # Hardcoded, best effort approach
 function(_corrosion_determine_libs arch vendor os env out_libs)
     if(os STREQUAL "windows")
-        list(APPEND libs "advapi32" "userenv" "ws2_32")
-
+        list(APPEND libs kernel32 advapi32 userenv kernel32 kernel32 ws2_32)
         if(env STREQUAL "msvc")
             list(APPEND libs "$<$<CONFIG:Debug>:msvcrtd>")
             # CONFIG takes a comma seperated list starting with CMake 3.19, but we still need to
             # support older CMake versions.
             set(config_is_release "$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>,$<CONFIG:RelWithDebInfo>>")
             list(APPEND libs "$<${config_is_release}:msvcrt>")
+            list(APPEND libs legacy_stdio_definitions)
         elseif(env STREQUAL "gnu")
             list(APPEND libs "gcc_eh" "pthread")
-        endif()
-
-        if(Rust_VERSION VERSION_LESS "1.33.0")
-            list(APPEND libs "shell32" "kernel32")
         endif()
 
         if(Rust_VERSION VERSION_GREATER_EQUAL "1.57.0")
             list(APPEND libs "bcrypt")
         endif()
     elseif(vendor STREQUAL "apple" AND os STREQUAL "darwin")
-        list(APPEND libs "System" "resolv" "c" "m")
+        list(APPEND libs "System" "resolv" "c" "m" "iconv")
     elseif(os STREQUAL "linux")
-        list(APPEND libs "dl" "rt" "pthread" "gcc_s" "c" "m" "util")
+        list(APPEND libs gcc_s util rt pthread m dl c)
     endif()
     set("${out_libs}" "${libs}" PARENT_SCOPE)
 endfunction()
