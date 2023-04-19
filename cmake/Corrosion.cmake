@@ -6,6 +6,8 @@ message(DEBUG "Using Corrosion ${Corrosion_VERSION} with CMake ${CMAKE_VERSION} 
         "and the `${CMAKE_GENERATOR}` Generator"
 )
 
+set(CORROSION_CMAKE_SRC_DIR "${CMAKE_CURRENT_LIST_DIR}" CACHE INTERNAL "" FORCE)
+
 get_cmake_property(COR_IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
 set(COR_IS_MULTI_CONFIG "${COR_IS_MULTI_CONFIG}" CACHE BOOL "Do not change this" FORCE)
 mark_as_advanced(FORCE COR_IS_MULTI_CONFIG)
@@ -582,7 +584,21 @@ function(_add_cargo_build out_cargo_build_out_dir)
     unset(cargo_rustc_crate_types)
     if(NOT target_kinds)
         message(FATAL_ERROR "TARGET_KINDS not specified")
-    elseif("staticlib" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
+    elseif("staticlib" IN_LIST target_kinds)
+        set(cargo_rustc_filter "--lib")
+        set(rustc_print_native_libs "--print=native-static-libs")
+        set(native_libs_rsp_file "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_required_libs.rsp")
+        set(COR_TARGET_NAME)
+        # Wrapper script around `cargo rustc` which captures the required link libraries into an rsp file.
+        set(cargo_native_libs_wrapper_script
+            ${CMAKE_COMMAND}
+                -D "COR_LIBS_OUTFILE=${native_libs_rsp_file}"
+                -D "COR_TARGET_NAME=${target_name}"
+                -D "COR_TARGET_IS_NO_STD=${COR_NO_STD}" # Todo: target property?
+                -P ${CORROSION_CMAKE_SRC_DIR}/CorrosionInvokeRustc.cmake
+                --)
+        target_link_options(${target_name} INTERFACE "@${native_libs_rsp_file}")
+    elseif("cdylib" IN_LIST target_kinds)
         set(cargo_rustc_filter "--lib")
         if("${Rust_VERSION}" VERSION_GREATER_EQUAL "1.64")
             # https://doc.rust-lang.org/1.64.0/cargo/commands/cargo-rustc.html
@@ -728,7 +744,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
 
-    # todo: this should probably also be guarded by if_not_host_build_condition.
     if(COR_NO_STD)
         corrosion_add_target_local_rustflags("${target_name}" "-Cdefault-linker-libraries=no")
     else()
@@ -777,6 +792,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
                 "CARGO_BUILD_RUSTC=${rustc_bin}"
+        # Wrapper script around cargo to intercept required link libraries
+        ${cargo_native_libs_wrapper_script}
+        # Actual build command
             "${cargo_bin}"
                 rustc
                 ${cargo_rustc_filter}
@@ -794,6 +812,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 # Any arguments to cargo must be placed before this line
                 ${local_rustflags_delimiter}
                 ${local_rustflags_genex}
+                ${rustc_print_native_libs}
 
         # Note: `BYPRODUCTS` may not contain **target specific** generator expressions.
         # This means we cannot use `${cargo_build_dir}`, since it currently uses `$<TARGET_PROPERTY>`

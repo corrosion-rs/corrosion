@@ -14,8 +14,10 @@
   the crate-types of Rust libraries (e.g. force building as a staticlib instead of an rlib).
 - Support *-windows-gnullvm targets. 
 - experimental support in corrosion_install for installing libraries and header files
+- Properly parse the required libraries individual Rust static-libraries need
+  to link to.
 
-[#459]: https://github.com/corrosion-rs/corrosion/pull/459
+  [#459]: https://github.com/corrosion-rs/corrosion/pull/459
 
 # v0.5.0 (2024-05-11)
 
