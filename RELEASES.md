@@ -30,10 +30,10 @@
   `--locked` and `--frozen` flags to all invocations of cargo. Only with CMake >= 3.19.
 - `FindRust` now provides cache variables containing information on the default host
   target triple:
-  - `Rust_CARGO_HOST_TARGET_ARCH`
-  - `Rust_CARGO_HOST_TARGET_VENDOR`
-  - `Rust_CARGO_HOST_TARGET_OS`
-  - `Rust_CARGO_HOST_TARGET_ENV`
+  - `Rust_CARGO_HOST_ARCH`
+  - `Rust_CARGO_HOST_VENDOR`
+  - `Rust_CARGO_HOST_OS`
+  - `Rust_CARGO_HOST_ENV`
 
 ## Other changes
 

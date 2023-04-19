@@ -120,10 +120,10 @@ versions individually.
   crate, that is only available on nightly toolchains.
 - Cache variables containing information based on the target triple for the selected target 
   as well as the default host target:
-  - `Rust_CARGO_TARGET_ARCH`, `Rust_CARGO_HOST_TARGET_ARCH`: e.g. `x86_64` or `aarch64`
-  - `Rust_CARGO_TARGET_VENDOR`, `Rust_CARGO_HOST_TARGET_VENDOR`: e.g. `apple`, `pc`, `unknown` etc.
-  - `Rust_CARGO_TARGET_OS`, `Rust_CARGO_HOST_TARGET_OS`:  e.g. `darwin`, `linux`, `windows`, `none`
-  - `Rust_CARGO_TARGET_ENV`, `Rust_CARGO_HOST_TARGET_ENV`: e.g. `gnu`, `musl`
+  - `Rust_CARGO_TARGET_ARCH`, `Rust_CARGO_HOST_ARCH`: e.g. `x86_64` or `aarch64`
+  - `Rust_CARGO_TARGET_VENDOR`, `Rust_CARGO_HOST_VENDOR`: e.g. `apple`, `pc`, `unknown` etc.
+  - `Rust_CARGO_TARGET_OS`, `Rust_CARGO_HOST_OS`:  e.g. `darwin`, `linux`, `windows`, `none`
+  - `Rust_CARGO_TARGET_ENV`, `Rust_CARGO_HOST_ENV`: e.g. `gnu`, `musl`
 
 
 
