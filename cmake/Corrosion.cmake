@@ -885,7 +885,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 # Any arguments to cargo must be placed before this line
                 ${local_rustflags_delimiter}
                 ${linker_arg}
-                ${linker_flavor_arg}
+                # ${linker_flavor_arg}
                 ${local_rustflags_genex}
 
         # Note: Adding `build_byproducts` (the byproducts in the cargo target directory) here
