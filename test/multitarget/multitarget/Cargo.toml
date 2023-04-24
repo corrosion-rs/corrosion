@@ -7,7 +7,7 @@ edition = "2018"
 
 [lib]
 name = "multitarget_lib"
-crate-type=["lib", "staticlib", "cdylib"]
+crate-type=["lib"]
 
 [[bin]]
 name = "bin1"
