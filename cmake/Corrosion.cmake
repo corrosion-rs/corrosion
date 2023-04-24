@@ -821,15 +821,23 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(deps_link_languages_prop "$<TARGET_PROPERTY:_cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>")
     set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
     set(target_uses_cxx  "$<IN_LIST:CXX,${deps_link_languages}>")
-    unset(default_linker)
+    unset(default_target_linker)
     # With the MSVC ABI rustc only supports directly invoking the linker - Invoking cl as the linker driver is not supported.
     if(NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
-        set(default_linker "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER},${CMAKE_C_COMPILER}>")
+        set(default_target_linker "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER},${CMAKE_C_COMPILER}>")
+    endif()
+    if(NOT (Rust_CARGO_HOST_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
+        # CMake doesn't select any compiler for the host, so just default to cxx for C++ and cc otherwise.
+        set(default_host_linker "$<IF:$<BOOL:${target_uses_cxx}>,cxx,cc>")
     endif()
 
-    set(default_linker_arg "-Clinker=${default_linker}")
+
+    set(default_linker
+            "$<IF:${hostbuild_override},${default_host_linker},${default_target_linker}>")
+    set(default_linker_arg "$<$<BOOL:${default_linker}>:-Clinker=${default_linker}>")
     # The default linker is always a compiler, so select flavor `gcc`
-    set(default_linker_flavor_arg "-Clinker-flavor=gcc")
+    set(default_linker_flavor_arg "$<$<BOOL:${default_linker}>:-Clinker-flavor=gcc>")
+
     set(explicit_linker_arg "-Clinker=${explicit_linker_property}")
     set(linker "$<IF:${explicit_linker_defined},${explicit_linker_arg},${default_linker_arg}>")
     set(linker_defined "$<OR:$<BOOL:${default_linker}>,${explicit_linker_defined}>")
