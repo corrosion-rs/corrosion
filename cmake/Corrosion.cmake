@@ -826,10 +826,17 @@ function(_add_cargo_build out_cargo_build_out_dir)
     if(NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
         set(default_linker "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER},${CMAKE_C_COMPILER}>")
     endif()
-    # Used to set a linker for a specific target-triple.
-    set(cargo_target_linker_var "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER")
-    set(linker "$<IF:${explicit_linker_defined},${explicit_linker_property},${default_linker}>")
-    set(cargo_target_linker $<$<BOOL:${linker}>:${cargo_target_linker_var}=${linker}>)
+
+    set(default_linker_arg "-Clinker=${default_linker}")
+    # The default linker is always a compiler, so select flavor `gcc`
+    set(default_linker_flavor_arg "-Clinker-flavor=gcc")
+    set(explicit_linker_arg "-Clinker=${explicit_linker_property}")
+    set(linker "$<IF:${explicit_linker_defined},${explicit_linker_arg},${default_linker_arg}>")
+    set(linker_defined "$<OR:$<BOOL:${default_linker}>,${explicit_linker_defined}>")
+    # Will evaluate to nothing if on `msvc` and no explicit linker was specified, or if `NO_LINKER_OVERRIDE` was set
+    set(linker_arg "$<${linker_defined}:${linker}>")
+    # For explicit linkers, we currently don't know the flavor and let rustc infer it.
+    set(linker_flavor_arg "$<$<AND:$<NOT:${explicit_linker_defined}>,$<BOOL:${default_linker}>>:${default_linker_flavor_arg}>")
 
     if(Rust_CROSSCOMPILING AND ("${CMAKE_C_COMPILER_TARGET}" OR "${CMAKE_CXX_COMPILER_TARGET}"))
         set(linker_target_triple "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER_TARGET},${CMAKE_C_COMPILER_TARGET}>")
@@ -850,7 +857,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
             ${CMAKE_COMMAND} -E env
                 "${build_env_variable_genex}"
                 "${global_rustflags_genex}"
-                "${cargo_target_linker}"
                 "${corrosion_cc_rs_flags}"
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
@@ -870,6 +876,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 ${flags_genex}
                 # Any arguments to cargo must be placed before this line
                 ${local_rustflags_delimiter}
+                ${linker_arg}
+                ${linker_flavor_arg}
                 ${local_rustflags_genex}
 
         # Note: Adding `build_byproducts` (the byproducts in the cargo target directory) here
