@@ -824,7 +824,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     unset(default_target_linker)
     # With the MSVC ABI rustc only supports directly invoking the linker - Invoking cl as the linker driver is not supported.
     if(NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
-        set(default_target_linker "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER},${CMAKE_C_COMPILER}>")
+        set(default_target_linker "$<IF:$<BOOL:${target_uses_cxx}>,clang,abcdefg>")#${CMAKE_CXX_COMPILER},${CMAKE_C_COMPILER}>")
     endif()
     if(NOT (Rust_CARGO_HOST_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
         # CMake doesn't select any compiler for the host, so just default to cxx for C++ and cc otherwise.
