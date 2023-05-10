@@ -1,9 +1,12 @@
-# Unreleased
+# 0.4.0-beta1 (2023-05-10)
+
+Changes compared to v0.3.5:
 
 ## Breaking Changes
 
 - The Visual Studio Generators now require at least CMake 3.20.
-  This was previously announced in the 0.3.0 release notes.
+  This was previously announced in the 0.3.0 release notes and is the same
+  requirement as for the other Multi-Config Generators.
 - The previously deprecated function `corrosion_set_linker_language()`
   will now raise an error when called and may be removed without further
   notice in future stable releases. Use `corrosion_set_linker()` instead.
@@ -27,7 +30,7 @@
 ## New features
 
 - `corrosion_import_crate()` has two new options `LOCKED` and `FROZEN` which pass the 
-  `--locked` and `--frozen` flags to all invocations of cargo. Only with CMake >= 3.19.
+  `--locked` and `--frozen` flags to all invocations of cargo.
 - `FindRust` now provides cache variables containing information on the default host
   target triple:
   - `Rust_CARGO_HOST_ARCH`
