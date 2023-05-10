@@ -3,8 +3,6 @@ on:
   push:
     branches:
       - master
-      - staging
-      - trying
   pull_request:
     branches:
       - 'master'
