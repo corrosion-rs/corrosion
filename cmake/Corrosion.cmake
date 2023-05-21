@@ -2,8 +2,11 @@ cmake_minimum_required(VERSION 3.15)
 
 if (CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_LESS 3.20.0)
     message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with Multi-Config Generators such as "
-       "\"Ninja Multi-Config\" or Visual Studio. "
-       "Please use a different generator or update to cmake >= 3.20.")
+        "\"Ninja Multi-Config\" or Visual Studio. "
+        "Please use a different generator or update to cmake >= 3.20.\n"
+        "Note: You are using CMake ${CMAKE_VERSION} (Path: `${CMAKE_COMMAND}`) with "
+        " the `${CMAKE_GENERATOR}` Generator."
+    )
 endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
