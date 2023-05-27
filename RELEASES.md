@@ -1,8 +1,22 @@
-# 0.4.0-beta1 (2023-05-10)
+# 0.4.0 LTS (2023-06-01)
 
-Changes compared to v0.3.5:
+No changes compared to v0.4.0-beta2.
 
-## Breaking Changes
+## Announcements
+
+The `v0.4.x` LTS series will be the last release to support older CMake and Rust versions.
+If necessary, fixes will be backported to the v0.4 branch. New features will not be
+actively backported after the next major release, but community contributions are possible.
+The `v0.4.x` series is currently planned to be maintained until the end of 2024.
+
+The following major release will increase the minimum required CMake version to 3.22. The 
+minimum supported Rust version will also be increased to make use of newly added flags, but 
+the exact version is not fixed yet. 
+
+
+## Changes compared to v0.3.5:
+
+### Breaking Changes
 
 - The Visual Studio Generators now require at least CMake 3.20.
   This was previously announced in the 0.3.0 release notes and is the same
@@ -14,7 +28,7 @@ Changes compared to v0.3.5:
   The detection does not require an enabled language anymore and will always fall back
   to the default host target triple. A warning is issued if target triple detection failed.
 
-## Potentially Breaking Changes
+### Potentially Breaking Changes
 
 - Corrosion now sets the `IMPORTED_NO_SONAME` property for shared rust libraries, since by
   default they won't have an `soname` field.
@@ -27,7 +41,7 @@ Changes compared to v0.3.5:
   do encounter a new linking issue when upgrading with `staticlib` targets, please open an
   issue.
 
-## New features
+### New features
 
 - `corrosion_import_crate()` has two new options `LOCKED` and `FROZEN` which pass the 
   `--locked` and `--frozen` flags to all invocations of cargo.
@@ -38,7 +52,7 @@ Changes compared to v0.3.5:
   - `Rust_CARGO_HOST_OS`
   - `Rust_CARGO_HOST_ENV`
 
-## Other changes
+### Other changes
 
 - When installing Corrosion with CMake >= 3.19, the legacy Generator tool is
   no longer built and installed by default.
@@ -48,11 +62,12 @@ Changes compared to v0.3.5:
   no languages where previously enabled. This is not considered a breaking change.
 - `corrosion_import_crate()` now warns about unexpected arguments.
 
-## Fixes
+### Fixes
 
 - Fix building when the `dev` profile is explicitly set by the user.
 
-## Experimental status (may be changed or removed before a stable release)
+## Experimental features (may be changed or removed without a major version bump)
+
 - Experimental cxxbridge and cbindgen integration.
 - Add a helper function to parse the package version from a Cargo.toml file
 - Expose rustup toolchains discovered by `FindRust` in the following cache variables
