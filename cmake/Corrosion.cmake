@@ -1,11 +1,18 @@
 cmake_minimum_required(VERSION 3.15)
 
-if (CMAKE_CONFIGURATION_TYPES AND CMAKE_VERSION VERSION_LESS 3.20.0)
+get_cmake_property(COR_IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
+
+if (COR_IS_MULTI_CONFIG AND CMAKE_VERSION VERSION_LESS 3.20.0)
     message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with Multi-Config Generators such as "
         "\"Ninja Multi-Config\" or Visual Studio. "
         "Please use a different generator or update to cmake >= 3.20.\n"
         "Note: You are using CMake ${CMAKE_VERSION} (Path: `${CMAKE_COMMAND}`) with "
         " the `${CMAKE_GENERATOR}` Generator."
+    )
+elseif(NOT COR_IS_MULTI_CONFIG AND DEFINED CMAKE_CONFIGURATION_TYPES)
+    message(WARNING "The Generator is ${CMAKE_GENERATOR}, which is not a multi-config "
+        "Generator, but CMAKE_CONFIGURATION_TYPES is set. Please don't set "
+        "CMAKE_CONFIGURATION_TYPES unless you are using a multi-config Generator."
     )
 endif()
 
@@ -107,7 +114,7 @@ function(_corrosion_set_imported_location_legacy target_name base_property filen
                 "${binary_root}/${filename}"
         )
     endforeach()
-    if(NOT "${CMAKE_CONFIGURATION_TYPES}")
+    if(NOT COR_IS_MULTI_CONFIG)
         set(binary_root "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
 
@@ -163,7 +170,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         set(base_output_directory "${curr_out_dir}")
     endforeach()
 
-    if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(NOT COR_IS_MULTI_CONFIG)
         if(output_directory)
             set(base_output_directory "${output_directory}")
         else()
@@ -225,7 +232,7 @@ function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names
         message(FATAL_ERROR "Unexpected additional arguments")
     endif()
 
-    if(CMAKE_CONFIGURATION_TYPES)
+    if(COR_IS_MULTI_CONFIG)
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>")
     else()
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
@@ -278,7 +285,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
         set(multiconfig_out_dir_genex "${multiconfig_out_dir_genex}$<$<CONFIG:${config_type}>:${curr_out_dir}>")
     endforeach()
 
-    if(CMAKE_CONFIGURATION_TYPES)
+    if(COR_IS_MULTI_CONFIG)
         set(output_dir "${multiconfig_out_dir_genex}")
     else()
         if(NOT output_dir)
@@ -1576,10 +1583,10 @@ function(corrosion_add_cxxbridge cxx_target)
             $<BUILD_INTERFACE:${generated_dir}/include>
             $<INSTALL_INTERFACE:include>
     )
-    
+
     # cxx generated code is using c++11 features in headers, so propagate c++11 as minimal requirement
     target_compile_features(${cxx_target} PUBLIC cxx_std_11)
-    
+
     # Todo: target_link_libraries is only necessary for rust2c projects.
     # It is possible that checking if the rust crate is an executable is a sufficient check,
     # but some more thought may be needed here.
