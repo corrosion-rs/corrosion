@@ -18,6 +18,7 @@ if (NOT CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set(_CORROSION_TOP_LEVEL OFF)
 else()
     set(_CORROSION_TOP_LEVEL ON)
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
 
 # ==== Corrosion Configuration ====

@@ -896,6 +896,16 @@ function(_add_cargo_build out_cargo_build_out_dir)
         add_custom_target(cargo-clean)
     endif()
     add_dependencies(cargo-clean cargo-clean_${target_name})
+
+    set_target_properties(
+            _cargo-build_${target_name}
+            cargo-build_${target_name}
+            cargo-prebuild_${target_name}
+            cargo-clean_${target_name}
+            PROPERTIES
+            FOLDER CORROSION_INTERNAL
+    )
+
 endfunction()
 
 #[=======================================================================[.md:
