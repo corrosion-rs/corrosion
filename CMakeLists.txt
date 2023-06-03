@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 project(Corrosion
-    VERSION 0.4.0
+    VERSION 0.4.1
     LANGUAGES NONE
     HOMEPAGE_URL "https://corrosion-rs.github.io/corrosion/"
 )

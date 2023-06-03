@@ -1,3 +1,11 @@
+# 0.4.1 (2023-06-03)
+
+This is a bugfix release.
+
+### Fixes
+
+- Fixes a regression on multi-config Generators
+
 # 0.4.0 LTS (2023-06-01)
 
 No changes compared to v0.4.0-beta2.
