@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
 get_cmake_property(COR_IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
+set(COR_IS_MULTI_CONFIG "${COR_IS_MULTI_CONFIG}" CACHE BOOL "Do not change this" FORCE)
+mark_as_advanced(FORCE COR_IS_MULTI_CONFIG)
 
 if (COR_IS_MULTI_CONFIG AND CMAKE_VERSION VERSION_LESS 3.20.0)
     message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with Multi-Config Generators such as "
@@ -700,7 +702,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     if (CMAKE_VS_PLATFORM_NAME)
         set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
-    elseif(CMAKE_CONFIGURATION_TYPES)
+    elseif(COR_IS_MULTI_CONFIG)
         set (build_dir "$<CONFIG>")
     else()
         set (build_dir .)
