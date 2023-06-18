@@ -221,6 +221,7 @@ if (DEFINED Rust_TOOLCHAIN)
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
     find_program(Rust_RUSTUP rustup PATHS "$ENV{HOME}/.cargo/bin")
     if(Rust_RUSTUP)
+        execute_process(COMMAND "${Rust_RUSTUP}" install "${Rust_TOOLCHAIN}")
         set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
     else()
         set(_RESOLVE_RUSTUP_TOOLCHAINS OFF)
