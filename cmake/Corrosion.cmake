@@ -843,7 +843,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(linker "$<IF:${explicit_linker_defined},${explicit_linker_property},${default_linker}>")
     set(cargo_target_linker $<$<BOOL:${linker}>:${cargo_target_linker_var}=${linker}>)
 
-    if(Rust_CROSSCOMPILING AND ("${CMAKE_C_COMPILER_TARGET}" OR "${CMAKE_CXX_COMPILER_TARGET}"))
+    if(Rust_CROSSCOMPILING AND (CMAKE_C_COMPILER_TARGET OR CMAKE_CXX_COMPILER_TARGET))
         set(linker_target_triple "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER_TARGET},${CMAKE_C_COMPILER_TARGET}>")
         set(rustflag_linker_arg "-Clink-args=--target=${linker_target_triple}")
         set(rustflag_linker_arg "$<${if_not_host_build_condition}:${rustflag_linker_arg}>")
