@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.15)
 
 list(APPEND CMAKE_MESSAGE_CONTEXT "Corrosion")
 
+message(DEBUG "Using Corrosion ${Corrosion_VERSION} with CMake ${CMAKE_VERSION} "
+        "and the `${CMAKE_GENERATOR}` Generator"
+)
+
 get_cmake_property(COR_IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
 set(COR_IS_MULTI_CONFIG "${COR_IS_MULTI_CONFIG}" CACHE BOOL "Do not change this" FORCE)
 mark_as_advanced(FORCE COR_IS_MULTI_CONFIG)
