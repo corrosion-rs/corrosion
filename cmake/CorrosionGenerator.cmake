@@ -4,6 +4,8 @@ function(_cargo_metadata out manifest)
     set(MULTI_VALUE_KEYWORDS "")
     cmake_parse_arguments(PARSE_ARGV 2 CM "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
+    list(APPEND CMAKE_MESSAGE_CONTEXT "_cargo_metadata")
+
     if(DEFINED CM_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "Internal error - unexpected arguments: ${CM_UNPARSED_ARGUMENTS}")
     elseif(DEFINED CM_KEYWORDS_MISSING_VALUES)
@@ -207,6 +209,7 @@ function(_generator_add_cargo_targets)
         "${multi_value_args}"
         ${ARGN}
     )
+    list(APPEND CMAKE_MESSAGE_CONTEXT "_add_cargo_targets")
 
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GGC no_linker_override)
     _corrosion_arg_passthrough_helper(CRATE_TYPES GGC crate_types)

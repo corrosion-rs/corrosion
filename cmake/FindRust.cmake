@@ -15,6 +15,8 @@ cmake_minimum_required(VERSION 3.12)
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(FindPackageHandleStandardArgs)
 
+list(APPEND CMAKE_MESSAGE_CONTEXT "FindRust")
+
 # Print error message and return.
 macro(_findrust_failed)
     if("${Rust_FIND_REQUIRED}")
@@ -812,3 +814,5 @@ if(NOT TARGET Rust::Rustc)
     )
     set(Rust_FOUND true)
 endif()
+
+list(POP_BACK CMAKE_MESSAGE_CONTEXT)
