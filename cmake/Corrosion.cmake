@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
+list(APPEND CMAKE_MESSAGE_CONTEXT "Corrosion")
+
 get_cmake_property(COR_IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
 set(COR_IS_MULTI_CONFIG "${COR_IS_MULTI_CONFIG}" CACHE BOOL "Do not change this" FORCE)
 mark_as_advanced(FORCE COR_IS_MULTI_CONFIG)
@@ -980,6 +982,7 @@ function(corrosion_import_crate)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
+    list(APPEND CMAKE_MESSAGE_CONTEXT "corrosion_import_crate")
 
     if(DEFINED COR_UNPARSED_ARGUMENTS)
         message(AUTHOR_WARNING "Unexpected arguments: " ${COR_UNPARSED_ARGUMENTS}
@@ -1879,3 +1882,6 @@ macro(_corrosion_arg_passthrough_helper arg_name prefix var_name)
         unset("${var_name}")
     endif()
 endmacro()
+
+list(POP_BACK CMAKE_MESSAGE_CONTEXT)
+
