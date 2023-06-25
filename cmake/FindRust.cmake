@@ -218,14 +218,14 @@ if (NOT "${Rust_TOOLCHAIN}" STREQUAL "$CACHE{Rust_TOOLCHAIN}")
     set(Rust_TOOLCHAIN ${Rust_TOOLCHAIN} CACHE STRING "Requested rustup toolchain" FORCE)
 endif()
 
+set(_RESOLVE_RUSTUP_TOOLCHAINS_DESC "Indicates whether to descend into the toolchain pointed to by rustup")
+set(Rust_RESOLVE_RUSTUP_TOOLCHAINS ON CACHE BOOL ${_RESOLVE_RUSTUP_TOOLCHAINS_DESC})
+
 # This block checks to see if we're prioritizing a rustup-managed toolchain.
 if (DEFINED Rust_TOOLCHAIN)
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
     find_program(Rust_RUSTUP rustup PATHS "$ENV{HOME}/.cargo/bin")
-    if(Rust_RUSTUP)
-        set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
-    else()
-        set(_RESOLVE_RUSTUP_TOOLCHAINS OFF)
+    if(NOT Rust_RUSTUP)
         if(NOT "${Rust_FIND_QUIETLY}")
             message(
                 WARNING "CMake variable `Rust_TOOLCHAIN` specified, but `rustup` was not found. "
@@ -292,8 +292,6 @@ else()
             unset(Rust_COMPILER CACHE)
         endif()
 
-        set(_RESOLVE_RUSTUP_TOOLCHAINS ON)
-
         # Get `rustup` next to the `rustc` proxy
         get_filename_component(_RUST_PROXIES_PATH "${_Rust_COMPILER_TEST}" DIRECTORY)
         find_program(Rust_RUSTUP rustup HINTS "${_RUST_PROXIES_PATH}" NO_DEFAULT_PATH)
@@ -304,6 +302,9 @@ endif()
 
 # At this point, the only thing we should have evaluated is a path to `rustup` _if that's what the
 # best source for a Rust toolchain was determined to be_.
+if (NOT Rust_RUSTUP)
+    set(Rust_RESOLVE_RUSTUP_TOOLCHAINS OFF CACHE BOOL ${_RESOLVE_RUSTUP_TOOLCHAINS_DESC} FORCE)
+endif()
 
 # List of user variables that will override any toolchain-provided setting
 set(_Rust_USER_VARS Rust_COMPILER Rust_CARGO Rust_CARGO_TARGET Rust_CARGO_HOST_TARGET)
@@ -316,8 +317,9 @@ foreach(_VAR ${_Rust_USER_VARS})
 endforeach()
 
 # Discover what toolchains are installed by rustup, if the discovered `rustc` is a proxy from
-# `rustup`, then select either the default toolchain, or the requested toolchain Rust_TOOLCHAIN
-if (_RESOLVE_RUSTUP_TOOLCHAINS)
+# `rustup` and the user hasn't explicitly requested to override this behavior, then select either
+# the default toolchain, or the requested toolchain Rust_TOOLCHAIN
+if (Rust_RESOLVE_RUSTUP_TOOLCHAINS)
     execute_process(
         COMMAND
             "${Rust_RUSTUP}" toolchain list --verbose
@@ -497,6 +499,14 @@ if (_RESOLVE_RUSTUP_TOOLCHAINS)
         rustc
             HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
             NO_DEFAULT_PATH)
+elseif (Rust_RUSTUP)
+    get_filename_component(_RUST_TOOLCHAIN_PATH "${Rust_RUSTUP}" DIRECTORY)
+    get_filename_component(_RUST_TOOLCHAIN_PATH "${_RUST_TOOLCHAIN_PATH}" DIRECTORY)
+    find_program(
+        Rust_COMPILER_CACHED
+        rustc
+            HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
+            NO_DEFAULT_PATH)
 else()
     find_program(Rust_COMPILER_CACHED rustc)
     if (EXISTS "${Rust_COMPILER_CACHED}")
@@ -514,7 +524,7 @@ if (NOT EXISTS "${Rust_COMPILER_CACHED}")
     _findrust_failed(${_NOT_FOUND_MESSAGE})
 endif()
 
-if (_RESOLVE_RUSTUP_TOOLCHAINS)
+if (Rust_RESOLVE_RUSTUP_TOOLCHAINS)
     set(_NOT_FOUND_MESSAGE "Rust was detected to be managed by rustup, but failed to find `cargo` "
         "next to `rustc` in `${_RUST_TOOLCHAIN_PATH}/bin`. This can happen for custom toolchains, "
         "if cargo was not built. "
