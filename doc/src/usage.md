@@ -77,11 +77,16 @@ them **before** `find_package(Corrosion REQUIRED)`.
   rustup toolchain (see `rustup show`) is used. Otherwise, the variable is unset by default.
 - `Rust_ROOT:STRING` - CMake provided. Path to a Rust toolchain to use. This is an alternative if
   you want to select a specific Rust toolchain, but it's not managed by rustup. Default: Nothing
-- `Rust_COMPILER:STRING` - Path to an actual `rustc`. If set to a `rustup` proxy, it will be
-  replaced by a path to an actual `rustc`. Default: The `rustc` in the first-found toolchain, either
+- `Rust_COMPILER:STRING` - Path to `rustc`, which should be used for compiling or for toolchain
+  detection (if it is a `rustup` proxy). Default: The `rustc` in the first-found toolchain, either
   from `rustup`, or from a toolchain available in the user's `PATH`.
-- `Rust_CARGO:STRING` - Path to an actual `cargo`. Default: the `cargo` installed next to
-  `${Rust_COMPILER}`.
+- `Rust_RESOLVE_RUSTUP_TOOLCHAINS:BOOL` - If the found `rustc` is a `rustup` proxy, resolve a
+  concrete path to a specific toolchain managed by `rustup`, according to the `rustup` toolchain
+  selection rules and other options detailed here. If this option is turned off, the found `rustc`
+  will be used as-is to compile, even if it is a `rustup` proxy, which might increase compilation
+  time. Default: `ON` if the found `rustc` is a rustup proxy or a `rustup` managed toolchain was
+  requested, `OFF` otherwise. Forced `OFF` if `rustup` was not found.
+- `Rust_CARGO:STRING` - Path to `cargo`. Default: the `cargo` installed next to `${Rust_COMPILER}`.
 - `Rust_CARGO_TARGET:STRING` - The default target triple to build for. Alter for cross-compiling.
   Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
   the default target triple reported by `${Rust_COMPILER} --version --verbose`.
@@ -118,7 +123,7 @@ versions individually.
 - `Rust_LLVM_VERSION<_MAJOR|_MINOR|_PATCH>` - The LLVM version used by rustc.
 - `Rust_IS_NIGHTLY` - 1 if a nightly toolchain is used, otherwise 0. Useful for selecting an unstable feature for a
   crate, that is only available on nightly toolchains.
-- Cache variables containing information based on the target triple for the selected target 
+- Cache variables containing information based on the target triple for the selected target
   as well as the default host target:
   - `Rust_CARGO_TARGET_ARCH`, `Rust_CARGO_HOST_ARCH`: e.g. `x86_64` or `aarch64`
   - `Rust_CARGO_TARGET_VENDOR`, `Rust_CARGO_HOST_VENDOR`: e.g. `apple`, `pc`, `unknown` etc.
@@ -303,7 +308,7 @@ Corrosion respects the following `OUTPUT_DIRECTORY` target properties on CMake >
 -   [RUNTIME_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html)
 -   [PDB_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/PDB_OUTPUT_DIRECTORY.html)
 
-If the target property is set (e.g. by defining the `CMAKE_XYZ_OUTPUT_DIRECTORY` variable before calling 
+If the target property is set (e.g. by defining the `CMAKE_XYZ_OUTPUT_DIRECTORY` variable before calling
 `corrosion_import_crate()`), corrosion will copy the built rust artifacts to the location defined in the
 target property.
 Due to limitations in CMake these target properties are evaluated in a deferred manner, to
