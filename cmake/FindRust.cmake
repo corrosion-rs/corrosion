@@ -145,8 +145,14 @@ function(_corrosion_determine_libs_new target_triple out_libs)
         message(DEBUG "Determining required link libraries: failed to create test library: ${cargo_new_result}")
         return()
     endif()
-    file(APPEND "${CMAKE_BINARY_DIR}/corrosion/required_libs/Cargo.toml"
-            "[lib]\ncrate-type=[\"staticlib\"]\n[workspace]")
+    # Cargo new may create a Cargo.toml which attempts to reference keys from an outside workspace,
+    # but our package is not part of that workspace, so we need to overwrite the Cargo.toml with
+    # our own.
+    set(manifest_path "${CMAKE_BINARY_DIR}/corrosion/required_libs/Cargo.toml")
+    set(manifest "[package]\nname = \"required_libs\"\nedition = \"2018\"\nversion = \"0.1.0\"\n")
+    string(APPEND manifest "\n[lib]\ncrate-type=[\"staticlib\"]\n[workspace]\n")
+    file(WRITE "${manifest_path}" "${manifest}")
+
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E env
             "CARGO_BUILD_RUSTC=${Rust_COMPILER_CACHED}"
