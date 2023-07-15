@@ -690,7 +690,8 @@ if(CORROSION_NATIVE_TOOLING)
             CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
             ${_CORROSION_GENERATOR_EXE}
                 --cargo ${CARGO_EXECUTABLE}
-                --locked
+
+
                 ${_CORROSION_VERBOSE_OUTPUT_FLAG}
         CACHE INTERNAL "corrosion-generator runner"
     )
