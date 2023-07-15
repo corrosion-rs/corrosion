@@ -585,6 +585,7 @@ if(CORROSION_NATIVE_TOOLING)
                     "${CARGO_EXECUTABLE}" install
                         --path "."
                         --root "${generator_destination}"
+                        --locked
                         ${_CORROSION_QUIET_OUTPUT_FLAG}
                 WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../generator"
                 RESULT_VARIABLE generator_build_failed
