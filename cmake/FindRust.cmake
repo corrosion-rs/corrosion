@@ -130,28 +130,15 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
 endfunction()
 
 function(_corrosion_determine_libs_new target_triple out_libs)
+    set(package_dir "${CMAKE_BINARY_DIR}/corrosion/required_libs")
     # Cleanup on reconfigure to get a cleans state (in case we change something in the future)
-    file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/corrosion/required_libs")
-    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/corrosion")
-    # Create a staticlib application for testing purposes
-    execute_process(
-            COMMAND "${Rust_CARGO_CACHED}" new --lib required_libs
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/corrosion"
-            RESULT_VARIABLE cargo_new_result
-            ERROR_QUIET
-    )
-    if(cargo_new_result)
-        file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/corrosion/required_libs")
-        message(DEBUG "Determining required link libraries: failed to create test library: ${cargo_new_result}")
-        return()
-    endif()
-    # Cargo new may create a Cargo.toml which attempts to reference keys from an outside workspace,
-    # but our package is not part of that workspace, so we need to overwrite the Cargo.toml with
-    # our own.
-    set(manifest_path "${CMAKE_BINARY_DIR}/corrosion/required_libs/Cargo.toml")
+    file(REMOVE_RECURSE "${package_dir}")
+    file(MAKE_DIRECTORY "${package_dir}")
     set(manifest "[package]\nname = \"required_libs\"\nedition = \"2018\"\nversion = \"0.1.0\"\n")
-    string(APPEND manifest "\n[lib]\ncrate-type=[\"staticlib\"]\n[workspace]\n")
-    file(WRITE "${manifest_path}" "${manifest}")
+    string(APPEND manifest "\n[lib]\ncrate-type=[\"staticlib\"]\npath = \"lib.rs\"\n")
+    string(APPEND manifest "\n[workspace]\n")
+    file(WRITE "${package_dir}/Cargo.toml" "${manifest}")
+    file(WRITE "${package_dir}/lib.rs" "pub fn add(left: usize, right: usize) -> usize {left + right}\n")
 
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E env
