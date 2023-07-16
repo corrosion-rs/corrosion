@@ -1,3 +1,15 @@
+# 0.4.2 (2023-07-16)
+
+### Fixes
+
+- Fix an issue when cross-compiling with clang
+- Fix detecting required libraries with cargo 1.71 
+
+### New features
+
+- Users can now set `Rust_RESOLVE_RUSTUP_TOOLCHAINS` to `OFF`, which will result in Corrosion
+  not attempting to resolve rustc/cargo.
+
 # 0.4.1 (2023-06-03)
 
 This is a bugfix release.
