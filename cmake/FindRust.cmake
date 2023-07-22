@@ -176,36 +176,6 @@ function(_corrosion_determine_libs_new target_triple out_libs)
     set("${out_libs}" "${libs_list}" PARENT_SCOPE)
 endfunction()
 
-# Hardcoded, best effort approach
-function(_corrosion_determine_libs arch vendor os env out_libs)
-    if(os STREQUAL "windows")
-        list(APPEND libs "advapi32" "userenv" "ws2_32")
-
-        if(env STREQUAL "msvc")
-            list(APPEND libs "$<$<CONFIG:Debug>:msvcrtd>")
-            # CONFIG takes a comma seperated list starting with CMake 3.19, but we still need to
-            # support older CMake versions.
-            set(config_is_release "$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>,$<CONFIG:RelWithDebInfo>>")
-            list(APPEND libs "$<${config_is_release}:msvcrt>")
-        elseif(env STREQUAL "gnu")
-            list(APPEND libs "gcc_eh" "pthread")
-        endif()
-
-        if(Rust_VERSION VERSION_LESS "1.33.0")
-            list(APPEND libs "shell32" "kernel32")
-        endif()
-
-        if(Rust_VERSION VERSION_GREATER_EQUAL "1.57.0")
-            list(APPEND libs "bcrypt")
-        endif()
-    elseif(vendor STREQUAL "apple" AND os STREQUAL "darwin")
-        list(APPEND libs "System" "resolv" "c" "m")
-    elseif(os STREQUAL "linux")
-        list(APPEND libs "dl" "rt" "pthread" "gcc_s" "c" "m" "util")
-    endif()
-    set("${out_libs}" "${libs}" PARENT_SCOPE)
-endfunction()
-
 if (NOT "${Rust_TOOLCHAIN}" STREQUAL "$CACHE{Rust_TOOLCHAIN}")
     # Promote Rust_TOOLCHAIN to a cache variable if it is not already a cache variable
     set(Rust_TOOLCHAIN ${Rust_TOOLCHAIN} CACHE STRING "Requested rustup toolchain" FORCE)
@@ -749,7 +719,6 @@ endif()
 
 _corrosion_parse_target_triple("${Rust_CARGO_TARGET_CACHED}" rust_arch rust_vendor rust_os rust_env)
 _corrosion_parse_target_triple("${Rust_CARGO_HOST_TARGET_CACHED}" rust_host_arch rust_host_vendor rust_host_os rust_host_env)
-_corrosion_determine_libs("${rust_arch}" "${rust_vendor}" "${rust_os}" "${rust_env}" rust_libs)
 
 set(Rust_CARGO_TARGET_ARCH "${rust_arch}" CACHE INTERNAL "Target architecture")
 set(Rust_CARGO_TARGET_VENDOR "${rust_vendor}" CACHE INTERNAL "Target vendor")
