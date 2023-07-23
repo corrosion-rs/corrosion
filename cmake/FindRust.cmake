@@ -111,12 +111,14 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
         )
     if((NOT whole_match) AND (NOT CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED))
         message(WARNING "Failed to parse target-triple `${target_triple}`."
-            "Corrosion attempts to link required C libraries depending on the OS "
-            "specified in the Rust target-triple for Linux, MacOS and windows.\n"
-            "Note: If you are targeting a different OS you can surpress this warning by"
+            "Corrosion determines some information about the output artifacts based on OS "
+            "specified in the Rust target-triple.\n"
+            "Currently this is relevant for windows and darwin (mac) targets, since file "
+            "extensions differ.\n"
+            "Note: If you are targeting a different OS you can suppress this warning by"
             " setting the CMake cache variable "
             "`CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED`."
-            "Please consider opening an issue on github if you encounter this warning."
+            "Please consider opening an issue on github if you you need to add a new vendor to the list."
             )
     endif()
 
