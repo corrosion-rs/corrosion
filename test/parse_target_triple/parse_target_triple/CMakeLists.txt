@@ -99,7 +99,8 @@ set(rustup_shipped_targets
         "x86_64-unknown-none"
         "x86_64-unknown-redox"
 )
+set(other_targets riscv32imc-esp-espidf xtensa-esp32s3-none-elf)
 
-foreach(target ${rustup_shipped_targets})
+foreach(target ${rustup_shipped_targets} ${other_targets})
     _corrosion_parse_target_triple("${target}"  arch vendor os env)
 endforeach()
