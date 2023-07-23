@@ -85,7 +85,7 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
     # we determine if vendor is present by matching against a list of known vendors.
     set(known_vendors
         "apple"
-        "esp" # riscv32imc-esp-espidf
+        "esp[a-z0-9]*" # espressif, e.g. riscv32imc-esp-espidf or xtensa-esp32s3-none-elf
         "fortanix"
         "kmc"
         "pc"
