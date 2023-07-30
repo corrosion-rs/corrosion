@@ -621,6 +621,32 @@ else()
     set(_CORR_PROP_HOST_BUILD INTERFACE_CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
 endif()
 
+
+function(_corrosion_determine_cc_rs_compiler lang out_compiler_path)
+    if(NOT ("${lang}" MATCHES "^(C|CXX)$"))
+        message(FATAL_ERROR "Corrosion internal error: _corrosion_determine_cc_rs_compiler called with lang=${lang}")
+    endif()
+    set(compiler_path "${CMAKE_${lang}_COMPILER}")
+    if("${CMAKE_${lang}_COMPILER_ID}" STREQUAL "Clang")
+        # Note: CMAKE_<LANG>_COMPILER_ABI is an internal CMake variable, so we check
+        # the rust target triple instead
+        if("${CMAKE_${lang}_COMPILER_FRONTEND_VARIANT}" STREQUAL "GNU"
+                AND _CORROSION_RUST_CARGO_TARGET_UNDERSCORE MATCHES "msvc"
+        )
+            message(STATUS
+                    "The CMake ${lang} compiler is clang with GNU-cli building for the MSVC ABI."
+                    "Note: C-code compiled via Rust / cc-rs will use clang-cl instead."
+            )
+            get_filename_component(compiler_dir "${CMAKE_${lang}_COMPILER}" DIRECTORY)
+            set(compiler_path "${compiler_dir}/clang-cl.exe")
+            if(NOT EXISTS "${compiler_path}")
+                message(FATAL_ERROR "clang-cl not found at `${compiler_path}` (next to ${CMAKE_${lang}_COMPILER})")
+            endif()
+        endif()
+    endif()
+    set("${out_compiler_path}" "${compiler_path}" PARENT_SCOPE)
+endfunction()
+
 # Add custom command to build one target in a package (crate)
 #
 # A target may be either a specific bin
@@ -766,13 +792,15 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(corrosion_cc_rs_flags)
 
     if(CMAKE_C_COMPILER AND _CORROSION_RUST_CARGO_TARGET_UNDERSCORE)
+        _corrosion_determine_cc_rs_compiler(C cc_rs_c_compiler)
         # This variable is read by cc-rs (often used in build scripts) to determine the c-compiler.
         # It can still be overridden if the user sets the non underscore variant via the environment variables
         # on the target.
-        list(APPEND corrosion_cc_rs_flags "CC_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_C_COMPILER}")
+        list(APPEND corrosion_cc_rs_flags "CC_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${cc_rs_c_compiler}")
     endif()
     if(CMAKE_CXX_COMPILER AND _CORROSION_RUST_CARGO_TARGET_UNDERSCORE)
-        list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_CXX_COMPILER}")
+        _corrosion_determine_cc_rs_compiler(CXX cc_rs_cxx_compiler)
+        list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${cc_rs_cxx_compiler}")
     endif()
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
     # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
