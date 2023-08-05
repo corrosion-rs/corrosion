@@ -1022,8 +1022,6 @@ function(corrosion_import_crate)
                     " cannot predict. Please consider using a custom cargo profile which inherits from the"
                     " built-in profile instead."
             )
-        else()
-            set(cargo_profile_native_generator --profile=${COR_PROFILE})
         endif()
     endif()
 
