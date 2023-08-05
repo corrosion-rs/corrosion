@@ -42,6 +42,13 @@ jobs:
       os: ${{ matrix.os }}
       rust: stable
 
+  test_legacy_nightly:
+    name: Legacy CMake + nightly Rust
+    uses: ./.github/workflows/test_legacy.yaml
+    with:
+      os: ubuntu-20.04
+      rust: nightly
+
   test:
     name: Test Corrosion
     runs-on: ${{ matrix.os }}
