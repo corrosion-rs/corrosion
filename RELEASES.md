@@ -1,3 +1,9 @@
+# Unreleased
+
+### Fixes
+
+- Fix the PROFILE option with CMake < 3.19 [#427]
+
 # 0.4.2 (2023-07-16)
 
 ### Fixes
