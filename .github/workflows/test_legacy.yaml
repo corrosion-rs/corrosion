@@ -32,7 +32,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{github.workspace}}/corrosion-prebuilt-generator
-          key: ${{ runner.os }}-generator-${{ hashFiles('generator/src/**', 'generator/Cargo.toml', 'generator/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ inputs.rust }}-generator-${{ hashFiles('generator/src/**', 'generator/Cargo.toml', 'generator/Cargo.lock') }}
       - name: Setup Environment and Configure CMake
         uses: "./.github/actions/setup_test"
         with:
