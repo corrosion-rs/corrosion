@@ -28,6 +28,19 @@ jobs:
       os: windows-2019
       rust: 1.46.0
 
+  test_legacy_stable:
+    name: Legacy CMake + stable Rust
+    uses: ./.github/workflows/test_legacy.yaml
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2019 # windows-latest is currently not having a supported MSVC compiler
+          - ubuntu-20.04
+          - macos-12
+    with:
+      os: ${{ matrix.os }}
+      rust: stable
 
   test:
     name: Test Corrosion
@@ -305,6 +318,7 @@ jobs:
       - test_legacy_linux
       - test_legacy_mac
       - test_legacy_windows
+      - test_legacy_stable
       - test
       - test_msvc
       - test_cxxbridge
