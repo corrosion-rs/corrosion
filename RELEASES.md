@@ -1,8 +1,19 @@
-# Unreleased
+# v0.4.3 (2023-08-06)
+
+### Announcements
+
+The Legacy CMake generator for supporting CMake versions 3.15-3.18
+will have it's minimum supported Rust version bumped to 1.56 in the
+next release. This is necessary to support Rust versions 1.72 and
+newer. If you cannot upgrade your CMake or Rust version, then it is 
+recommended to not upgrade beyond the `v0.4.3` tag.
 
 ### Fixes
 
 - Fix the PROFILE option with CMake < 3.19 [#427]
+- Relax vendor parsing for espressif targets (removes warnings)
+- Fix an issue detecting required link libraries with Rust >= 1.71
+  when the cmake build directory is located in a Cargo workspace.
 
 # 0.4.2 (2023-07-16)
 
