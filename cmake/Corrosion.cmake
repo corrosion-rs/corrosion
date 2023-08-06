@@ -571,20 +571,19 @@ endif()
 if(CORROSION_NATIVE_TOOLING)
     if (NOT TARGET Corrosion::Generator )
         add_subdirectory(generator)
-    else()
-        get_property(
-                _CORROSION_GENERATOR_EXE
-                TARGET Corrosion::Generator PROPERTY IMPORTED_LOCATION
-        )
     endif()
+    get_property(
+        _CORROSION_GENERATOR_EXE
+        TARGET Corrosion::Generator PROPERTY IMPORTED_LOCATION
+    )
     set(
-_CORROSION_GENERATOR
-            ${CMAKE_COMMAND} -E env
+        _CORROSION_GENERATOR
+        ${CMAKE_COMMAND} -E env
             CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
             ${_CORROSION_GENERATOR_EXE}
             --cargo ${CARGO_EXECUTABLE}
             ${_CORROSION_VERBOSE_OUTPUT_FLAG}
-            CACHE INTERNAL "corrosion-generator runner"
+        CACHE INTERNAL "corrosion-generator runner"
     )
 endif()
 
