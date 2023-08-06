@@ -1,8 +1,11 @@
-# Unreleased
+# v0.4.3 (2023-09-09)
 
 ### Fixes
 
 - Fix the PROFILE option with CMake < 3.19 [#427]
+- Relax vendor parsing for espressif targets (removes warnings)
+- Fix an issue detecting required link libraries with Rust >= 1.71
+  when the cmake build directory is located in a Cargo workspace.
 
 # 0.4.2 (2023-07-16)
 
