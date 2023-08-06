@@ -49,6 +49,18 @@ jobs:
       os: ubuntu-20.04
       rust: nightly
 
+  test_legacy_new_lockfile_msrv:
+    name: Test MSRV of the new lockfile
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@1.56
+      - name: Test Generator build with MSRV
+        run: cargo build
+        working-directory: generator
+
   test:
     name: Test Corrosion
     runs-on: ${{ matrix.os }}
@@ -326,6 +338,7 @@ jobs:
       - test_legacy_mac
       - test_legacy_windows
       - test_legacy_stable
+      - test_legacy_new_lockfile_msrv
       - test
       - test_msvc
       - test_cxxbridge
