@@ -6,7 +6,7 @@ license = "MIT"
 edition = "2018"
 
 [dependencies]
-cargo_metadata = "0.15"
+cargo_metadata = "0.17"
 serde = { version = " 1.0.186", features = ["derive"] }
 
 [dependencies.clap]
