@@ -19,6 +19,8 @@ const CRATES: &str = "crates";
 const IMPORTED_CRATES: &str = "imported-crates";
 const CRATE_TYPE: &str = "crate-type";
 const PASSTHROUGH_ADD_CARGO_BUILD: &str = "passthrough-acb";
+const BIN_NAMESPACE: &str = "bin_namespace";
+const LIB_NAMESPACE: &str = "lib_namespace";
 
 pub fn subcommand() -> App<'static, 'static> {
     SubCommand::with_name(GEN_CMAKE)
@@ -72,6 +74,18 @@ pub fn subcommand() -> App<'static, 'static> {
                 .value_delimiter(std::char::from_u32(0x1f).unwrap().to_string().as_str())
                 .help("Passthrough arguments to the _add_cargo_build invocation(s) in CMake")
         )
+        .arg(
+            Arg::with_name(BIN_NAMESPACE)
+                .long("bin_namespace")
+                .help("The namespace that bin targets should be placed in in generated CMake")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name(LIB_NAMESPACE)
+                .long("lib_namespace")
+                .help("The namespace that lib targets should be placed in in generated CMake")
+                .takes_value(true),
+        )
 }
 
 pub fn invoke(
@@ -120,6 +134,8 @@ cmake_minimum_required(VERSION 3.15)
                         package.clone(),
                         t.clone(),
                         workspace_manifest_path.clone(),
+                        matches.value_of(BIN_NAMESPACE),
+                        matches.value_of(LIB_NAMESPACE),
                         &crate_kinds,
                     )
                 })
@@ -145,7 +161,10 @@ cmake_minimum_required(VERSION 3.15)
             .unwrap();
     }
     if let Some(imported_crate_list_name) = matches.value_of(IMPORTED_CRATES) {
-        let imported_targets: Vec<_> = targets.iter().map(|target| target.target_name()).collect();
+        let imported_targets: Vec<_> = targets
+            .iter()
+            .map(|target| target.target_name_cmake())
+            .collect();
         let imported_targets_list = imported_targets.join(";");
         writeln!(
             out_file,

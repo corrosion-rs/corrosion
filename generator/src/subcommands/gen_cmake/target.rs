@@ -15,6 +15,7 @@ pub enum CargoTargetType {
 pub struct CargoTarget {
     cargo_package: Rc<cargo_metadata::Package>,
     cargo_target: cargo_metadata::Target,
+    target_name_cmake: String,
     target_type: CargoTargetType,
     workspace_manifest_path: Rc<PathBuf>,
 }
@@ -47,6 +48,8 @@ impl CargoTarget {
         cargo_package: Rc<cargo_metadata::Package>,
         cargo_target: cargo_metadata::Target,
         workspace_manifest_path: Rc<PathBuf>,
+        bin_namespace: Option<&str>,
+        lib_namespace: Option<&str>,
         // If Some, only import crates if the kind variant is given in crate_kinds.
         crate_kinds: &Option<Vec<&str>>,
     ) -> Option<Self> {
@@ -74,16 +77,26 @@ impl CargoTarget {
             return None;
         };
 
+        let target_name_cmake = match (&target_type, bin_namespace, lib_namespace) {
+            (CargoTargetType::Executable, None, _) => cargo_target.name.clone(),
+            (CargoTargetType::Library { .. }, _, None) => cargo_target.name.clone(),
+            (CargoTargetType::Executable, Some(n), _) => format!("{}::{}", n, cargo_target.name),
+            (CargoTargetType::Library { .. }, _, Some(n)) => {
+                format!("{}::{}", n, cargo_target.name)
+            }
+        };
+
         Some(Self {
             cargo_package,
             cargo_target,
+            target_name_cmake,
             target_type,
             workspace_manifest_path,
         })
     }
 
-    pub(crate) fn target_name(&self) -> &str {
-        &self.cargo_target.name
+    pub(crate) fn target_name_cmake(&self) -> &str {
+        &self.target_name_cmake
     }
 
     pub fn emit_cmake_target(
@@ -132,6 +145,7 @@ impl CargoTarget {
                     _corrosion_add_library_target(
                             WORKSPACE_MANIFEST_PATH \"{workspace_manifest_path}\"
                             TARGET_NAME \"{target_name}\"
+                            TARGET_NAME_CMAKE \"{target_name_cmake}\"
                             LIB_KINDS {lib_kinds}
                             OUT_ARCHIVE_OUTPUT_BYPRODUCTS archive_byproducts
                             OUT_SHARED_LIB_BYPRODUCTS shared_lib_byproduct
@@ -145,6 +159,7 @@ impl CargoTarget {
                     ",
                     workspace_manifest_path = ws_manifest,
                     target_name = self.cargo_target.name,
+                    target_name_cmake = self.target_name_cmake,
                     lib_kinds = lib_kinds,
                 )?;
             }
@@ -152,7 +167,7 @@ impl CargoTarget {
                 writeln!(
                     out_file,
                     "
-                    _corrosion_add_bin_target(\"{workspace_manifest_path}\" \"{target_name}\"
+                    _corrosion_add_bin_target(\"{workspace_manifest_path}\" \"{target_name}\" \"{target_name_cmake}\"
                         bin_byproduct pdb_byproduct
                     )
                     set(byproducts \"\")
@@ -160,6 +175,7 @@ impl CargoTarget {
                     ",
                     workspace_manifest_path = ws_manifest,
                     target_name = self.cargo_target.name,
+                    target_name_cmake = self.target_name_cmake,
                 )?;
             }
         };
@@ -171,6 +187,7 @@ impl CargoTarget {
                 cargo_build_out_dir
                 PACKAGE \"{package_name}\"
                 TARGET \"{target_name}\"
+                TARGET_NAME_CMAKE \"{target_name_cmake}\"
                 MANIFEST_PATH \"{package_manifest_path}\"
                 WORKSPACE_MANIFEST_PATH \"{workspace_manifest_path}\"
                 TARGET_KINDS {target_kinds}
@@ -178,28 +195,28 @@ impl CargoTarget {
                 {passthrough_add_cargo_build}
             )
 
-            set_target_properties({target_name} PROPERTIES
+            set_target_properties({target_name_cmake} PROPERTIES
                 INTERFACE_COR_PACKAGE_MANIFEST_PATH \"{package_manifest_path}\"
             )
 
             if(archive_byproducts)
                 _corrosion_copy_byproducts(
-                    {target_name} ARCHIVE_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{archive_byproducts}}\"
+                    {target_name_cmake} ARCHIVE_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{archive_byproducts}}\"
                 )
             endif()
             if(shared_lib_byproduct)
                 _corrosion_copy_byproducts(
-                    {target_name} LIBRARY_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{shared_lib_byproduct}}\"
+                    {target_name_cmake} LIBRARY_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{shared_lib_byproduct}}\"
                 )
             endif()
             if(pdb_byproduct)
                 _corrosion_copy_byproducts(
-                    {target_name} PDB_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{pdb_byproduct}}\"
+                    {target_name_cmake} PDB_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{pdb_byproduct}}\"
                 )
             endif()
             if(bin_byproduct)
                 _corrosion_copy_byproducts(
-                    {target_name} RUNTIME_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{bin_byproduct}}\"
+                    {target_name_cmake} RUNTIME_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{bin_byproduct}}\"
                 )
             endif()
             ",
@@ -209,6 +226,7 @@ impl CargoTarget {
             workspace_manifest_path = ws_manifest,
             target_kinds = target_kinds,
             passthrough_add_cargo_build = passthrough_add_cargo_build,
+            target_name_cmake = self.target_name_cmake,
 
         )?;
         Ok(())

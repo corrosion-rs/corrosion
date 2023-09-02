@@ -1,0 +1,9 @@
+[package]
+name = "mycrate"
+version = "0.1.0"
+edition = "2018"
+description = "descr;\"hello\\"
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+name = "mycrate"

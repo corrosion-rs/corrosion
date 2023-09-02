@@ -44,7 +44,7 @@ endfunction()
 # Add targets (crates) of one package
 function(_generator_add_package_targets)
     set(OPTIONS NO_LINKER_OVERRIDE)
-    set(ONE_VALUE_KEYWORDS WORKSPACE_MANIFEST_PATH PACKAGE_MANIFEST_PATH PACKAGE_NAME PACKAGE_VERSION TARGETS_JSON OUT_CREATED_TARGETS)
+    set(ONE_VALUE_KEYWORDS WORKSPACE_MANIFEST_PATH PACKAGE_MANIFEST_PATH PACKAGE_NAME PACKAGE_VERSION TARGETS_JSON OUT_CREATED_TARGETS BIN_NAMESPACE LIB_NAMESPACE)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES)
     cmake_parse_arguments(PARSE_ARGV 0 GAPT "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
@@ -90,13 +90,21 @@ function(_generator_add_package_targets)
             endif()
         endforeach()
 
-        if(TARGET "${target_name}"
+        if(("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds) AND GAPT_LIB_NAMESPACE)
+            set(target_name_cmake "${GAPT_LIB_NAMESPACE}::${target_name}")
+        elseif(("bin" IN_LIST kinds) AND GAPT_BIN_NAMESPACE)
+            set(target_name_cmake "${GAPT_BIN_NAMESPACE}::${target_name}")
+        else()
+            set(target_name_cmake "${target_name}")
+        endif()
+
+        if(TARGET "${target_name_cmake}"
             AND ("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "bin" IN_LIST kinds)
             )
             message(WARNING "Failed to import Rust crate ${target_name} (kind: `${target_kind}`) because a target "
                 "with the same name already exists. Skipping this target.\n"
                 "Help: If you are importing a package which exposes both a `lib` and "
-                "a `bin` target, please consider explicitly naming the targets in your `Cargo.toml` manifest.\n"
+                "a `bin` target, use the LIB_NAMESPACE and BIN_NAMESPACE options to import them into separate namespaces.\n"
                 "Note: If you have multiple different packages which have targets with the same name, please note that "
                 "this is currently not supported by Corrosion. Feel free to open an issue on Github to request "
                 "supporting this scenario."
@@ -113,6 +121,7 @@ function(_generator_add_package_targets)
             _corrosion_add_library_target(
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 TARGET_NAME "${target_name}"
+                TARGET_NAME_CMAKE "${target_name_cmake}"
                 LIB_KINDS ${kinds}
                 OUT_ARCHIVE_OUTPUT_BYPRODUCTS archive_byproducts
                 OUT_SHARED_LIB_BYPRODUCTS shared_lib_byproduct
@@ -127,6 +136,7 @@ function(_generator_add_package_targets)
                 cargo_build_out_dir
                 PACKAGE ${package_name}
                 TARGET ${target_name}
+                TARGET_NAME_CMAKE "${target_name_cmake}"
                 MANIFEST_PATH "${manifest_path}"
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 TARGET_KINDS "${kinds}"
@@ -136,25 +146,25 @@ function(_generator_add_package_targets)
             )
             if(archive_byproducts)
                 _corrosion_copy_byproducts(
-                    ${target_name} ARCHIVE_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${archive_byproducts}"
+                    ${target_name_cmake} ARCHIVE_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${archive_byproducts}"
                 )
             endif()
             if(shared_lib_byproduct)
                 _corrosion_copy_byproducts(
-                    ${target_name} LIBRARY_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${shared_lib_byproduct}"
+                    ${target_name_cmake} LIBRARY_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${shared_lib_byproduct}"
                 )
             endif()
             if(pdb_byproduct)
                 _corrosion_copy_byproducts(
-                    ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                    ${target_name_cmake} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
                 )
             endif()
-            list(APPEND corrosion_targets ${target_name})
+            list(APPEND corrosion_targets ${target_name_cmake})
         # Note: "bin" is mutually exclusive with "staticlib/cdylib", since `bin`s are seperate crates from libraries.
         elseif("bin" IN_LIST kinds)
             set(bin_byproduct "")
             set(pdb_byproduct "")
-            _corrosion_add_bin_target("${workspace_manifest_path}" "${target_name}"
+                _corrosion_add_bin_target("${workspace_manifest_path}" "${target_name}" "${target_name_cmake}"
                 "bin_byproduct" "pdb_byproduct"
             )
 
@@ -166,6 +176,7 @@ function(_generator_add_package_targets)
                 cargo_build_out_dir
                 PACKAGE "${package_name}"
                 TARGET "${target_name}"
+                TARGET_NAME_CMAKE "${target_name_cmake}"
                 MANIFEST_PATH "${manifest_path}"
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 TARGET_KINDS "bin"
@@ -174,14 +185,14 @@ function(_generator_add_package_targets)
                 ${no_linker_override}
             )
             _corrosion_copy_byproducts(
-                    ${target_name} RUNTIME_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${bin_byproduct}"
+                    ${target_name_cmake} RUNTIME_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${bin_byproduct}"
             )
             if(pdb_byproduct)
                 _corrosion_copy_byproducts(
-                        ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                        ${target_name_cmake} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
                 )
             endif()
-            list(APPEND corrosion_targets ${target_name})
+            list(APPEND corrosion_targets ${target_name_cmake})
         else()
             # ignore other kinds (like examples, tests, build scripts, ...)
         endif()
@@ -200,7 +211,7 @@ endfunction()
 # `MANIFEST_PATH`.
 function(_generator_add_cargo_targets)
     set(options NO_LINKER_OVERRIDE)
-    set(one_value_args MANIFEST_PATH IMPORTED_CRATES)
+    set(one_value_args MANIFEST_PATH IMPORTED_CRATES BIN_NAMESPACE LIB_NAMESPACE)
     set(multi_value_args CRATES CRATE_TYPES)
     cmake_parse_arguments(
         GGC
@@ -213,6 +224,8 @@ function(_generator_add_cargo_targets)
 
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GGC no_linker_override)
     _corrosion_arg_passthrough_helper(CRATE_TYPES GGC crate_types)
+    _corrosion_arg_passthrough_helper(BIN_NAMESPACE GGC bin_namespace)
+    _corrosion_arg_passthrough_helper(LIB_NAMESPACE GGC lib_namespace)
 
     _cargo_metadata(json "${GGC_MANIFEST_PATH}")
     string(JSON packages GET "${json}" "packages")
@@ -272,6 +285,8 @@ function(_generator_add_cargo_targets)
             OUT_CREATED_TARGETS curr_created_targets
             ${no_linker_override}
             ${crate_types}
+            ${bin_namespace}
+            ${lib_namespace}
         )
         list(APPEND created_targets "${curr_created_targets}")
     endforeach()
