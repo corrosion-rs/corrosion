@@ -9,58 +9,6 @@ on:
       - 'stable/**'
 jobs:
 
-  test_legacy_linux:
-    name: Test Corrosion (CMake 3.15)
-    uses: ./.github/workflows/test_legacy.yaml
-    with :
-      os: ubuntu-20.04
-      rust: 1.46.0
-  test_legacy_mac:
-    name: Test Corrosion (CMake 3.15)
-    uses: ./.github/workflows/test_legacy.yaml
-    with:
-      os: macos-12
-      rust: 1.54.0
-  test_legacy_windows:
-    name: Test Corrosion (CMake 3.15)
-    uses: ./.github/workflows/test_legacy.yaml
-    with:
-      os: windows-2019
-      rust: 1.46.0
-
-  test_legacy_stable:
-    name: Legacy CMake + stable Rust
-    uses: ./.github/workflows/test_legacy.yaml
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - windows-2019 # windows-latest is currently not having a supported MSVC compiler
-          - ubuntu-20.04
-          - macos-12
-    with:
-      os: ${{ matrix.os }}
-      rust: stable
-
-  test_legacy_nightly:
-    name: Legacy CMake + nightly Rust
-    uses: ./.github/workflows/test_legacy.yaml
-    with:
-      os: ubuntu-20.04
-      rust: nightly
-
-  test_legacy_new_lockfile_msrv:
-    name: Test MSRV of the new lockfile
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Rust
-        id: install_rust
-        uses: dtolnay/rust-toolchain@1.56
-      - name: Test Generator build with MSRV
-        run: cargo build
-        working-directory: generator
-
   test:
     name: Test Corrosion
     runs-on: ${{ matrix.os }}
@@ -82,35 +30,34 @@ jobs:
           - darwin
           - msvc
         cmake:
-          - 3.19.0
+          - 3.22.0
         rust:
-          # Our MSRV is already tested with the legacy generator, so just test the current stable rust here.
-          - stable
+          - "stable"
         generator:
           - default # This is just whatever the platform default is
           - ninja
         compiler: [default]
         include:
           - rust: nightly
-            cmake: 3.19.0
+            cmake: 3.22.0
             generator: ninja
             arch: x86_64
             abi: msvc
             os: windows-2019
           - rust: nightly
-            cmake: 3.19.0
+            cmake: 3.22.0
             generator: ninja
             arch: x86_64
             abi: gnu
             os: ubuntu-latest
           - rust: nightly
-            cmake: 3.19.0
+            cmake: 3.22.0
             generator: ninja
             arch: x86_64
             abi: darwin
             os: macos-12
           - rust: 1.54
-            cmake: 3.19.0
+            cmake: 3.22.0
             generator: ninja
             arch: x86_64
             abi: msvc
@@ -119,7 +66,7 @@ jobs:
           - os: ubuntu-latest
             arch: x86_64
             abi: gnu
-            cmake: 3.20.0
+            cmake: 3.22.0
             rust: 1.54
             generator: ninja-multiconfig
 
@@ -199,9 +146,9 @@ jobs:
           - arch: x86_64
             rust: 1.46.0
           - os: windows-2019
-            cmake: 3.20.6  # Multi-config Generators require at least CMake 3.20
+            cmake: 3.22.0  # Multi-config Generators require at least CMake 3.20
           - os: windows-2022
-            cmake: 3.21.5 # VS on windows-2022 requires at least CMake 3.21
+            cmake: 3.22.0
 
     steps:
       - uses: actions/checkout@v3
@@ -259,7 +206,7 @@ jobs:
         uses: "./.github/actions/setup_test"
         with:
           target_arch: x86_64
-          cmake: 3.15.7
+          cmake: 3.22.0
           rust: stable minus 2 releases
           abi: ${{ matrix.abi }}
           generator: ninja
@@ -290,7 +237,7 @@ jobs:
       - name: Install CMake
         uses: corrosion-rs/install-cmake@v2
         with:
-          cmake: 3.18.0
+          cmake: 3.22.0
           ninja: 1.10.0
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -334,11 +281,6 @@ jobs:
     name: bors-ci-status
     if: ${{ always() }}
     needs:
-      - test_legacy_linux
-      - test_legacy_mac
-      - test_legacy_windows
-      - test_legacy_stable
-      - test_legacy_new_lockfile_msrv
       - test
       - test_msvc
       - test_cxxbridge

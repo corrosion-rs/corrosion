@@ -90,25 +90,15 @@ them **before** `find_package(Corrosion REQUIRED)`.
 - `Rust_CARGO_TARGET:STRING` - The default target triple to build for. Alter for cross-compiling.
   Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
   the default target triple reported by `${Rust_COMPILER} --version --verbose`.
-- `CORROSION_NATIVE_TOOLING:BOOL` - Use a native tool (written in Rust) as part of Corrosion. This
-  option increases the configure-time significantly unless Corrosion is installed.
-  Default: `OFF` if CMake >= 3.19.0. Forced `ON` for CMake < 3.19.
+
 
 
 #### Developer/Maintainer Options
 These options are not used in the course of normal Corrosion usage, but are used to configure how
 Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.
 
-- `CORROSION_DEV_MODE:BOOL` - Indicates that Corrosion is being actively developed. Default: `OFF`
-  if Corrosion is a subdirectory, `ON` if it is the top-level project
 - `CORROSION_BUILD_TESTS:BOOL` - Build the Corrosion tests. Default: `Off` if Corrosion is a
   subdirectory, `ON` if it is the top-level project
-- `CORROSION_GENERATOR_EXECUTABLE:STRING` - Specify a path to the corrosion-generator executable.
-  This is to support scenarios where it's easier to build corrosion-generator outside of the normal
-  bootstrap path, such as in the case of package managers that make it very easy to import Rust
-  crates for fully reproducible, offline builds.
-- `CORROSION_INSTALL_EXECUTABLE:BOOL` - Controls whether corrosion-generator is installed with the
-  package. Default: `ON` with `CORROSION_GENERATOR_EXECUTABLE` unset, otherwise `OFF`
 
 
 ### Information provided by Corrosion
@@ -295,14 +285,14 @@ cmake -S. -Bbuild-android-arm64 -GNinja -DCMAKE_SYSTEM_NAME=Android \
 
 **Important note:** The Android SDK ships with CMake 3.10 at newest, which Android Studio will
 prefer over any CMake you've installed locally. CMake 3.10 is insufficient for using Corrosion,
-which requires a minimum of CMake 3.15. If you're using Android Studio to build your project,
+which requires a minimum of CMake 3.22. If you're using Android Studio to build your project,
 follow the instructions in the Android Studio documentation for
 [using a specific version of CMake](https://developer.android.com/studio/projects/install-ndk#vanilla_cmake).
 
 
 ### CMake `OUTPUT_DIRECTORY` target properties and `IMPORTED_LOCATION`
 
-Corrosion respects the following `OUTPUT_DIRECTORY` target properties on CMake >= 3.19:
+Corrosion respects the following `OUTPUT_DIRECTORY` target properties:
 -   [ARCHIVE_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/ARCHIVE_OUTPUT_DIRECTORY.html)
 -   [LIBRARY_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/LIBRARY_OUTPUT_DIRECTORY.html)
 -   [RUNTIME_OUTPUT_DIRECTORY](https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html)

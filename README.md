@@ -38,3 +38,13 @@ add_executable(your_cpp_bin main.cpp)
 target_link_libraries(your_cpp_bin PUBLIC rust-lib)
 ```
 
+## Requirements
+
+### Stable v0.4 Release
+
+- CMake 3.15 or newer. Some features may only be available on more recents CMake versions
+- Rust 1.46 or newer. Some platforms / features may require more recent Rust versions
+
+### Development (master branch)
+
+- CMake 3.22 or newer

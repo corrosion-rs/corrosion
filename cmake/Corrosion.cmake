@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 
 list(APPEND CMAKE_MESSAGE_CONTEXT "Corrosion")
 
@@ -10,14 +10,8 @@ get_cmake_property(COR_IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
 set(COR_IS_MULTI_CONFIG "${COR_IS_MULTI_CONFIG}" CACHE BOOL "Do not change this" FORCE)
 mark_as_advanced(FORCE COR_IS_MULTI_CONFIG)
 
-if (COR_IS_MULTI_CONFIG AND CMAKE_VERSION VERSION_LESS 3.20.0)
-    message(FATAL_ERROR "Corrosion requires at least CMake 3.20 with Multi-Config Generators such as "
-        "\"Ninja Multi-Config\" or Visual Studio. "
-        "Please use a different generator or update to cmake >= 3.20.\n"
-        "Note: You are using CMake ${CMAKE_VERSION} (Path: `${CMAKE_COMMAND}`) with "
-        " the `${CMAKE_GENERATOR}` Generator."
-    )
-elseif(NOT COR_IS_MULTI_CONFIG AND DEFINED CMAKE_CONFIGURATION_TYPES)
+
+if(NOT COR_IS_MULTI_CONFIG AND DEFINED CMAKE_CONFIGURATION_TYPES)
     message(WARNING "The Generator is ${CMAKE_GENERATOR}, which is not a multi-config "
         "Generator, but CMAKE_CONFIGURATION_TYPES is set. Please don't set "
         "CMAKE_CONFIGURATION_TYPES unless you are using a multi-config Generator."
@@ -93,9 +87,7 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio"
             " causes the build to fail. Please upgrade your Rust version to 1.54 or newer.")
 endif()
 
-if (NOT TARGET Corrosion::Generator)
-    message(STATUS "Using Corrosion as a subdirectory")
-endif()
+#    message(STATUS "Using Corrosion as a subdirectory")
 
 get_property(
     RUSTC_EXECUTABLE
@@ -555,9 +547,7 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
 endfunction()
 
 
-if (NOT CORROSION_NATIVE_TOOLING)
-    include(CorrosionGenerator)
-endif()
+include(CorrosionGenerator)
 
 # Note: `cmake_language(GET_MESSAGE_LOG_LEVEL <output_variable>)` requires CMake 3.25,
 # so we offer our own option to control verbosity of downstream commands (e.g. cargo build)
@@ -566,25 +556,6 @@ if (CORROSION_VERBOSE_OUTPUT)
 else()
     # We want to silence some less important commands by default.
     set(_CORROSION_QUIET_OUTPUT_FLAG --quiet)
-endif()
-
-if(CORROSION_NATIVE_TOOLING)
-    if (NOT TARGET Corrosion::Generator )
-        add_subdirectory(generator)
-    endif()
-    get_property(
-        _CORROSION_GENERATOR_EXE
-        TARGET Corrosion::Generator PROPERTY IMPORTED_LOCATION
-    )
-    set(
-        _CORROSION_GENERATOR
-        ${CMAKE_COMMAND} -E env
-            CARGO_BUILD_RUSTC=${RUSTC_EXECUTABLE}
-            ${_CORROSION_GENERATOR_EXE}
-            --cargo ${CARGO_EXECUTABLE}
-            ${_CORROSION_VERBOSE_OUTPUT_FLAG}
-        CACHE INTERNAL "corrosion-generator runner"
-    )
 endif()
 
 set(_CORROSION_CARGO_VERSION ${Rust_CARGO_VERSION} CACHE INTERNAL "cargo version used by corrosion")
@@ -607,19 +578,11 @@ set(_CORROSION_RUST_CARGO_TARGET_UPPER
 # immediately, we are using a different property name depending on the CMake version. However users avoid using
 # any of the properties directly, as they are no longer part of the public API and are to be considered deprecated.
 # Instead use the corrosion_set_... functions as documented in the Readme.
-if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.19.0)
-    set(_CORR_PROP_FEATURES CORROSION_FEATURES CACHE INTERNAL "")
-    set(_CORR_PROP_ALL_FEATURES CORROSION_ALL_FEATURES CACHE INTERNAL "")
-    set(_CORR_PROP_NO_DEFAULT_FEATURES CORROSION_NO_DEFAULT_FEATURES CACHE INTERNAL "")
-    set(_CORR_PROP_ENV_VARS CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
-    set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
-else()
-    set(_CORR_PROP_FEATURES INTERFACE_CORROSION_FEATURES CACHE INTERNAL "")
-    set(_CORR_PROP_ALL_FEATURES INTERFACE_CORROSION_ALL_FEATURES CACHE INTERNAL "")
-    set(_CORR_PROP_NO_DEFAULT_FEATURES INTERFACE_NO_DEFAULT_FEATURES CACHE INTERNAL "")
-    set(_CORR_PROP_ENV_VARS INTERFACE_CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
-    set(_CORR_PROP_HOST_BUILD INTERFACE_CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
-endif()
+set(_CORR_PROP_FEATURES CORROSION_FEATURES CACHE INTERNAL "")
+set(_CORR_PROP_ALL_FEATURES CORROSION_ALL_FEATURES CACHE INTERNAL "")
+set(_CORR_PROP_NO_DEFAULT_FEATURES CORROSION_NO_DEFAULT_FEATURES CACHE INTERNAL "")
+set(_CORR_PROP_ENV_VARS CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
+set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
 
 # Add custom command to build one target in a package (crate)
 #
@@ -998,67 +961,17 @@ function(corrosion_import_crate)
     endif()
 
     set(imported_crates "")
-    if (CORROSION_NATIVE_TOOLING)
-        get_filename_component(manifest_directory "${COR_MANIFEST_PATH}" DIRECTORY)
-        get_filename_component(toml_dir_name ${manifest_directory} NAME)
 
-        set(
-            generated_cmake
-            "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/corrosion/${toml_dir_name}.dir/cargo-build.cmake"
-        )
-
-        if (CMAKE_VS_PLATFORM_NAME)
-            set (_CORROSION_CONFIGURATION_ROOT --configuration-root ${CMAKE_VS_PLATFORM_NAME})
-        endif()
-
-        set(crates_args)
-        foreach(crate ${COR_CRATES})
-            list(APPEND crates_args --crates ${crate})
-        endforeach()
-        if(DEFINED COR_CRATE_TYPES)
-            set(crate_types "--crate-type=${COR_CRATE_TYPES}")
-        endif()
-
-        list(APPEND passthrough_to_acb_args ${no_linker_override})
-        if(passthrough_to_acb_args)
-            # 31 == 0x1f
-            string(ASCII 31 unit_seperator)
-            list(JOIN passthrough_to_acb_args "${unit_seperator}" joined_args)
-            set(passthrough_to_acb "--passthrough-acb=${joined_args}")
-        endif()
-
-        execute_process(
-            COMMAND
-                ${_CORROSION_GENERATOR}
-                    --manifest-path ${COR_MANIFEST_PATH}
-                    gen-cmake
-                        ${_CORROSION_CONFIGURATION_ROOT}
-                        ${crates_args}
-                        ${crate_types}
-                        ${cargo_profile_native_generator}
-                        --imported-crates=imported_crates
-                        ${passthrough_to_acb}
-                        -o ${generated_cmake}
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            RESULT_VARIABLE ret)
-
-        if (NOT ret EQUAL "0")
-            message(FATAL_ERROR "corrosion-generator failed")
-        endif()
-
-        include(${generated_cmake})
-    else()
-        _generator_add_cargo_targets(
-            MANIFEST_PATH
-                "${COR_MANIFEST_PATH}"
-            IMPORTED_CRATES
-                imported_crates
-            ${crate_allowlist}
-            ${crate_types}
-            ${cargo_profile}
-            ${no_linker_override}
-        )
-    endif()
+    _generator_add_cargo_targets(
+        MANIFEST_PATH
+            "${COR_MANIFEST_PATH}"
+        IMPORTED_CRATES
+            imported_crates
+        ${crate_allowlist}
+        ${crate_types}
+        ${cargo_profile}
+        ${no_linker_override}
+    )
 
     # Not target props yet:
     # NO_STD
@@ -1080,11 +993,6 @@ function(corrosion_import_crate)
     if(DEFINED COR_IMPORTED_CRATES)
         set(${COR_IMPORTED_CRATES} ${imported_crates} PARENT_SCOPE)
     endif()
-endfunction()
-
-function(corrosion_set_linker_language target_name language)
-    message(FATAL_ERROR "corrosion_set_linker_language was deprecated and removed."
-            "Please use corrosion_set_linker and set a specific linker.")
 endfunction()
 
 function(corrosion_set_linker target_name linker)
