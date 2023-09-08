@@ -137,6 +137,22 @@ function(_corrosion_set_imported_location_legacy target_name base_property filen
         )
 endfunction()
 
+
+# Sets out_var to true if the byproduct copying and imported location is done in a deferred
+# manner to respect target properties, etc. that may be set later.
+function(_corrosion_determine_deferred_byproduct_copying_and_import_location_handling out_var)
+    set(${out_var} ${CORROSION_RESPECT_OUTPUT_DIRECTORY} PARENT_SCOPE)
+endfunction()
+
+function(_corrosion_bin_target_suffix target_name out_var_suffix)
+    get_target_property(hostbuild "${target_name}" ${_CORR_PROP_HOST_BUILD})
+    if(hostbuild AND CMAKE_HOST_WIN32)
+        set(${out_var_suffix} ".exe" PARENT_SCOPE)
+    elseif(Rust_CARGO_TARGET_OS STREQUAL "windows")
+        set(${out_var_suffix} ".exe" PARENT_SCOPE)
+    endif()
+endfunction()
+
 # Do not call this function directly!
 #
 # This function should be called deferred to evaluate target properties late in the configure stage.
@@ -150,6 +166,16 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         set(output_dir_prop_target_name "${CMAKE_MATCH_1}")
     else()
         set(output_dir_prop_target_name "${target_name}")
+    endif()
+
+    # Append .exe suffix for executable by-products if the target is windows or if it's a host
+    # build and the host is Windows.
+    get_target_property(target_type ${target_name} TYPE)
+    if(${target_type} STREQUAL "EXECUTABLE")
+        _corrosion_bin_target_suffix(${target_name} "suffix")
+        if(suffix)
+            set(filename "${filename}${suffix}")
+        endif()
     endif()
 
     get_target_property(output_directory "${output_dir_prop_target_name}" "${output_directory_property}")
@@ -228,7 +254,8 @@ endfunction()
 #    artifact.
 # - filename of the artifact.
 function(_corrosion_set_imported_location target_name base_property output_directory_property filename)
-    if(CORROSION_RESPECT_OUTPUT_DIRECTORY)
+    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
+    if(defer)
         _corrosion_call_set_imported_location_deferred("${target_name}" "${base_property}" "${output_directory_property}" "${filename}")
     else()
         _corrosion_set_imported_location_legacy("${target_name}" "${base_property}" "${filename}")
@@ -302,6 +329,17 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
         endif()
     endif()
 
+    # Append .exe suffix for executable by-products if the target is windows or if it's a host
+    # build and the host is Windows.
+    get_target_property(target_type ${target_name} TYPE)
+    if(${target_type} STREQUAL "EXECUTABLE")
+        _corrosion_bin_target_suffix(${target_name} "suffix")
+        if(suffix)
+            set(tmp_file_names "${file_names}")
+            list(TRANSFORM tmp_file_names APPEND "${suffix}" OUTPUT_VARIABLE file_names)
+        endif()
+    endif()
+
     list(TRANSFORM file_names PREPEND "${cargo_build_dir}/" OUTPUT_VARIABLE src_file_names)
     list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
@@ -343,7 +381,8 @@ endfunction()
 # - cargo_build_dir: the directory cargo build places it's output artifacts in.
 # - filenames: the file names of any output artifacts as a list.
 function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir filenames)
-    if(CORROSION_RESPECT_OUTPUT_DIRECTORY)
+    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
+    if(defer)
         _corrosion_call_copy_byproduct_deferred("${target_name}" "${output_dir_prop_name}" "${cargo_build_dir}" "${filenames}")
     else()
         _corrosion_copy_byproduct_legacy("${target_name}" "${cargo_build_dir}" "${filenames}")
@@ -528,10 +567,15 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
         set(${out_pdb_byproduct} "${pdb_name}" PARENT_SCOPE)
     endif()
 
-    if(Rust_CARGO_TARGET_OS STREQUAL "windows")
-        set(bin_filename "${bin_name}.exe")
+    set(bin_filename "${bin_name}")
+    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
+    if(defer)
+        # .exe suffix will be added later, also depending on possible hostbuild
+        # target property
     else()
-        set(bin_filename "${bin_name}")
+        if(Rust_CARGO_TARGET_OS STREQUAL "windows")
+            set(bin_filename "${bin_name}.exe")
+        endif()
     endif()
     set(${out_bin_byproduct} "${bin_filename}" PARENT_SCOPE)
 
