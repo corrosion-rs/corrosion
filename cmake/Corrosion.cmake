@@ -283,7 +283,7 @@ function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names
     )
 endfunction()
 
-function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names)
+function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names is_binary)
     if(ARGN)
         message(FATAL_ERROR "Unexpected additional arguments")
     endif()
@@ -323,8 +323,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
 
     # Append .exe suffix for executable by-products if the target is windows or if it's a host
     # build and the host is Windows.
-    get_target_property(target_type ${target_name} TYPE)
-    if(${target_type} STREQUAL "EXECUTABLE")
+    if(${is_binary})
         _corrosion_bin_target_suffix(${target_name} "suffix")
         if(suffix)
             set(tmp_file_names "${file_names}")
@@ -351,7 +350,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
     )
 endfunction()
 
-function(_corrosion_call_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names)
+function(_corrosion_call_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names is_binary)
     cmake_language(EVAL CODE "
         cmake_language(DEFER
             CALL
@@ -360,6 +359,7 @@ function(_corrosion_call_copy_byproduct_deferred target_name output_dir_prop_nam
             [[${output_dir_prop_name}]]
             [[${cargo_build_dir}]]
             [[${file_names}]]
+            [[${is_binary}]]
         )
     ")
 endfunction()
@@ -372,10 +372,11 @@ endfunction()
 #   `RUNTIME_OUTPUT_DIRECTORY`)
 # - cargo_build_dir: the directory cargo build places it's output artifacts in.
 # - filenames: the file names of any output artifacts as a list.
-function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir filenames)
+# - is_binary: TRUE if the byproducts are program executables.
+function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir filenames is_binary)
     _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
     if(defer)
-        _corrosion_call_copy_byproduct_deferred("${target_name}" "${output_dir_prop_name}" "${cargo_build_dir}" "${filenames}")
+        _corrosion_call_copy_byproduct_deferred("${target_name}" "${output_dir_prop_name}" "${cargo_build_dir}" "${filenames}" "${is_binary}")
     else()
         _corrosion_copy_byproduct_legacy("${target_name}" "${cargo_build_dir}" "${filenames}")
     endif()
