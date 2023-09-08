@@ -97,10 +97,6 @@ function(corrosion_tests_add_test test_name bin_names)
     if(CMAKE_GENERATOR_PLATFORM)
         set(TEST_GENERATOR_PLATFORM "GENERATOR_PLATFORM" "${CMAKE_GENERATOR_PLATFORM}")
     endif()
-    if(CORROSION_GENERATOR_EXECUTABLE)
-        # Mainly used in CI to build the native generator once and then reuse it for all tests
-        set(TEST_GENERATOR_BIN EXTERNAL_CORROSION_GENERATOR "${CORROSION_GENERATOR_EXECUTABLE}")
-    endif()
     if(CMAKE_CROSSCOMPILING)
         set(TEST_SYSTEM_NAME SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
     endif()
@@ -118,7 +114,6 @@ function(corrosion_tests_add_test test_name bin_names)
             "${TEST_C_COMPILER}"
             "${TEST_CXX_COMPILER}"
             "${TEST_GENERATOR_PLATFORM}"
-            "${TEST_GENERATOR_BIN}"
             ${pass_through_arguments}
 
             COMMAND_EXPAND_LISTS
@@ -169,7 +164,6 @@ add_subdirectory(custom_profiles)
 add_subdirectory(cbindgen)
 add_subdirectory(cxxbridge)
 add_subdirectory(envvar)
-add_subdirectory(external_corrosion_generator)
 add_subdirectory(features)
 add_subdirectory(find_rust)
 add_subdirectory(gensource)

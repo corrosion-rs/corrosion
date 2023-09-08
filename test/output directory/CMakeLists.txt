@@ -1,7 +1,3 @@
-if(CMAKE_VERSION VERSION_LESS 3.19.0)
-    return()
-endif()
-
 if(CMAKE_C_COMPILER)
     set(TEST_C_COMPILER "C_COMPILER" "${CMAKE_C_COMPILER}")
 endif()

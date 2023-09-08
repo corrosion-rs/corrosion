@@ -1,3 +1,10 @@
+# Unreleased
+
+### Breaking Changes
+
+- The master branch of corrosion now requires CMake 3.22. See also the 
+  [v0.4.0 Release notes](#040-lts-2023-06-01) for more details.
+
 # v0.4.3 (2023-09-09)
 
 ### Fixes

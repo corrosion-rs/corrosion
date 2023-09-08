@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 project(Corrosion
     # Official releases will be major.minor.patch. When the `tweak` field is
     # set it indicates that we are on a commit, that is not a officially
     # tagged release. Users don't need to care about this, it is mainly to
     # clearly see in configure logs which version was used, without needing to
     # rely on `git`, since Corrosion may be installed or otherwise packaged.
-    VERSION 0.4.3
+    VERSION 0.4.99.99 # a 0.5-pre-release
     LANGUAGES NONE
     HOMEPAGE_URL "https://corrosion-rs.github.io/corrosion/"
 )
@@ -23,12 +23,6 @@ endif()
 # ==== Corrosion Configuration ====
 
 option(
-    CORROSION_DEV_MODE
-    "Enables some additional features if you're developing Corrosion"
-    ${_CORROSION_TOP_LEVEL}
-)
-
-option(
     CORROSION_BUILD_TESTS
     "Build Corrosion test project"
     ${_CORROSION_TOP_LEVEL}
@@ -39,24 +33,17 @@ set(
   "Use prebuilt, non-bootstrapped corrosion-generator")
 mark_as_advanced(CORROSION_GENERATOR_EXECUTABLE)
 
-if (CORROSION_GENERATOR_EXECUTABLE)
-    add_executable(Corrosion::Generator IMPORTED GLOBAL)
-    set_property(
-        TARGET Corrosion::Generator
-        PROPERTY IMPORTED_LOCATION ${CORROSION_GENERATOR_EXECUTABLE})
-    set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
-elseif(CORROSION_NATIVE_TOOLING OR CMAKE_VERSION VERSION_LESS 3.19.0)
-        set(CORROSION_INSTALL_EXECUTABLE_DEFAULT "ON")
-else()
-    set(CORROSION_INSTALL_EXECUTABLE_DEFAULT OFF)
-endif()
-
 option(
     CORROSION_INSTALL_EXECUTABLE
     "Controls whether corrosion-generator is installed with the package"
     ${CORROSION_INSTALL_EXECUTABLE_DEFAULT}
 )
 mark_as_advanced(CORROSION_INSTALL_EXECUTABLE)
+
+if (CORROSION_GENERATOR_EXECUTABLE OR CORROSION_INSTALL_EXECUTABLE)
+    message(FATAL_ERROR "The Cache variables CORROSION_GENERATOR_EXECUTABLE CORROSION_INSTALL_EXECUTABLE"
+            " were removed.")
+endif()
 
 if (_CORROSION_TOP_LEVEL)
     # We need to enable a language for corrosions test to work.
@@ -86,18 +73,6 @@ endif()
 # Installation
 
 include(GNUInstallDirs)
-
-if(CORROSION_INSTALL_EXECUTABLE)
-    get_property(
-            _CORROSION_GENERATOR_EXE
-            TARGET Corrosion::Generator PROPERTY IMPORTED_LOCATION
-    )
-    install(PROGRAMS "${_CORROSION_GENERATOR_EXE}" DESTINATION "${CMAKE_INSTALL_FULL_LIBEXECDIR}")
-else()
-    message(DEBUG "Not installing corrosion-generator since "
-        "`CORROSION_INSTALL_EXECUTABLE` is set to ${CORROSION_INSTALL_EXECUTABLE}"
-    )
-endif()
 
 # Generate the Config file
 include(CMakePackageConfigHelpers)
