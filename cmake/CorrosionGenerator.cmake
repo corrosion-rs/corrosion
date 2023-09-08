@@ -136,17 +136,17 @@ function(_generator_add_package_targets)
             )
             if(archive_byproducts)
                 _corrosion_copy_byproducts(
-                    ${target_name} ARCHIVE_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${archive_byproducts}"
+                    ${target_name} ARCHIVE_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${archive_byproducts}" FALSE
                 )
             endif()
             if(shared_lib_byproduct)
                 _corrosion_copy_byproducts(
-                    ${target_name} LIBRARY_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${shared_lib_byproduct}"
+                    ${target_name} LIBRARY_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${shared_lib_byproduct}" FALSE
                 )
             endif()
             if(pdb_byproduct)
                 _corrosion_copy_byproducts(
-                    ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                    ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}" FALSE
                 )
             endif()
             list(APPEND corrosion_targets ${target_name})
@@ -174,11 +174,11 @@ function(_generator_add_package_targets)
                 ${no_linker_override}
             )
             _corrosion_copy_byproducts(
-                    ${target_name} RUNTIME_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${bin_byproduct}"
+                    ${target_name} RUNTIME_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${bin_byproduct}" TRUE
             )
             if(pdb_byproduct)
                 _corrosion_copy_byproducts(
-                        ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                        ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}" FALSE
                 )
             endif()
             list(APPEND corrosion_targets ${target_name})
