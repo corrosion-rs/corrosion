@@ -41,8 +41,6 @@ jobs:
         with:
           path: stable-v0.4
           ref: 'stable/v0.4'
-      - name: Copy documentation for v0.4 into mdbook subdirectory
-        run: mkdir main/doc/v0.4 && cp -r stable-v0.4/doc/src/ main/doc/v0.4
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Build mdbook for main branch
@@ -68,7 +66,9 @@ jobs:
           cp highlightjs/build/highlight.min.js main/doc/book/highlight.js
           cp highlightjs/build/highlight.min.js stable-v0.4/doc/book/highlight.js
       - name: Copy stable doc into main
-        run: mkdir main/doc/book/v0.4 && cp -r stable-v0.4/doc/book/ main/doc/book/v0.4
+        run: mkdir main/doc/book/v0.4 && cp -a stable-v0.4/doc/book/. main/doc/book/v0.4/
+      - name: Debug print
+        run: ls -la main/doc/book/v0.4
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
