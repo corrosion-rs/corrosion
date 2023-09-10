@@ -18,15 +18,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Build and deploy the documentation of master and the stable/v0.4 branch
   deploy:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
       - name: Install mdbook
         env:
           MDBOOK_VERSION: 'v0.4.27'
@@ -34,12 +32,27 @@ jobs:
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/${MDBOOK_VERSION}/mdbook-${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
           echo `pwd`/mdbook >> $GITHUB_PATH
-      - name: Build mdbook
-        run: |
-          cd doc
-          mdbook build
+      - name: Checkout master
+        uses: actions/checkout@v4
+        with:
+          path: main
+      - name: Checkout stable/v0.4
+        uses: actions/checkout@v4
+        with:
+          path: stable-v0.4
+          ref: 'stable/v0.4'
+      - name: Copy documentation for v0.4 into mdbook subdirectory
+        run: mkdir main/doc/v0.4 && cp -r stable-v0.4/doc/src/ main/doc/v0.4
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      - name: Build mdbook for main branch
+        working-directory: 'main/doc'
+        run: mdbook build
+      - name: Build mdbook for stable/v0.4 branch
+        working-directory: 'stable-v0.4/doc'
+        run: mdbook build
       # Override mdbooks default highlight.js with a custom version containing CMake support.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'highlightjs/highlight.js'
           # mdbook currently (as of v0.4.27) does not support v11 yet.
@@ -52,11 +65,14 @@ jobs:
         working-directory: highlightjs
       - name: Override highlightjs
         run: |
-          cp highlightjs/build/highlight.min.js doc/book/highlight.js
+          cp highlightjs/build/highlight.min.js main/doc/book/highlight.js
+          cp highlightjs/build/highlight.min.js stable-v0.4/doc/book/highlight.js
+      - name: Copy stable doc into main
+        run: mkdir main/doc/book/v0.4 && cp -r stable-v0.4/doc/book/ main/doc/book/v0.4
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v2
         with:
-          path: 'doc/book'
+          path: 'main/doc/book'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v2
