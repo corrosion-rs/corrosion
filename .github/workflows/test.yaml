@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-2019 # windows-latest is currently not having a supported MSVC compiler
+          - windows-2022
           - ubuntu-latest
           - macos-12
         arch:
@@ -30,7 +30,7 @@ jobs:
           - darwin
           - msvc
         cmake:
-          - 3.22.0
+          - 3.22.6
         rust:
           - "stable"
         generator:
@@ -39,25 +39,25 @@ jobs:
         compiler: [default]
         include:
           - rust: nightly
-            cmake: 3.22.0
+            cmake: 3.22.6
             generator: ninja
             arch: x86_64
             abi: msvc
-            os: windows-2019
+            os: windows-2022
           - rust: nightly
-            cmake: 3.22.0
+            cmake: 3.22.6
             generator: ninja
             arch: x86_64
             abi: gnu
             os: ubuntu-latest
           - rust: nightly
-            cmake: 3.22.0
+            cmake: 3.22.6
             generator: ninja
             arch: x86_64
             abi: darwin
             os: macos-12
           - rust: 1.54
-            cmake: 3.22.0
+            cmake: 3.22.6
             generator: ninja
             arch: x86_64
             abi: msvc
@@ -66,30 +66,30 @@ jobs:
           - os: ubuntu-latest
             arch: x86_64
             abi: gnu
-            cmake: 3.22.0
+            cmake: 3.22.6
             rust: 1.54
             generator: ninja-multiconfig
 
         exclude:
 
           # We have a separate test Matrix for the Visual Studio Generator
-          - os: windows-2019
+          - os: windows-2022
             generator: default # Default generator is Visual Studio
 
           # ARCH
-          - os: windows-2019
+          - os: windows-2022
             arch: i686
             abi: gnu
-          - os: windows-2019
+          - os: windows-2022
             arch: aarch64
             abi: gnu
-          - os: windows-2019
+          - os: windows-2022
             arch: i686
             generator: ninja
-          - os: windows-2019
+          - os: windows-2022
             arch: aarch64
             generator: ninja
-          - os: windows-2019
+          - os: windows-2022
             arch: powerpc64le
           - os: macos-12
             arch: i686
@@ -103,7 +103,7 @@ jobs:
             abi: msvc
           - os: ubuntu-latest
             abi: darwin
-          - os: windows-2019
+          - os: windows-2022
             abi: darwin
           - os: macos-12
             abi: msvc
@@ -111,7 +111,7 @@ jobs:
             abi: gnu
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Environment and Configure CMake
         uses: "./.github/actions/setup_test"
         with:
@@ -146,12 +146,12 @@ jobs:
           - arch: x86_64
             rust: 1.46.0
           - os: windows-2019
-            cmake: 3.22.0  # Multi-config Generators require at least CMake 3.20
+            cmake: 3.22.6
           - os: windows-2022
-            cmake: 3.22.0
+            cmake: 3.22.6
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # The initial configure for MSVC is quite slow, so we cache the build directory
       # (including the build directories of the tests) since reconfiguring is
       # significantly faster.
@@ -182,7 +182,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-2019
+          - windows-2022
           - ubuntu-latest
           - macos-12
         include:
@@ -190,7 +190,7 @@ jobs:
         #  - os: windows-2019
         #    abi: gnu
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/cache@v3
         id: cache_cxxbridge
         with:
@@ -206,7 +206,7 @@ jobs:
         uses: "./.github/actions/setup_test"
         with:
           target_arch: x86_64
-          cmake: 3.22.0
+          cmake: 3.22.6
           rust: stable minus 2 releases
           abi: ${{ matrix.abi }}
           generator: ninja
@@ -237,7 +237,7 @@ jobs:
       - name: Install CMake
         uses: corrosion-rs/install-cmake@v2
         with:
-          cmake: 3.22.0
+          cmake: 3.22.6
           ninja: 1.10.0
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -274,9 +274,9 @@ jobs:
           cd build
           &&
           ctest --output-on-failure -C Release -j 3
-  # We need some "accumulation" job here because bors fails (timeouts) to
-  # listen on matrix builds.
-  # Hence, we have some kind of dummy here that bors can listen on
+
+  # We want an "accumulation" job here because it is easier to specify required
+  # jobs here via needs, then in the github UI, since we use matrix jobs.
   ci-success:
     name: bors-ci-status
     if: ${{ always() }}
