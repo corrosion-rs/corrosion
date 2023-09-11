@@ -19,7 +19,7 @@ jobs:
         os:
           - windows-2022
           - ubuntu-latest
-          - macos-12
+          - macos-13
         arch:
           - x86_64
           - i686
@@ -55,7 +55,7 @@ jobs:
             generator: ninja
             arch: x86_64
             abi: darwin
-            os: macos-12
+            os: macos-13
           - rust: 1.54
             cmake: 3.22.6
             generator: ninja
@@ -91,11 +91,11 @@ jobs:
             generator: ninja
           - os: windows-2022
             arch: powerpc64le
-          - os: macos-12
+          - os: macos-13
             arch: i686
-          - os: macos-12
+          - os: macos-13
             arch: aarch64
-          - os: macos-12
+          - os: macos-13
             arch: powerpc64le
 
           # ABI
@@ -105,9 +105,9 @@ jobs:
             abi: darwin
           - os: windows-2022
             abi: darwin
-          - os: macos-12
+          - os: macos-13
             abi: msvc
-          - os: macos-12
+          - os: macos-13
             abi: gnu
 
     steps:
@@ -184,7 +184,7 @@ jobs:
         os:
           - windows-2022
           - ubuntu-latest
-          - macos-12
+          - macos-13
         include:
           - abi: default
         #  - os: windows-2019
@@ -224,10 +224,10 @@ jobs:
         os:
           - windows-2019
           - ubuntu-latest
-          - macos-12
+          - macos-13
         include:
           - rust: 1.46.0
-          - os: macos-12
+          - os: macos-13
             rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
     steps:
       - uses: actions/checkout@v3
