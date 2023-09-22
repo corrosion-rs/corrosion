@@ -779,7 +779,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # Skip adding the linker argument, if the linker is explicitly set, since the
         # explicit_linker_property will not be set when this function runs.
         # Passing this rustflag is necessary for clang.
-        corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:${explicit_linker_defined}>:${rustflag_linker_arg}>")
+        corrosion_add_target_rustflags("${target_name}" "$<$<NOT:${explicit_linker_defined}>:${rustflag_linker_arg}>")
     endif()
 
     message(DEBUG "TARGET ${target_name} produces byproducts ${byproducts}")
