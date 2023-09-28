@@ -93,6 +93,7 @@ function(_corrosion_parse_target_triple target_triple out_arch out_vendor out_os
         "nvidia"
         "openwrt"
         "alpine"
+        "chimera"
         "unknown"
         "uwp" # aarch64-uwp-windows-msvc
         "wrs" # e.g. aarch64-wrs-vxworks
