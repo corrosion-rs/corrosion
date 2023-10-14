@@ -17,33 +17,50 @@ set(oneValueArgs
     CARGO_TARGET
     C_COMPILER
     CXX_COMPILER
+    C_COMPILER_TARGET
+    CXX_COMPILER_TARGET
     SYSTEM_NAME
     CARGO_PROFILE
+    OSX_ARCHITECTURES
+    TOOLCHAIN_FILE
 )
 set(multiValueArgs "PASS_THROUGH_ARGS")
 cmake_parse_arguments(TEST "${options}" "${oneValueArgs}"
                       "${multiValueArgs}" ${TEST_ARG_LIST} )
 
+set(configure_args "")
 if(TEST_CARGO_TARGET)
-    set(TEST_Rust_CARGO_TARGET "-DRust_CARGO_TARGET=${TEST_CARGO_TARGET}")
+    list(APPEND configure_args "-DRust_CARGO_TARGET=${TEST_CARGO_TARGET}")
 endif()
 if(TEST_USE_INSTALLED_CORROSION)
-    set(TEST_CORROSION_INSTALL "-DCORROSION_TESTS_FIND_CORROSION=ON")
+    list(APPEND configure_args "-DCORROSION_TESTS_FIND_CORROSION=ON")
 endif()
 if(TEST_GENERATOR_PLATFORM)
-    set(TEST_GENERATOR_PLATFORM "-A${TEST_GENERATOR_PLATFORM}")
+    list(APPEND configure_args "-A${TEST_GENERATOR_PLATFORM}")
 endif()
 if(TEST_C_COMPILER)
-    set(TEST_C_COMPILER "-DCMAKE_C_COMPILER=${TEST_C_COMPILER}")
+    list(APPEND configure_args "-DCMAKE_C_COMPILER=${TEST_C_COMPILER}")
 endif()
 if(TEST_CXX_COMPILER)
-    set(TEST_CXX_COMPILER "-DCMAKE_CXX_COMPILER=${TEST_CXX_COMPILER}")
+    list(APPEND configure_args "-DCMAKE_CXX_COMPILER=${TEST_CXX_COMPILER}")
+endif()
+if(TEST_C_COMPILER_TARGET)
+    list(APPEND configure_args "-DCMAKE_C_COMPILER_TARGET=${TEST_C_COMPILER_TARGET}")
+endif()
+if(TEST_CXX_COMPILER_TARGET)
+    list(APPEND configure_args "-DCMAKE_CXX_COMPILER_TARGET=${TEST_CXX_COMPILER_TARGET}")
 endif()
 if(TEST_SYSTEM_NAME)
-    set(TEST_SYSTEM_NAME "-DCMAKE_SYSTEM_NAME=${TEST_SYSTEM_NAME}")
+    list(APPEND configure_args "-DCMAKE_SYSTEM_NAME=${TEST_SYSTEM_NAME}")
+endif()
+if(TEST_OSX_ARCHITECTURES)
+    list(APPEND configure_args "-DCMAKE_OSX_ARCHITECTURES=${TEST_OSX_ARCHITECTURES}")
+endif()
+if(TEST_TOOLCHAIN_FILE)
+    list(APPEND configure_args "-DCMAKE_TOOLCHAIN_FILE=${TEST_TOOLCHAIN_FILE}")
 endif()
 if(TEST_CARGO_PROFILE)
-    set(TEST_CARGO_PROFILE "-DCARGO_PROFILE=${TEST_CARGO_PROFILE}")
+    list(APPEND configure_args "-DCARGO_PROFILE=${TEST_CARGO_PROFILE}")
 endif()
 
 # Remove old binary directory
@@ -59,13 +76,7 @@ execute_process(
             "-G${TEST_GENERATOR}"
             "-DRust_TOOLCHAIN=${TEST_RUST_TOOLCHAIN}"
             --log-level Debug
-            ${TEST_Rust_CARGO_TARGET}
-            ${TEST_CORROSION_INSTALL}
-            ${TEST_GENERATOR_PLATFORM}
-            ${TEST_C_COMPILER}
-            ${TEST_CXX_COMPILER}
-            ${TEST_SYSTEM_NAME}
-            ${TEST_CARGO_PROFILE}
+            ${configure_args}
             ${TEST_PASS_THROUGH_ARGS}
             -S "${TEST_SOURCE_DIR}"
             -B "${TEST_BINARY_DIR}"

@@ -87,18 +87,30 @@ function(corrosion_tests_add_test test_name bin_names)
         set(test_dir "${test_name}")
     endif()
 
-
+    set(configure_cmake_args)
     if(CMAKE_C_COMPILER)
-        set(TEST_C_COMPILER "C_COMPILER" "${CMAKE_C_COMPILER}")
+        list(APPEND configure_cmake_args "C_COMPILER" "${CMAKE_C_COMPILER}")
     endif()
     if(CMAKE_CXX_COMPILER)
-        set(TEST_CXX_COMPILER "CXX_COMPILER" "${CMAKE_CXX_COMPILER}")
+        list(APPEND configure_cmake_args "CXX_COMPILER" "${CMAKE_CXX_COMPILER}")
+    endif()
+    if(CMAKE_C_COMPILER_TARGET)
+        list(APPEND configure_cmake_args "C_COMPILER_TARGET" "${CMAKE_C_COMPILER_TARGET}")
+    endif()
+    if(CMAKE_CXX_COMPILER_TARGET)
+        list(APPEND configure_cmake_args "CXX_COMPILER_TARGET" "${CMAKE_CXX_COMPILER_TARGET}")
     endif()
     if(CMAKE_GENERATOR_PLATFORM)
-        set(TEST_GENERATOR_PLATFORM "GENERATOR_PLATFORM" "${CMAKE_GENERATOR_PLATFORM}")
+        list(APPEND configure_cmake_args "GENERATOR_PLATFORM" "${CMAKE_GENERATOR_PLATFORM}")
     endif()
     if(CMAKE_CROSSCOMPILING)
-        set(TEST_SYSTEM_NAME SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
+        list(APPEND configure_cmake_args SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
+    endif()
+    if(CMAKE_OSX_ARCHITECTURES)
+        list(APPEND configure_cmake_args OSX_ARCHITECTURES "${CMAKE_OSX_ARCHITECTURES}")
+    endif()
+    if(CMAKE_TOOLCHAIN_FILE)
+        list(APPEND configure_cmake_args TOOLCHAIN_FILE "${CMAKE_TOOLCHAIN_FILE}")
     endif()
 
     add_test(NAME "${test_name}_build"
@@ -110,10 +122,7 @@ function(corrosion_tests_add_test test_name bin_names)
             GENERATOR "${CMAKE_GENERATOR}"
             RUST_TOOLCHAIN "${Rust_TOOLCHAIN}"
             CARGO_TARGET "${Rust_CARGO_TARGET}"
-            "${TEST_SYSTEM_NAME}"
-            "${TEST_C_COMPILER}"
-            "${TEST_CXX_COMPILER}"
-            "${TEST_GENERATOR_PLATFORM}"
+            ${configure_cmake_args}
             ${pass_through_arguments}
 
             COMMAND_EXPAND_LISTS
