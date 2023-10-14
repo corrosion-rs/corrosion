@@ -5,6 +5,15 @@
 - The master branch of corrosion now requires CMake 3.22. See also the 
   [v0.4.0 Release notes](#040-lts-2023-06-01) for more details.
 
+# v0.4.4 (2023-10-06)
+
+### Fixes
+
+- Add `chimera` ([#445]) and `unikraft` ([#446]) to the list of known vendors
+
+[#445]: https://github.com/corrosion-rs/corrosion/pull/445
+[#446]: https://github.com/corrosion-rs/corrosion/pull/446
+
 # v0.4.3 (2023-09-09)
 
 ### Fixes
