@@ -73,7 +73,7 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
 endif()
 
 function(corrosion_tests_add_test test_name bin_names)
-    set(options "")
+    set(options "IS_HOSTBUILD")
     set(one_value_kewords "TEST_SRC_DIR")
     set(multi_value_keywords "")
     cmake_parse_arguments(PARSE_ARGV 2 TST "${options}" "${one_value_kewords}" "${multi_value_keywords}")
@@ -141,7 +141,7 @@ function(corrosion_tests_add_test test_name bin_names)
         set_tests_properties("${test_name}_run_${bin}" PROPERTIES FIXTURES_REQUIRED "build_fixture_${test_name}")
         # CMAKE_CROSSCOMPILING is not set when cross-compiling with VS (via -A flag).
         # Todo: We could run x86 binaries on x64 hosts.
-        if(CMAKE_CROSSCOMPILING OR CMAKE_VS_PLATFORM_NAME)
+        if((CMAKE_CROSSCOMPILING OR CMAKE_VS_PLATFORM_NAME) AND NOT "${TST_IS_HOSTBUILD}")
             # Todo: In the future we could potentially run some tests with qemu.
             set_tests_properties("${test_name}_run_${bin}" PROPERTIES DISABLED TRUE)
         endif()
