@@ -143,6 +143,29 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
 
+# For now just test if hostbuild works when cross-compiling on windows.
+# For testing everything we would also need to install a cross-compiler first.
+  windows_cross_hostbuild:
+    name: Test Windows Cross
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CMake
+        uses: corrosion-rs/install-cmake@v2
+        with:
+          cmake: 3.22.6
+          ninja: 1.10.0
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-unknown-linux-gnu
+      - name: Configure
+        run: cmake -S. -Bbuild "-DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}}" -DRust_CARGO_TARGET=aarch64-unknown-linux-gnu
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -R hostbuild
 
   linux_base:
     name: Test Linux (base)
