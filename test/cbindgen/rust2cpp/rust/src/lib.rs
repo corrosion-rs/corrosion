@@ -1,5 +1,8 @@
 pub const MAGIC_NUMBER: u64 = 0xABCD_EFAB;
 
+pub mod ffi;
+pub mod other_mod;
+
 #[derive(Debug)]
 #[repr(C)]
 pub struct Point {

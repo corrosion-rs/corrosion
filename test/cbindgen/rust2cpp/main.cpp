@@ -16,4 +16,7 @@ int main(int argc, char **argv) {
     add_point(&p1, NULL);
     assert(p1.x == 100);
     assert(p1.y == 100);
+
+    assert(OTHER_MOD_MAGIC_NUMBER == 192312312);
+    assert(FFI_MAGIC_NUMBER == 0xFDA00184);
 }

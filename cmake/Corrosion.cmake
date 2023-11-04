@@ -1599,6 +1599,15 @@ between multiple invocations of this function.
 
 [cbindgen]: https://github.com/eqrion/cbindgen
 
+### Current limitations
+
+- Cbindgens (optional) macro expansion feature internally actually builds the crate / runs the build script.
+  For this to work as expected in all cases, we probably need to set all the same environment variables
+  as when corrosion builds the crate. However the crate is a **library**, so we would need to figure out which
+  target builds it - and if there are multiple, potentially generate bindings per-target?
+  Alternatively we could add support of setting some environment variables on rlibs, and pulling that
+  information in when building the actual corrosion targets
+  Alternatively we could restrict corrosions support of this feature to actual imported staticlib/cdylib targets.
 ANCHOR_END: corrosion_cbindgen
 #]=======================================================================]
 function(corrosion_experimental_cbindgen)
@@ -1672,6 +1681,8 @@ function(corrosion_experimental_cbindgen)
     set(corrosion_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated")
     set(generated_dir "${corrosion_generated_dir}/cbindgen/${rust_target}")
     set(header_placement_dir "${generated_dir}/include/")
+    set(depfile_placement_dir "${generated_dir}/depfile")
+    set(generated_depfile "${depfile_placement_dir}/${output_header_name}.d")
     set(generated_header "${header_placement_dir}/${output_header_name}")
     message(STATUS "rust target is ${rust_target}")
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.23")
@@ -1693,29 +1704,32 @@ function(corrosion_experimental_cbindgen)
     # This may be different from $header_placement_dir since the user specified HEADER_NAME may contain
     # relative directories.
     get_filename_component(generated_header_dir "${generated_header}" DIRECTORY)
-    file(MAKE_DIRECTORY ${generated_header_dir})
+    file(MAKE_DIRECTORY "${generated_header_dir}")
 
-    # Todo: Add dependencies on the source Rust files here to get proper dependency rules (hard).
-    # For now we just specify a dummy file we won't generate as an additional output, so that the rule
-    # always runs.
-    # Future Options: a) upstream depfile creation into cbindgen, b) spider our way through the source-code ourselves.
-    # c) ask the user to specify the dependencies (in order to relax the rules).
+    unset(depfile_cbindgen_arg)
+    unset(depfile_cmake_arg)
+    get_filename_component(generated_depfile_dir "${generated_depfile}" DIRECTORY)
+    file(MAKE_DIRECTORY "${generated_depfile_dir}")
+    set(depfile_cbindgen_arg "--depfile=${generated_depfile}")
+
     add_custom_command(
         OUTPUT
-        "${generated_header}" "${CMAKE_CURRENT_BINARY_DIR}/corrosion/non-existing-file.h"
+        "${generated_header}"
         COMMAND
         "${cbindgen}"
                     --output "${generated_header}"
                     --crate "${rust_target}"
+                    ${depfile_cbindgen_arg}
                     ${CCN_FLAGS}
         COMMENT "Generate cbindgen bindings for crate ${rust_target}"
+        DEPFILE "${generated_depfile}"
         COMMAND_EXPAND_LISTS
         WORKING_DIRECTORY "${package_manifest_dir}"
     )
 
     if(NOT installed_cbindgen)
         add_custom_command(
-            OUTPUT "${generated_header}" "${CMAKE_CURRENT_BINARY_DIR}/corrosion/non-existing-file.h"
+            OUTPUT "${generated_header}"
             APPEND
             DEPENDS _corrosion_cbindgen
         )
