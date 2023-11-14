@@ -1571,6 +1571,7 @@ ANCHOR: corrosion_cbindgen
 ```cmake
 corrosion_cbindgen(
         TARGET <imported_target_name>
+        CARGO_PACKAGE <cargo_package_name>
         HEADER_NAME <output_header_name>
         [MANIFEST_DIRECTORY <package_manifest_directory>]
         [CBINDGEN_VERSION <version>]
@@ -1584,9 +1585,13 @@ If `cbindgen` is not in `PATH` the helper function will automatically try to dow
 between multiple invocations of this function.
 
 
-* **TARGET**: The name of an imported Rust library target (crate), for which bindings should be generated.
+* **TARGET**: The name of an imported Rust library target, for which bindings should be generated.
               If the target was not previously imported by Corrosion, because the crate only produces an
               `rlib`, you must additionally specify `MANIFEST_DIRECTORY`.
+
+* **CARGO_PACKAGE**: The name of the Rust cargo package that contains the library target. Note, that `cbindgen`
+                     expects this package name using the `--crate` parameter. If not specified, the **TARGET**
+                     will be used instead.
 
 * **MANIFEST_DIRECTORY**: Directory of the package defining the library crate bindings should be generated for.
     If you want to avoid specifying `MANIFEST_DIRECTORY` you could add a `staticlib` target to your package
@@ -1614,7 +1619,7 @@ function(corrosion_experimental_cbindgen)
     # Todo:
     # - set the target-triple via the TARGET env variable based on the target triple for the rust crate.
     set(OPTIONS "")
-    set(ONE_VALUE_KEYWORDS TARGET MANIFEST_DIRECTORY HEADER_NAME CBINDGEN_VERSION)
+    set(ONE_VALUE_KEYWORDS TARGET CARGO_PACKAGE MANIFEST_DIRECTORY HEADER_NAME CBINDGEN_VERSION)
     set(MULTI_VALUE_KEYWORDS "FLAGS")
     cmake_parse_arguments(PARSE_ARGV 0 CCN "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
@@ -1644,6 +1649,15 @@ function(corrosion_experimental_cbindgen)
         else()
             set(package_manifest_dir "${CCN_MANIFEST_DIRECTORY}")
         endif()
+    endif()
+
+    unset(rust_cargo_package)
+    if(NOT DEFINED CCN_CARGO_PACKAGE)
+        message(STATUS "Using rust_target ${rust_target} as crate for cbindgen")
+        set(rust_cargo_package "${rust_target}")
+    else()
+        message(STATUS "Using crate ${CCN_CARGO_PACKAGE} as crate for cbindgen")
+        set(rust_cargo_package "${CCN_CARGO_PACKAGE}")
     endif()
 
     set(output_header_name "${CCN_HEADER_NAME}")
@@ -1718,10 +1732,10 @@ function(corrosion_experimental_cbindgen)
         COMMAND
         "${cbindgen}"
                     --output "${generated_header}"
-                    --crate "${rust_target}"
+                    --crate "${rust_cargo_package}"
                     ${depfile_cbindgen_arg}
                     ${CCN_FLAGS}
-        COMMENT "Generate cbindgen bindings for crate ${rust_target}"
+        COMMENT "Generate cbindgen bindings for package ${rust_cargo_package} and output header ${generated_header}"
         DEPFILE "${generated_depfile}"
         COMMAND_EXPAND_LISTS
         WORKING_DIRECTORY "${package_manifest_dir}"
@@ -1737,7 +1751,7 @@ function(corrosion_experimental_cbindgen)
 
     add_custom_target(_corrosion_cbindgen_${rust_target}_bindings
         DEPENDS "${generated_header}"
-        COMMENT "Generate cbindgen bindings for crate ${rust_target}"
+        COMMENT "Generate cbindgen bindings for package ${rust_cargo_package}"
     )
     add_dependencies(${rust_target} _corrosion_cbindgen_${rust_target}_bindings)
 endfunction()
