@@ -12,6 +12,7 @@
 - `corrosion_experimental_cbindgen()` will now correctly use the package name, instead of assuming that
     the package and crate name are identical. 
 - Fix hostbuild when cross-compiling to windows [#477]
+- Set the `AR_<triple>` variable for `cc-rs` (except for msvc targets) [#456]
 
 [#456]: https://github.com/corrosion-rs/corrosion/pull/456
 [#477]: https://github.com/corrosion-rs/corrosion/pull/477
