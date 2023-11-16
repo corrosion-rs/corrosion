@@ -186,8 +186,17 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         else()
             set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
+        string(REPLACE "\$<CONFIG>" "${config_type}" curr_out_dir "${curr_out_dir}")
         message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
                 " to `${curr_out_dir}/${filename}`.")
+
+        string(GENEX_STRIP "${curr_out_dir}" stripped_out_dir)
+        if(NOT ("${stripped_out_dir}" STREQUAL "${curr_out_dir}"))
+            message(FATAL_ERROR "${output_directory_property} for target ${output_dir_prop_target_name} "
+                    "contained an unexpected Generator expression. Output dir: `${curr_out_dir}`"
+                "Note: Corrosion only supports the `\$<CONFIG>` generator expression for output directories.")
+        endif()
+
         # For Multiconfig we want to specify the correct location for each configuration
         set_property(
             TARGET ${target_name}
@@ -202,6 +211,13 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
             set(base_output_directory "${output_directory}")
         else()
             set(base_output_directory "${CMAKE_CURRENT_BINARY_DIR}")
+        endif()
+        string(REPLACE "\$<CONFIG>" "${CMAKE_BUILD_TYPE}" base_output_directory "${base_output_directory}")
+        string(GENEX_STRIP "${base_output_directory}" stripped_out_dir)
+        if(NOT ("${stripped_out_dir}" STREQUAL "${base_output_directory}"))
+            message(FATAL_ERROR "${output_dir_prop_target_name} for target ${output_dir_prop_target_name} "
+                    "contained an unexpected Generator expression. Output dir: `${base_output_directory}`"
+                    "Note: Corrosion only supports the `\$<CONFIG>` generator expression for output directories.")
         endif()
     endif()
 
