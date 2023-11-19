@@ -20,19 +20,9 @@ endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
 
-set(CORROSION_NATIVE_TOOLING_DESCRIPTION
-    "Use native tooling - Required on CMake < 3.19 and available as a fallback option for recent versions"
-    )
-
 set(CORROSION_RESPECT_OUTPUT_DIRECTORY_DESCRIPTION
     "Respect the CMake target properties specifying the output directory of a target, such as
-    `RUNTIME_OUTPUT_DIRECTORY`. This requires CMake >= 3.19, otherwise this option is forced off."
-)
-
-option(
-    CORROSION_NATIVE_TOOLING
-    "${CORROSION_NATIVE_TOOLING_DESCRIPTION}"
-    OFF
+    `RUNTIME_OUTPUT_DIRECTORY`."
 )
 
 option(CORROSION_RESPECT_OUTPUT_DIRECTORY
@@ -45,14 +35,6 @@ option(
     "Surpresses a warning if the parsing the target triple failed."
     OFF
 )
-
-# The native tooling is required on CMAke < 3.19 so we override whatever the user may have set.
-if (CMAKE_VERSION VERSION_LESS 3.19.0)
-    set(CORROSION_NATIVE_TOOLING ON CACHE INTERNAL "${CORROSION_NATIVE_TOOLING_DESCRIPTION}" FORCE)
-    set(CORROSION_RESPECT_OUTPUT_DIRECTORY OFF CACHE INTERNAL
-        "${CORROSION_RESPECT_OUTPUT_DIRECTORY_DESCRIPTION}" FORCE
-    )
-endif()
 
 find_package(Rust REQUIRED)
 

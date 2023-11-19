@@ -4,6 +4,8 @@
 
 - The master branch of corrosion now requires CMake 3.22. See also the 
   [v0.4.0 Release notes](#040-lts-2023-06-01) for more details.
+- Removed native tooling and the corresponding option `CORROSION_NATIVE_TOOLING`.
+  Corrosion now always uses pure CMake.
 
 # v0.4.4 (2023-10-06)
 
