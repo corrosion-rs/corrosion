@@ -783,7 +783,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
     if(CMAKE_CXX_COMPILER)
         list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_CXX_COMPILER}")
     endif()
-    if(CMAKE_AR)
+    # cc-rs doesn't seem to support `llvm-ar` (commandline syntax), wo we might as well just use
+    # the default AR.
+    if(CMAKE_AR AND NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc"))
         list(APPEND corrosion_cc_rs_flags "AR_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_AR}")
     endif()
 
