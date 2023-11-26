@@ -20,15 +20,10 @@ endif()
 
 option(CORROSION_VERBOSE_OUTPUT "Enables verbose output from Corrosion and Cargo" OFF)
 
-set(CORROSION_RESPECT_OUTPUT_DIRECTORY_DESCRIPTION
-    "Respect the CMake target properties specifying the output directory of a target, such as
-    `RUNTIME_OUTPUT_DIRECTORY`."
-)
-
-option(CORROSION_RESPECT_OUTPUT_DIRECTORY
-    "${CORROSION_RESPECT_OUTPUT_DIRECTORY_DESCRIPTION}"
-    ON
-)
+if(DEFINED CORROSION_RESPECT_OUTPUT_DIRECTORY AND NOT CORROSION_RESPECT_OUTPUT_DIRECTORY)
+    message(WARNING "The option CORROSION_RESPECT_OUTPUT_DIRECTORY was removed."
+    " Corrosion now always attempts to respect the output directory.")
+endif()
 
 option(
     CORROSION_NO_WARN_PARSE_TARGET_TRIPLE_FAILED
@@ -80,43 +75,6 @@ get_property(
     CARGO_EXECUTABLE
     TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
 )
-
-# Note: Legacy function, used when respecting the `XYZ_OUTPUT_DIRECTORY` target properties is not
-# possible.
-function(_corrosion_set_imported_location_legacy target_name base_property filename)
-    foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
-        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}/${config_type}")
-        string(TOUPPER "${config_type}" config_type_upper)
-        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
-                " to `${binary_root}/${filename}`.")
-        # For Multiconfig we want to specify the correct location for each configuration
-        set_property(
-            TARGET ${target_name}
-            PROPERTY "${base_property}_${config_type_upper}"
-                "${binary_root}/${filename}"
-        )
-    endforeach()
-    if(NOT COR_IS_MULTI_CONFIG)
-        set(binary_root "${CMAKE_CURRENT_BINARY_DIR}")
-    endif()
-
-    message(DEBUG "Setting ${base_property} for target ${target_name}"
-                " to `${binary_root}/${filename}`.")
-
-    # IMPORTED_LOCATION must be set regardless of possible overrides. In the multiconfig case,
-    # the last configuration "wins".
-    set_property(
-            TARGET ${target_name}
-            PROPERTY "${base_property}" "${binary_root}/${filename}"
-        )
-endfunction()
-
-
-# Sets out_var to true if the byproduct copying and imported location is done in a deferred
-# manner to respect target properties, etc. that may be set later.
-function(_corrosion_determine_deferred_byproduct_copying_and_import_location_handling out_var)
-    set(${out_var} ${CORROSION_RESPECT_OUTPUT_DIRECTORY} PARENT_SCOPE)
-endfunction()
 
 function(_corrosion_bin_target_suffix target_name out_var_suffix)
     get_target_property(hostbuild "${target_name}" ${_CORR_PROP_HOST_BUILD})
@@ -214,22 +172,6 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         )
 endfunction()
 
-# Helper function to call _corrosion_set_imported_location_deferred while eagerly
-# evaluating arguments.
-# Refer to https://cmake.org/cmake/help/latest/command/cmake_language.html#deferred-call-examples
-function(_corrosion_call_set_imported_location_deferred target_name base_property output_directory_property filename)
-    cmake_language(EVAL CODE "
-        cmake_language(DEFER
-            CALL
-            _corrosion_set_imported_location_deferred
-            [[${target_name}]]
-            [[${base_property}]]
-            [[${output_directory_property}]]
-            [[${filename}]]
-        )
-    ")
-endfunction()
-
 # Set the imported location of a Rust target.
 #
 # Rust targets are built via custom targets / custom commands. The actual artifacts are exposed
@@ -245,41 +187,16 @@ endfunction()
 #    artifact.
 # - filename of the artifact.
 function(_corrosion_set_imported_location target_name base_property output_directory_property filename)
-    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
-    if(defer)
-        _corrosion_call_set_imported_location_deferred("${target_name}" "${base_property}" "${output_directory_property}" "${filename}")
-    else()
-        _corrosion_set_imported_location_legacy("${target_name}" "${base_property}" "${filename}")
-    endif()
-endfunction()
-
-function(_corrosion_copy_byproduct_legacy target_name cargo_build_dir file_names)
-    if(ARGN)
-        message(FATAL_ERROR "Unexpected additional arguments")
-    endif()
-
-    if(COR_IS_MULTI_CONFIG)
-        set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>")
-    else()
-        set(output_dir "${CMAKE_CURRENT_BINARY_DIR}")
-    endif()
-
-    list(TRANSFORM file_names PREPEND "${cargo_build_dir}/" OUTPUT_VARIABLE src_file_names)
-    list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
-    message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
-    add_custom_command(TARGET _cargo-build_${target_name}
-                        POST_BUILD
-                        COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
-                        COMMAND
-                        ${CMAKE_COMMAND} -E copy_if_different
-                            # tested to work with both multiple files and paths with spaces
-                            ${src_file_names}
-                            "${output_dir}"
-                        BYPRODUCTS ${dst_file_names}
-                        COMMENT "Copying byproducts `${file_names}` to ${output_dir}"
-                        VERBATIM
-                        COMMAND_EXPAND_LISTS
-    )
+        cmake_language(EVAL CODE "
+            cmake_language(DEFER
+                CALL
+                _corrosion_set_imported_location_deferred
+                [[${target_name}]]
+                [[${base_property}]]
+                [[${output_directory_property}]]
+                [[${filename}]]
+            )
+        ")
 endfunction()
 
 function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names is_binary)
@@ -349,20 +266,6 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
     )
 endfunction()
 
-function(_corrosion_call_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names is_binary)
-    cmake_language(EVAL CODE "
-        cmake_language(DEFER
-            CALL
-            _corrosion_copy_byproduct_deferred
-            [[${target_name}]]
-            [[${output_dir_prop_name}]]
-            [[${cargo_build_dir}]]
-            [[${file_names}]]
-            [[${is_binary}]]
-        )
-    ")
-endfunction()
-
 # Copy the artifacts generated by cargo to the appropriate destination.
 #
 # Parameters:
@@ -372,13 +275,18 @@ endfunction()
 # - cargo_build_dir: the directory cargo build places it's output artifacts in.
 # - filenames: the file names of any output artifacts as a list.
 # - is_binary: TRUE if the byproducts are program executables.
-function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir filenames is_binary)
-    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
-    if(defer)
-        _corrosion_call_copy_byproduct_deferred("${target_name}" "${output_dir_prop_name}" "${cargo_build_dir}" "${filenames}" "${is_binary}")
-    else()
-        _corrosion_copy_byproduct_legacy("${target_name}" "${cargo_build_dir}" "${filenames}")
-    endif()
+function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir file_names is_binary)
+        cmake_language(EVAL CODE "
+            cmake_language(DEFER
+                CALL
+                _corrosion_copy_byproduct_deferred
+                [[${target_name}]]
+                [[${output_dir_prop_name}]]
+                [[${cargo_build_dir}]]
+                [[${file_names}]]
+                [[${is_binary}]]
+            )
+        ")
 endfunction()
 
 
@@ -559,16 +467,9 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
         set(${out_pdb_byproduct} "${pdb_name}" PARENT_SCOPE)
     endif()
 
+    # Potential .exe suffix will be added later, also depending on possible hostbuild
+    # target property
     set(bin_filename "${bin_name}")
-    _corrosion_determine_deferred_byproduct_copying_and_import_location_handling("defer")
-    if(defer)
-        # .exe suffix will be added later, also depending on possible hostbuild
-        # target property
-    else()
-        if(Rust_CARGO_TARGET_OS STREQUAL "windows")
-            set(bin_filename "${bin_name}.exe")
-        endif()
-    endif()
     set(${out_bin_byproduct} "${bin_filename}" PARENT_SCOPE)
 
 
