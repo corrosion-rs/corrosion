@@ -1,3 +1,9 @@
+# v0.4.5 (2ß23-11-29)
+
+### Fixes
+
+- Fix hostbuild executables when cross-compiling on windows to non-windows targets.
+
 # v0.4.4 (2023-10-06)
 
 ### Fixes
