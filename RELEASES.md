@@ -1,8 +1,9 @@
-# v0.4.5 (2ß23-11-29)
+# v0.4.5 (2023-11-30)
 
 ### Fixes
 
-- Fix hostbuild executables when cross-compiling on windows to non-windows targets.
+- Fix hostbuild executables when cross-compiling on windows to non-windows targets
+  (Only with CMake >= 3.19).
 
 # v0.4.4 (2023-10-06)
 
