@@ -7,6 +7,19 @@
 - Removed native tooling and the corresponding option `CORROSION_NATIVE_TOOLING`.
   Corrosion now always uses pure CMake.
 
+### New features
+
+- Support using the `$<CONFIG>` generator expression in `OUTPUT_DIRECTORY`. [#459]
+
+### Fixes
+
+- Combine `-framework` flags on macos to avoid linker deduplication errors [#455]
+- Set the `AR_<triple>` variable for `cc-rs` (except for msvc targets) [#456]
+
+[#459]: https://github.com/corrosion-rs/corrosion/pull/459
+[#456]: https://github.com/corrosion-rs/corrosion/pull/456
+[#455]: https://github.com/corrosion-rs/corrosion/pull/455
+
 # v0.4.5 (2023-11-30)
 
 ### Fixes
