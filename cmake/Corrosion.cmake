@@ -78,9 +78,7 @@ get_property(
 
 function(_corrosion_bin_target_suffix target_name out_var_suffix)
     get_target_property(hostbuild "${target_name}" ${_CORR_PROP_HOST_BUILD})
-    if(hostbuild AND CMAKE_HOST_WIN32)
-        set(_suffix ".exe")
-    elseif(Rust_CARGO_TARGET_OS STREQUAL "windows")
+    if((Rust_CARGO_TARGET_OS STREQUAL "windows") OR (hostbuild AND CMAKE_HOST_WIN32))
         set(_suffix ".exe")
     else()
         set(_suffix "")
@@ -106,7 +104,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
     # Append .exe suffix for executable by-products if the target is windows or if it's a host
     # build and the host is Windows.
     get_target_property(target_type ${target_name} TYPE)
-    if(${target_type} STREQUAL "EXECUTABLE")
+    if(${target_type} STREQUAL "EXECUTABLE" AND (NOT "${filename}" MATCHES "\.pdb$"))
         _corrosion_bin_target_suffix(${target_name} "suffix")
         string(APPEND filename "${suffix}")
     endif()
@@ -199,7 +197,7 @@ function(_corrosion_set_imported_location target_name base_property output_direc
         ")
 endfunction()
 
-function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names is_binary)
+function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_name)
     if(ARGN)
         message(FATAL_ERROR "Unexpected additional arguments")
     endif()
@@ -239,28 +237,26 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
 
     # Append .exe suffix for executable by-products if the target is windows or if it's a host
     # build and the host is Windows.
-    if(${is_binary})
+    get_target_property(target_type "${target_name}" TYPE)
+    if (target_type STREQUAL "EXECUTABLE" AND (NOT "${filename}" MATCHES "\.pdb$"))
         _corrosion_bin_target_suffix(${target_name} "suffix")
         if(suffix)
-            set(tmp_file_names "${file_names}")
-            list(TRANSFORM tmp_file_names APPEND "${suffix}" OUTPUT_VARIABLE file_names)
+            string(APPEND file_name "${suffix}")
         endif()
     endif()
-
-    list(TRANSFORM file_names PREPEND "${cargo_build_dir}/" OUTPUT_VARIABLE src_file_names)
-    list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
-    message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
+    set(src_file_name "${cargo_build_dir}/${file_name}")
+    set(dst_file_name "${output_dir}/${file_name}")
+    message(DEBUG "Adding command to copy byproduct `${file_name}` to ${dst_file_name}")
     add_custom_command(TARGET _cargo-build_${target_name}
                         POST_BUILD
                         # output_dir may contain a Generator expression.
                         COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
                         COMMAND
                         ${CMAKE_COMMAND} -E copy_if_different
-                            # tested to work with both multiple files and paths with spaces
-                            ${src_file_names}
+                            ${src_file_name}
                             "${output_dir}"
-                        BYPRODUCTS ${dst_file_names}
-                        COMMENT "Copying byproducts `${file_names}` to ${output_dir}"
+                        BYPRODUCTS ${dst_file_name}
+                        COMMENT "Copying byproduct `${file_name}` to ${output_dir}"
                         VERBATIM
                         COMMAND_EXPAND_LISTS
     )
@@ -273,9 +269,12 @@ endfunction()
 # - output_dir_prop_name: The property name controlling the destination (e.g.
 #   `RUNTIME_OUTPUT_DIRECTORY`)
 # - cargo_build_dir: the directory cargo build places it's output artifacts in.
-# - filenames: the file names of any output artifacts as a list.
-# - is_binary: TRUE if the byproducts are program executables.
-function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir file_names is_binary)
+# - filename: the file name of the output artifact.
+function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir file_name)
+        list(LENGTH file_name list_len)
+        if(NOT list_len EQUAL "1")
+            message(FATAL_ERROR "Internal error: Exactly one filename should be passed.")
+        endif()
         cmake_language(EVAL CODE "
             cmake_language(DEFER
                 CALL
@@ -283,8 +282,7 @@ function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build
                 [[${target_name}]]
                 [[${output_dir_prop_name}]]
                 [[${cargo_build_dir}]]
-                [[${file_names}]]
-                [[${is_binary}]]
+                [[${file_name}]]
             )
         ")
 endfunction()
