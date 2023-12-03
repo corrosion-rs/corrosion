@@ -10,25 +10,15 @@ project(Corrosion
     HOMEPAGE_URL "https://corrosion-rs.github.io/corrosion/"
 )
 
-# Default behavior:
-# - If the project is being used as a subdirectory, then don't build tests and
-#   don't enable any languages.
-# - If this is a top level project, then build tests and enable the C++ compiler
-if (NOT CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    set(_CORROSION_TOP_LEVEL OFF)
-else()
-    set(_CORROSION_TOP_LEVEL ON)
-endif()
-
 # ==== Corrosion Configuration ====
 
 option(
     CORROSION_BUILD_TESTS
     "Build Corrosion test project"
-    ${_CORROSION_TOP_LEVEL}
+    ${PROJECT_IS_TOP_LEVEL}
 )
 
-if (_CORROSION_TOP_LEVEL)
+if (PROJECT_IS_TOP_LEVEL)
     # We need to enable a language for corrosions test to work.
     # For projects using corrosion this is not needed
     enable_language(C)
@@ -49,7 +39,7 @@ if (CORROSION_BUILD_TESTS)
 endif()
 
 # If Corrosion is a subdirectory, do not enable its install code
-if (NOT _CORROSION_TOP_LEVEL)
+if (NOT PROJECT_IS_TOP_LEVEL)
     return()
 endif()
 
