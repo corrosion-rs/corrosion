@@ -78,9 +78,7 @@ get_property(
 
 function(_corrosion_bin_target_suffix target_name out_var_suffix)
     get_target_property(hostbuild "${target_name}" ${_CORR_PROP_HOST_BUILD})
-    if(hostbuild AND CMAKE_HOST_WIN32)
-        set(_suffix ".exe")
-    elseif(Rust_CARGO_TARGET_OS STREQUAL "windows")
+    if((Rust_CARGO_TARGET_OS STREQUAL "windows") OR (hostbuild AND CMAKE_HOST_WIN32))
         set(_suffix ".exe")
     else()
         set(_suffix "")
@@ -106,7 +104,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
     # Append .exe suffix for executable by-products if the target is windows or if it's a host
     # build and the host is Windows.
     get_target_property(target_type ${target_name} TYPE)
-    if(${target_type} STREQUAL "EXECUTABLE")
+    if(${target_type} STREQUAL "EXECUTABLE" AND (NOT "${filename}" MATCHES "\.pdb$"))
         _corrosion_bin_target_suffix(${target_name} "suffix")
         string(APPEND filename "${suffix}")
     endif()
@@ -199,7 +197,7 @@ function(_corrosion_set_imported_location target_name base_property output_direc
         ")
 endfunction()
 
-function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names is_binary)
+function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names)
     if(ARGN)
         message(FATAL_ERROR "Unexpected additional arguments")
     endif()
@@ -239,11 +237,17 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
 
     # Append .exe suffix for executable by-products if the target is windows or if it's a host
     # build and the host is Windows.
-    if(${is_binary})
+    get_target_property(target_type "${target_name}" TYPE)
+    if (target_type STREQUAL "EXECUTABLE")
+        list(LENGTH file_names list_len)
+        if(NOT list_len EQUAL "1")
+            message(FATAL_ERROR
+                    "Internal error: Exactly one filename should be passed for executable types.")
+        endif()
         _corrosion_bin_target_suffix(${target_name} "suffix")
-        if(suffix)
-            set(tmp_file_names "${file_names}")
-            list(TRANSFORM tmp_file_names APPEND "${suffix}" OUTPUT_VARIABLE file_names)
+        if(suffix AND (NOT "${file_names}" MATCHES "\.pdb$"))
+            # For executable targets we know / checked that only one file will be passed.
+            string(APPEND file_names "${suffix}")
         endif()
     endif()
 
@@ -274,8 +278,7 @@ endfunction()
 #   `RUNTIME_OUTPUT_DIRECTORY`)
 # - cargo_build_dir: the directory cargo build places it's output artifacts in.
 # - filenames: the file names of any output artifacts as a list.
-# - is_binary: TRUE if the byproducts are program executables.
-function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir file_names is_binary)
+function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir file_names)
         cmake_language(EVAL CODE "
             cmake_language(DEFER
                 CALL
@@ -284,7 +287,6 @@ function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build
                 [[${output_dir_prop_name}]]
                 [[${cargo_build_dir}]]
                 [[${file_names}]]
-                [[${is_binary}]]
             )
         ")
 endfunction()
