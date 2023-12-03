@@ -28,23 +28,6 @@ option(
     ${_CORROSION_TOP_LEVEL}
 )
 
-set(
-  CORROSION_GENERATOR_EXECUTABLE CACHE STRING
-  "Use prebuilt, non-bootstrapped corrosion-generator")
-mark_as_advanced(CORROSION_GENERATOR_EXECUTABLE)
-
-option(
-    CORROSION_INSTALL_EXECUTABLE
-    "Controls whether corrosion-generator is installed with the package"
-    ${CORROSION_INSTALL_EXECUTABLE_DEFAULT}
-)
-mark_as_advanced(CORROSION_INSTALL_EXECUTABLE)
-
-if (CORROSION_GENERATOR_EXECUTABLE OR CORROSION_INSTALL_EXECUTABLE)
-    message(FATAL_ERROR "The Cache variables CORROSION_GENERATOR_EXECUTABLE CORROSION_INSTALL_EXECUTABLE"
-            " were removed.")
-endif()
-
 if (_CORROSION_TOP_LEVEL)
     # We need to enable a language for corrosions test to work.
     # For projects using corrosion this is not needed
