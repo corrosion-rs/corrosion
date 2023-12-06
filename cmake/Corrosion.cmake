@@ -690,6 +690,13 @@ function(_add_cargo_build out_cargo_build_out_dir)
         list(APPEND corrosion_cc_rs_flags "AR_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_AR}")
     endif()
 
+    # when cross compiling, the sysroot is a necessary element to pass to the compiler
+    if (CMAKE_CROSSCOMPILING AND NOT ANDROID)
+        list (
+        APPEND corrosion_cc_rs_flags
+        CFLAGS_${Rust_CARGO_TARGET}="${CMAKE_C_FLAGS} --sysroot ${CMAKE_SYSROOT}")
+    endif () 
+
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
     # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
     # CMAKE_OSX_SYSROOT. Fortunately the compilers Apple ships also respect the SDKROOT environment
