@@ -580,7 +580,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
         set(cargo_rustc_filter "--lib")
         set(rustc_print_native_libs "--print=native-static-libs")
         set(native_libs_rsp_file "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_required_libs.rsp")
-        set(COR_TARGET_NAME)
         # Wrapper script around `cargo rustc` which captures the required link libraries into an rsp file.
         set(cargo_native_libs_wrapper_script
             ${CMAKE_COMMAND}
