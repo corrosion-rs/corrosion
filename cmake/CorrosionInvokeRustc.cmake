@@ -56,7 +56,7 @@ else()
 endif()
 
 # Transform back
-string(REPLACE ";" " " "libs_list" "${libs_list}")
-file(WRITE "${COR_LIBS_OUTFILE}" "${libs_list}")
+list(JOIN libs_list " " libs_list_joined)
+file(WRITE "${COR_LIBS_OUTFILE}" "${libs_list_joined}")
 message(STATUS "Wrote required libs for target ${COR_TARGET_NAME} to ${COR_LIBS_OUTFILE}")
-message(STATUS "Required libs: " ${libs_list})
+message(STATUS "Required libs: " ${libs_list_joined})
