@@ -676,13 +676,22 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(corrosion_cc_rs_flags)
 
     if(CMAKE_C_COMPILER)
+        set(_CORROSION_C_COMPILER "${CMAKE_C_COMPILER}")
+        if(CMAKE_C_COMPILER_LAUNCHER)
+            set(_CORROSION_C_COMPILER "${CMAKE_C_COMPILER_LAUNCHER} ${_CORROSION_C_COMPILER}")
+        endif()
+
         # This variable is read by cc-rs (often used in build scripts) to determine the c-compiler.
         # It can still be overridden if the user sets the non underscore variant via the environment variables
         # on the target.
-        list(APPEND corrosion_cc_rs_flags "CC_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_C_COMPILER}")
+        list(APPEND corrosion_cc_rs_flags "CC_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${_CORROSION_C_COMPILER}")
     endif()
     if(CMAKE_CXX_COMPILER)
-        list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_CXX_COMPILER}")
+        set(_CORROSION_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
+        if(CMAKE_CXX_COMPILER_LAUNCHER)
+            set(_CORROSION_CXX_COMPILER "${CMAKE_CXX_COMPILER_LAUNCHER} ${_CORROSION_CXX_COMPILER}")
+        endif()
+        list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${_CORROSION_CXX_COMPILER}")
     endif()
     # cc-rs doesn't seem to support `llvm-ar` (commandline syntax), wo we might as well just use
     # the default AR.
