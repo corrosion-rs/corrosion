@@ -146,13 +146,13 @@ endfunction()
 
 function(_corrosion_bin_target_suffix target_name out_var_suffix)
     get_target_property(hostbuild "${target_name}" ${_CORR_PROP_HOST_BUILD})
-    if(hostbuild AND CMAKE_HOST_WIN32)
-        set(${out_var_suffix} ".exe" PARENT_SCOPE)
-    elseif((NOT hostbuild) AND (Rust_CARGO_TARGET_OS STREQUAL "windows"))
-        set(${out_var_suffix} ".exe" PARENT_SCOPE)
+    if((hostbuild AND CMAKE_HOST_WIN32)
+       OR ((NOT hostbuild) AND (Rust_CARGO_TARGET_OS STREQUAL "windows")))
+        set(_suffix ".exe")
     else()
-        set(${out_var_suffix} "" PARENT_SCOPE)
+        set(_suffix "")
     endif()
+    set(${out_var_suffix} "${_suffix}" PARENT_SCOPE)
 endfunction()
 
 # Do not call this function directly!
