@@ -236,6 +236,9 @@ jobs:
         with:
           cmake: ${{ matrix.cmake }}
           ninja: 1.10.0
+      # Install cbindgen before Rust to use recent default Rust version.
+      - name: Install cbindgen
+        run: cargo install cbindgen
       - name: Install Rust
         id: install_rust
         uses: dtolnay/rust-toolchain@master
@@ -323,6 +326,9 @@ jobs:
         with:
           cmake: 3.22.6
           ninja: 1.10.0
+      # Install cbindgen before Rust to use recent default Rust version.
+      - name: Install cbindgen
+        run: cargo install cbindgen
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
