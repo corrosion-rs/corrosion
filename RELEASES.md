@@ -20,6 +20,22 @@
 [#456]: https://github.com/corrosion-rs/corrosion/pull/456
 [#455]: https://github.com/corrosion-rs/corrosion/pull/455
 
+# v0.4.7 (2024-01-19)
+
+### Fixes
+
+- The C/C++ compiler passed from corrosion to `cc-rs` can now be overriden by users setting
+  `CC_<target>` (e.g. `CC_x86_64-unknown-linux-gnu=/path/to/my-compiler`) environment variables ([#475]).
+
+[#475]: https://github.com/corrosion-rs/corrosion/pull/475
+
+# v0.4.6 (2024-01-17)
+
+### Fixes
+
+- Fix hostbuild executables when cross-compiling from non-windows to windows targets.
+  (Only with CMake >= 3.19).
+
 # v0.4.5 (2023-11-30)
 
 ### Fixes
