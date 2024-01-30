@@ -204,12 +204,29 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name car
     endif()
     get_target_property(output_dir ${target_name} "${output_dir_prop_name}")
 
+    get_target_property(target_type ${target_name} TYPE)
+    if(NOT output_dir AND "${output_dir_prop_name}" STREQUAL PDB_OUTPUT_DIRECTORY)
+        if("${target_type}" STREQUAL EXECUTABLE)
+            get_target_property(output_dir ${target_name} "RUNTIME_OUTPUT_DIRECTORY")
+        elseif("${target_type}" STREQUAL SHARED_LIBRARY)
+            get_target_property(output_dir ${target_name} "LIBRARY_OUTPUT_DIRECTORY")
+        endif()
+    endif()
+
     # A Genex expanding to the output directory depending on the configuration.
     set(multiconfig_out_dir_genex "")
 
     foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
         string(TOUPPER "${config_type}" config_type_upper)
         get_target_property(output_dir_curr_config ${target_name} "${output_dir_prop_name}_${config_type_upper}")
+
+        if(NOT output_dir_curr_config AND "${output_dir_prop_name}" STREQUAL PDB_OUTPUT_DIRECTORY)
+            if("${target_type}" STREQUAL EXECUTABLE)
+                get_target_property(output_dir_curr_config ${target_name} "RUNTIME_OUTPUT_DIRECTORY_${config_type_upper}")
+            elseif("${target_type}" STREQUAL SHARED_LIBRARY)
+                get_target_property(output_dir_curr_config ${target_name} "LIBRARY_OUTPUT_DIRECTORY_${config_type_upper}")
+            endif()
+        endif()
 
         if(output_dir_curr_config)
             set(curr_out_dir "${output_dir_curr_config}")
