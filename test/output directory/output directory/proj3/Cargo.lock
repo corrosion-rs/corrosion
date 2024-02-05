@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "rust-lib"
+name = "rust_package3"
 version = "0.1.0"

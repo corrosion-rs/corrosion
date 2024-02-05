@@ -40,11 +40,13 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
     set_tests_properties("output_directory_build" PROPERTIES FIXTURES_REQUIRED "fixture_corrosion_install")
 endif()
 
-foreach(output_approach targetprop var)
+foreach(output_approach targetprop var targetprop_pdb_fallback)
     if(output_approach STREQUAL "targetprop")
        set(rust_proj_suffix "1")
     elseif(output_approach STREQUAL "var")
         set(rust_proj_suffix "2")
+    elseif(output_approach STREQUAL "targetprop_pdb_fallback")
+        set(rust_proj_suffix "3")
     else()
         message(FATAL_ERROR "specify rust project suffix for new output approach ${output_approach}")
     endif()
@@ -109,6 +111,9 @@ foreach(output_approach targetprop var)
                 # end up in the same directory.
                 set(expected_lib_pdb_path "custom_binlib_pdb_var")
                 set(expected_bin_pdb_path "custom_binlib_pdb_var")
+            elseif(output_approach STREQUAL "targetprop_pdb_fallback")
+                set(expected_lib_pdb_path "custom_lib_targetprop")
+                set(expected_bin_pdb_path "custom_bin_targetprop")
             else()
                 message(FATAL_ERROR "specify rust project suffix for new output approach ${output_approach}")
             endif()
@@ -145,3 +150,5 @@ set_tests_properties("postbuild_custom_command" PROPERTIES FIXTURES_REQUIRED "bu
 
 add_test(NAME "output_directory_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build")
 set_tests_properties("output_directory_cleanup" PROPERTIES FIXTURES_CLEANUP "build_fixture_output_directory")
+
+
