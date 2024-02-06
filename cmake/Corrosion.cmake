@@ -198,35 +198,29 @@ function(_corrosion_set_imported_location target_name base_property output_direc
         ")
 endfunction()
 
-function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_name cargo_build_dir file_names)
+function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names cargo_build_dir file_names)
     if(ARGN)
         message(FATAL_ERROR "Unexpected additional arguments")
     endif()
-    get_target_property(output_dir ${target_name} "${output_dir_prop_name}")
 
-    get_target_property(target_type ${target_name} TYPE)
-    if(NOT output_dir AND "${output_dir_prop_name}" STREQUAL PDB_OUTPUT_DIRECTORY)
-        if("${target_type}" STREQUAL EXECUTABLE)
-            get_target_property(output_dir ${target_name} "RUNTIME_OUTPUT_DIRECTORY")
-        elseif("${target_type}" STREQUAL SHARED_LIBRARY)
-            get_target_property(output_dir ${target_name} "LIBRARY_OUTPUT_DIRECTORY")
+    foreach(output_dir_prop_name ${output_dir_prop_names})
+        get_target_property(output_dir ${target_name} "${output_dir_prop_name}")
+        if(output_dir)
+            break()
         endif()
-    endif()
+    endforeach()
 
     # A Genex expanding to the output directory depending on the configuration.
     set(multiconfig_out_dir_genex "")
 
     foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
         string(TOUPPER "${config_type}" config_type_upper)
-        get_target_property(output_dir_curr_config ${target_name} "${output_dir_prop_name}_${config_type_upper}")
-
-        if(NOT output_dir_curr_config AND "${output_dir_prop_name}" STREQUAL PDB_OUTPUT_DIRECTORY)
-            if("${target_type}" STREQUAL EXECUTABLE)
-                get_target_property(output_dir_curr_config ${target_name} "RUNTIME_OUTPUT_DIRECTORY_${config_type_upper}")
-            elseif("${target_type}" STREQUAL SHARED_LIBRARY)
-                get_target_property(output_dir_curr_config ${target_name} "LIBRARY_OUTPUT_DIRECTORY_${config_type_upper}")
+        foreach(output_dir_prop_name ${output_dir_prop_names})
+            get_target_property(output_dir_curr_config ${target_name} "${output_dir_prop_name}_${config_type_upper}")
+            if(output_dir_curr_config)
+                break()
             endif()
-        endif()
+        endforeach()
 
         if(output_dir_curr_config)
             set(curr_out_dir "${output_dir_curr_config}")
@@ -292,17 +286,17 @@ endfunction()
 #
 # Parameters:
 # - target_name: The name of the Rust target
-# - output_dir_prop_name: The property name controlling the destination (e.g.
-#   `RUNTIME_OUTPUT_DIRECTORY`)
+# - output_dir_prop_names: The property name(s) controlling the destination (e.g.
+#   `LIBRARY_OUTPUT_DIRECTORY` or `PDB_OUTPUT_DIRECTORY;RUNTIME_OUTPUT_DIRECTORY`)
 # - cargo_build_dir: the directory cargo build places it's output artifacts in.
 # - filenames: the file names of any output artifacts as a list.
-function(_corrosion_copy_byproducts target_name output_dir_prop_name cargo_build_dir file_names)
+function(_corrosion_copy_byproducts target_name output_dir_prop_names cargo_build_dir file_names)
         cmake_language(EVAL CODE "
             cmake_language(DEFER
                 CALL
                 _corrosion_copy_byproduct_deferred
                 [[${target_name}]]
-                [[${output_dir_prop_name}]]
+                [[${output_dir_prop_names}]]
                 [[${cargo_build_dir}]]
                 [[${file_names}]]
             )

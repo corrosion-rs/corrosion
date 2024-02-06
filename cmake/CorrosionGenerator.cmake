@@ -146,7 +146,7 @@ function(_generator_add_package_targets)
             endif()
             if(pdb_byproduct)
                 _corrosion_copy_byproducts(
-                    ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                    ${target_name} "PDB_OUTPUT_DIRECTORY;LIBRARY_OUTPUT_DIRECTORY" "${cargo_build_out_dir}" "${pdb_byproduct}"
                 )
             endif()
             list(APPEND corrosion_targets ${target_name})
@@ -178,7 +178,7 @@ function(_generator_add_package_targets)
             )
             if(pdb_byproduct)
                 _corrosion_copy_byproducts(
-                        ${target_name} PDB_OUTPUT_DIRECTORY "${cargo_build_out_dir}" "${pdb_byproduct}"
+                        ${target_name} "PDB_OUTPUT_DIRECTORY;RUNTIME_OUTPUT_DIRECTORY" "${cargo_build_out_dir}" "${pdb_byproduct}"
                 )
             endif()
             list(APPEND corrosion_targets ${target_name})
