@@ -42,3 +42,17 @@ add_executable(consumer consumer.cpp)
 add_dependencies(consumer cargo-build_rust_lib1 cargo-build_rust_lib2)
 
 target_link_libraries(consumer rust_lib1 rust_lib2)
+
+
+corrosion_import_crate(MANIFEST_PATH proj3/Cargo.toml)
+
+# Note: The output directories defined here must be manually kept in sync with the expected test location.
+set_target_properties(rust_bin3
+                      PROPERTIES
+                      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/custom_bin_targetprop_pdb_fallback"
+)
+set_target_properties(rust_lib3
+                      PROPERTIES
+                      ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/custom_archive_targetprop_pdb_fallback"
+                      LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/custom_lib_targetprop_pdb_fallback"
+)
