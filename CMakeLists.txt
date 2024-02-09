@@ -29,8 +29,8 @@ endif()
 #
 # It is strongly encouraged to install Corrosion separately and use
 # `find_package(Corrosion REQUIRED)` instead if that works with your workflow.
-option(INCLUDE_CORROSION "Optionally include Corrosion during the CMake Process." ON)
-if (INCLUDE_CORROSION)
+option(CORROSION_INSTALL_ONLY "Only add rules for installing Corrosion itself." OFF)
+if (NOT CORROSION_INSTALL_ONLY)
     list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
     include(Corrosion)
 endif()
