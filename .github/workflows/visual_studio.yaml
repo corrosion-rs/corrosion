@@ -42,7 +42,7 @@ jobs:
       # significantly faster.
       - name: Cache MSVC build directory
         id: cache-msvc-builddir
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: build
           key: ${{ inputs.os }}-${{ inputs.target_arch }}-${{ inputs.rust }}-msvc-${{ inputs.vs_version}}-build
