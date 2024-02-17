@@ -416,10 +416,7 @@ function(_corrosion_add_library_target)
 
         # Todo: NO_STD target property?
         if(NOT COR_NO_STD)
-            set_property(
-                    TARGET ${target_name}-static
-                    PROPERTY INTERFACE_LINK_LIBRARIES ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS}
-            )
+            target_link_options(${target_name}-static INTERFACE ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS})
             if(is_macos)
                 set_property(TARGET ${target_name}-static
                         PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
