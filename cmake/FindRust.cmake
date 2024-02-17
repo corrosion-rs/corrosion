@@ -760,6 +760,11 @@ if(NOT DEFINED CACHE{Rust_CARGO_TARGET_LINK_NATIVE_LIBS})
     # for the target and once for the host target (if cross-compiling).
     set(Rust_CARGO_TARGET_LINK_NATIVE_LIBS "${required_native_libs}" CACHE INTERNAL
             "Required native libraries when linking Rust static libraries")
+
+    list(JOIN Rust_CARGO_TARGET_LINK_NATIVE_LIBS " " libs_list_joined)
+    file(WRITE "${CMAKE_BINARY_DIR}/native_libs.rsp" "${libs_list_joined}")
+    message(STATUS "Wrote required libs to  ${CMAKE_BINARY_DIR}/native_libs.rsp")
+    message(STATUS "Required libs: " ${libs_list_joined})
 endif()
 
 if(Rust_CROSSCOMPILING AND NOT DEFINED CACHE{Rust_CARGO_HOST_TARGET_LINK_NATIVE_LIBS})
