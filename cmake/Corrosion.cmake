@@ -798,6 +798,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 ${cargo_rustc_crate_types}
                 --manifest-path "${path_to_toml}"
                 --target-dir "${cargo_target_dir}"
+                --color never
                 ${cargo_profile}
                 ${flags_genex}
                 # Any arguments to cargo must be placed before this line
