@@ -588,7 +588,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 -D "COR_TARGET_IS_NO_STD=${COR_NO_STD}" # Todo: target property?
                 -P ${CORROSION_CMAKE_SRC_DIR}/CorrosionInvokeRustc.cmake
                 --)
-        target_link_options(${target_name} INTERFACE "@$<SHELL_PATH:${native_libs_rsp_file}>")
+        # target_link_options(${target_name} INTERFACE "@$<SHELL_PATH:${native_libs_rsp_file}>")
+        set_property(TARGET ${target_name} APPEND PROPERTY
+                     INTERFACE_LINK_LIBRARIES "-Wl,@$<SHELL_PATH:${native_libs_rsp_file}>" )
     elseif("cdylib" IN_LIST target_kinds)
         set(cargo_rustc_filter "--lib")
         if("${Rust_VERSION}" VERSION_GREATER_EQUAL "1.64")
