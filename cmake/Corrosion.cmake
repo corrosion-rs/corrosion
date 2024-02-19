@@ -588,7 +588,12 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 -D "COR_TARGET_IS_NO_STD=${COR_NO_STD}" # Todo: target property?
                 -P ${CORROSION_CMAKE_SRC_DIR}/CorrosionInvokeRustc.cmake
                 --)
-        target_link_options(${target_name} INTERFACE "@$<SHELL_PATH:${native_libs_rsp_file}>")
+        if(Rust_CARGO_TARGET_ENV STREQUAL "msvc")
+            # Pass the @rsp file through to the linker, since the linker accepts it but cl.exe does not.
+            target_link_options(${target_name} INTERFACE "/link@$<SHELL_PATH:${native_libs_rsp_file}>")
+        else()
+            target_link_options(${target_name} INTERFACE "@$<SHELL_PATH:${native_libs_rsp_file}>")
+        endif()
         #set_property(TARGET ${target_name} APPEND PROPERTY
         #             INTERFACE_LINK_LIBRARIES "-Wl,@$<SHELL_PATH:${native_libs_rsp_file}>" )
     elseif("cdylib" IN_LIST target_kinds)
