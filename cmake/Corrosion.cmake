@@ -620,10 +620,10 @@ endif()
 # Note: `cmake_language(GET_MESSAGE_LOG_LEVEL <output_variable>)` requires CMake 3.25,
 # so we offer our own option to control verbosity of downstream commands (e.g. cargo build)
 if (CORROSION_VERBOSE_OUTPUT)
-    set(_CORROSION_VERBOSE_OUTPUT_FLAG --verbose)
+    set(_CORROSION_VERBOSE_OUTPUT_FLAG --verbose CACHE INTERNAL "")
 else()
     # We want to silence some less important commands by default.
-    set(_CORROSION_QUIET_OUTPUT_FLAG --quiet)
+    set(_CORROSION_QUIET_OUTPUT_FLAG --quiet CACHE INTERNAL "")
 endif()
 
 if(CORROSION_NATIVE_TOOLING)
