@@ -112,6 +112,12 @@ function(corrosion_tests_add_test test_name bin_names)
     if(CMAKE_TOOLCHAIN_FILE)
         list(APPEND configure_cmake_args TOOLCHAIN_FILE "${CMAKE_TOOLCHAIN_FILE}")
     endif()
+    if(CMAKE_CROSS_CONFIGS)
+        list(APPEND configure_cmake_args CMAKE_CROSS_CONFIGS "${CMAKE_CROSS_CONFIGS}")
+    endif()
+    if(CMAKE_DEFAULT_CONFIGS)
+        list(APPEND configure_cmake_args CMAKE_DEFAULT_CONFIGS "${CMAKE_DEFAULT_CONFIGS}")
+    endif()
 
     add_test(NAME "${test_name}_build"
             COMMAND
