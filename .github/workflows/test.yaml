@@ -259,7 +259,7 @@ jobs:
       - name: Install CMake
         uses: corrosion-rs/install-cmake@v2
         with:
-          cmake: 3.22.6
+          cmake: 3.23.5
           ninja: 1.10.0
       # Install cbindgen before Rust to use recent default Rust version.
       - name: Install cbindgen
