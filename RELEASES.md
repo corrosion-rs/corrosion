@@ -10,6 +10,8 @@
 ### New features
 
 - Support using the `$<CONFIG>` generator expression in `OUTPUT_DIRECTORY`. [#459]
+- Properly parse the required libraries individual Rust static-libraries need 
+  to link to. 
 
 ### Fixes
 
