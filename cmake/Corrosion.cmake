@@ -934,7 +934,6 @@ function(corrosion_import_crate)
             imported_crates
         ${crate_allowlist}
         ${crate_types}
-        ${cargo_profile}
         ${no_linker_override}
     )
 
