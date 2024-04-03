@@ -26,10 +26,10 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache Legacy Generator
         id: cache_generator
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/corrosion-prebuilt-generator
           key: ${{ runner.os }}-${{ inputs.rust }}-generator-${{ hashFiles('generator/src/**', 'generator/Cargo.toml', 'generator/Cargo.lock') }}
