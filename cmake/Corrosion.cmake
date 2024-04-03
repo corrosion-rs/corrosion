@@ -1013,7 +1013,6 @@ function(corrosion_import_crate)
     _corrosion_option_passthrough_helper(FROZEN COR frozen)
     _corrosion_arg_passthrough_helper(CRATES COR crate_allowlist)
     _corrosion_arg_passthrough_helper(CRATE_TYPES COR crate_types)
-    _corrosion_arg_passthrough_helper(PROFILE COR cargo_profile)
 
     if(COR_PROFILE)
         if(Rust_VERSION VERSION_LESS 1.57.0)
@@ -1082,7 +1081,6 @@ function(corrosion_import_crate)
                         ${_CORROSION_CONFIGURATION_ROOT}
                         ${crates_args}
                         ${crate_types}
-                        ${cargo_profile_native_generator}
                         --imported-crates=imported_crates
                         ${passthrough_to_acb}
                         -o ${generated_cmake}
@@ -1102,7 +1100,6 @@ function(corrosion_import_crate)
                 imported_crates
             ${crate_allowlist}
             ${crate_types}
-            ${cargo_profile}
             ${no_linker_override}
         )
     endif()
