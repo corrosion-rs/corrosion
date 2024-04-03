@@ -37,7 +37,7 @@ runs:
   steps:
     - name: Cache Cargo registry
       id: cache-registry
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cargo/registry
         key: ${{ runner.os }}-cargo-registry
@@ -138,10 +138,10 @@ runs:
         arch: ${{ steps.arch_flags.outputs.msvc }}
       if: ${{ 'msvc' == steps.determine_abi.outputs.abi }}
     - name: Install CMake
-      uses: corrosion-rs/install-cmake@v2
+      uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
       with:
-        cmake: ${{inputs.cmake}}
-        ninja: 1.10.0
+        cmakeVersion: "${{ inputs.cmake }}"
+        ninjaVersion: "~1.10.0"
     - name: Install Rust
       id: install_rust
       uses: dtolnay/rust-toolchain@master
