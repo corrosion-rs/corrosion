@@ -5,7 +5,7 @@ project(Corrosion
     # tagged release. Users don't need to care about this, it is mainly to
     # clearly see in configure logs which version was used, without needing to
     # rely on `git`, since Corrosion may be installed or otherwise packaged.
-    VERSION 0.4.7
+    VERSION 0.4.8
     LANGUAGES NONE
     HOMEPAGE_URL "https://corrosion-rs.github.io/corrosion/"
 )

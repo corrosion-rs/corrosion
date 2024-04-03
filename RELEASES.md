@@ -1,3 +1,12 @@
+# v0.4.8 (2024-04-03)
+
+### Fixes
+
+- Fix an internal error when passing both the `PROFILE` and `CRATES` option to
+  `corrosion_import_crate()` ([#496]).
+
+[#496]: https://github.com/corrosion-rs/corrosion/pull/496
+
 # v0.4.7 (2024-01-19)
 
 ### Fixes
