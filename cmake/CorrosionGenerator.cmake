@@ -79,7 +79,6 @@ function(_generator_add_package_targets)
         string(JSON target_name GET "${target}" "name")
         string(JSON target_kind GET "${target}" "kind")
         string(JSON target_kind_len LENGTH "${target_kind}")
-        string(JSON target_name GET "${target}" "name")
 
         math(EXPR target_kind_len-1 "${target_kind_len} - 1")
         set(kinds)
