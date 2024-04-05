@@ -105,6 +105,13 @@ function(_generator_add_package_targets)
         endif()
 
         if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds)
+            # Explicitly set library names have always been forbidden from using dashes (by cargo).
+            # Starting with Rust 1.79, names inherited from the package name will have dashes replaced
+            # by underscores too. Corrosion will thus replace dashes with underscores, to make the target
+            # name consistent independent of the Rust version. `bin` target names are not affected.
+            # See https://github.com/corrosion-rs/corrosion/issues/501 for more details.
+            string(REPLACE "\-" "_" target_name "${target_name}")
+
             set(archive_byproducts "")
             set(shared_lib_byproduct "")
             set(pdb_byproduct "")

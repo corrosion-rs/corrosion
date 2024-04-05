@@ -5,16 +5,16 @@ include(../../test_header.cmake)
 corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
 
 add_executable(rustflags-cpp-exe main.cpp)
-target_link_libraries(rustflags-cpp-exe PUBLIC rustflag-test-lib)
+target_link_libraries(rustflags-cpp-exe PUBLIC rustflag_test_lib)
 
 # Test --cfg=key="value" rustflag.
-corrosion_add_target_rustflags(rustflag-test-lib --cfg=test_rustflag_cfg1="test_rustflag_cfg1_value")
+corrosion_add_target_rustflags(rustflag_test_lib --cfg=test_rustflag_cfg1="test_rustflag_cfg1_value")
 
 # Test using a generator expression to produce a rustflag and passing multiple rustflags.
-corrosion_add_target_rustflags(rustflag-test-lib
+corrosion_add_target_rustflags(rustflag_test_lib
         --cfg=test_rustflag_cfg2="$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>"
         "--cfg=test_rustflag_cfg3"
 )
 
-corrosion_add_target_local_rustflags(rustflag-test-lib "--cfg=test_local_rustflag1")
-corrosion_add_target_local_rustflags(rustflag-test-lib --cfg=test_local_rustflag2="value")
+corrosion_add_target_local_rustflags(rustflag_test_lib "--cfg=test_local_rustflag1")
+corrosion_add_target_local_rustflags(rustflag_test_lib --cfg=test_local_rustflag2="value")

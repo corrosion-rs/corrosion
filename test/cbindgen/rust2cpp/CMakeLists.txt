@@ -3,8 +3,8 @@ project(test_project VERSION 0.1.0)
 include(../../test_header.cmake)
 
 corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
-corrosion_experimental_cbindgen(TARGET rust-lib HEADER_NAME "rust-lib.h")
+corrosion_experimental_cbindgen(TARGET rust_lib HEADER_NAME "rust-lib.h")
 
 add_executable(cpp-exe main.cpp)
 set_property(TARGET cpp-exe PROPERTY CXX_STANDARD 11)
-target_link_libraries(cpp-exe PUBLIC rust-lib)
+target_link_libraries(cpp-exe PUBLIC rust_lib)

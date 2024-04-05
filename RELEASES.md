@@ -2,6 +2,9 @@
 
 ### Breaking Changes
 
+- Dashes (`-`) in names of imported CMake **library** targets are now replaced with underscores (`_`).
+  See [issue #501] for details. Users on older Corrosion versions will experience the same
+  change when using Rust 1.79 or newer. `bin` targets are not affected by this change.
 - The master branch of corrosion now requires CMake 3.22. See also the 
   [v0.4.0 Release notes](#040-lts-2023-06-01) for more details.
 - Removed native tooling and the corresponding option `CORROSION_NATIVE_TOOLING`.
@@ -25,6 +28,7 @@
   to cbindgen via the `TARGET` environment variable. The `hostbuild` property is considered. [#507]
 - Detect msvc linker flags coming from `--print=native-static-libs` and put them into `INTERFACE_LINK_OPTIONS` instead of `INTERFACE_LINK_LIBRARIES` [#511]
 
+[issue #501]: https://github.com/corrosion-rs/corrosion/issues/501
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459
 [#456]: https://github.com/corrosion-rs/corrosion/pull/456
 [#455]: https://github.com/corrosion-rs/corrosion/pull/455
@@ -58,7 +62,7 @@
 
 ### Fixes
 
-- The C/C++ compiler passed from corrosion to `cc-rs` can now be overriden by users setting
+- The C/C++ compiler passed from corrosion to `cc-rs` can now be overridden by users setting
   `CC_<target>` (e.g. `CC_x86_64-unknown-linux-gnu=/path/to/my-compiler`) environment variables ([#475]).
 
 [#475]: https://github.com/corrosion-rs/corrosion/pull/475
