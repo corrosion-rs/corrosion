@@ -82,8 +82,13 @@ impl CargoTarget {
         })
     }
 
-    pub(crate) fn target_name(&self) -> &str {
-        &self.cargo_target.name
+    /// Cargo / Rust 1.78 and newer replace dashes with underscores in libraries
+    /// To make the names consistent across versions we also do the replacement here.
+    pub(crate) fn target_name(&self) -> String {
+        match self.target_type {
+            CargoTargetType::Library { .. } => self.cargo_target.name.replace("-", "_"),
+            _ => self.cargo_target.name.to_string(),
+        }
     }
 
     pub fn emit_cmake_target(

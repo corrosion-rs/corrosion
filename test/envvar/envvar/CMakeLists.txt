@@ -4,7 +4,7 @@ include(../../test_header.cmake)
 
 corrosion_import_crate(MANIFEST_PATH Cargo.toml)
 
-corrosion_set_env_vars(rust-lib-requiring-envvar
+corrosion_set_env_vars(rust_lib_requiring_envvar
         "ANOTHER_VARIABLE=ANOTHER_VALUE"
         "$<TARGET_PROPERTY:program_requiring_rust_lib_with_envvar,INDIRECT_VAR_TEST>"
         "COR_CARGO_VERSION_MAJOR=${Rust_CARGO_VERSION_MAJOR}"
@@ -20,4 +20,4 @@ set_property(
     "REQUIRED_VARIABLE=EXPECTED_VALUE"
 )
 
-target_link_libraries(program_requiring_rust_lib_with_envvar PUBLIC rust-lib-requiring-envvar)
+target_link_libraries(program_requiring_rust_lib_with_envvar PUBLIC rust_lib_requiring_envvar)

@@ -9,4 +9,4 @@ endif()
 corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml PROFILE ${CARGO_PROFILE})
 
 add_executable(${CARGO_PROFILE}_bin main.cpp)
-target_link_libraries(${CARGO_PROFILE}_bin PUBLIC cargo-profiles-lib)
+target_link_libraries(${CARGO_PROFILE}_bin PUBLIC cargo_profiles_lib)

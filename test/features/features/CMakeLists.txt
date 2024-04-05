@@ -5,9 +5,9 @@ include(../../test_header.cmake)
 corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml FEATURES thirdfeature ALL_FEATURES)
 
 add_executable(features-cpp-exe main.cpp)
-target_link_libraries(features-cpp-exe PUBLIC rust-feature-lib)
+target_link_libraries(features-cpp-exe PUBLIC rust_feature_lib)
 
-corrosion_set_features(rust-feature-lib
+corrosion_set_features(rust_feature_lib
         ALL_FEATURES OFF
         NO_DEFAULT_FEATURES
         FEATURES
