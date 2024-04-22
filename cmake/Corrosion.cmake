@@ -1141,7 +1141,6 @@ function(corrosion_link_libraries target_name)
             return()
         endif()
     endif()
-    add_dependencies(_cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
         set_property(
             TARGET _cargo-build_${target_name}
@@ -1150,8 +1149,19 @@ function(corrosion_link_libraries target_name)
             $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
         )
 
-        corrosion_add_target_local_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
-        corrosion_add_target_local_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>")
+        if (TARGET "${library}")
+            corrosion_add_target_local_rustflags(${target_name}
+                "-L$<TARGET_LINKER_FILE_DIR:${library}>"
+                "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>"
+            )
+            add_dependencies(_cargo-build_${target_name} ${library})
+        elseif(IS_ABSOLUTE "${library}")
+            # Linking via full path (See https://doc.rust-lang.org/rustc/command-line-arguments.html#linking-modifiers-verbatim)
+            corrosion_add_target_local_rustflags(${target_name} "-Clink-arg=${library}")
+        else()
+            # We have to assume ${library} is a non-CMake library name
+            corrosion_add_target_local_rustflags(${target_name} "-l${library}")
+        endif()
     endforeach()
 endfunction()
 
