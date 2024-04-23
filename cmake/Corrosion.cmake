@@ -1539,10 +1539,13 @@ between multiple invocations of this function.
 ANCHOR_END: corrosion_cbindgen
 #]=======================================================================]
 function(corrosion_experimental_cbindgen)
-    # Todo:
-    # - set the target-triple via the TARGET env variable based on the target triple for the rust crate.
     set(OPTIONS "")
-    set(ONE_VALUE_KEYWORDS TARGET CARGO_PACKAGE MANIFEST_DIRECTORY HEADER_NAME CBINDGEN_VERSION)
+    set(ONE_VALUE_KEYWORDS
+            TARGET
+            CARGO_PACKAGE
+            MANIFEST_DIRECTORY
+            HEADER_NAME
+            CBINDGEN_VERSION)
     set(MULTI_VALUE_KEYWORDS "FLAGS")
     cmake_parse_arguments(PARSE_ARGV 0 CCN "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
@@ -1556,6 +1559,10 @@ function(corrosion_experimental_cbindgen)
     endforeach()
     set(rust_target "${CCN_TARGET}")
     unset(package_manifest_dir)
+
+
+    set(hostbuild_override "$<BOOL:$<TARGET_PROPERTY:${rust_target},${_CORR_PROP_HOST_BUILD}>>")
+    set(cbindgen_target_triple "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${_CORROSION_RUST_CARGO_TARGET}>")
 
     if(TARGET "${rust_target}")
         get_target_property(package_manifest_path "${rust_target}" INTERFACE_COR_PACKAGE_MANIFEST_PATH)
@@ -1653,7 +1660,9 @@ function(corrosion_experimental_cbindgen)
         OUTPUT
         "${generated_header}"
         COMMAND
-        "${cbindgen}"
+        "${CMAKE_COMMAND}" -E env
+            TARGET="${cbindgen_target_triple}"
+            "${cbindgen}"
                     --output "${generated_header}"
                     --crate "${rust_cargo_package}"
                     ${depfile_cbindgen_arg}
