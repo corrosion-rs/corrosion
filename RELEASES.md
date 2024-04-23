@@ -10,6 +10,9 @@
 ### New features
 
 - Support using the `$<CONFIG>` generator expression in `OUTPUT_DIRECTORY`. [#459]
+- If `corrosion_link_libraries()` is called on a Rust static library target, then
+  `target_link_libraries()` is called to propogate the dependencies to C/C++ consumers.
+  Previously a warning was emitted in this case and the arguments ignored.
 
 ### Fixes
 
