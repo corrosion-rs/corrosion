@@ -13,6 +13,9 @@
 - If `corrosion_link_libraries()` is called on a Rust static library target, then
   `target_link_libraries()` is called to propogate the dependencies to C/C++ consumers.
   Previously a warning was emitted in this case and the arguments ignored. [#506]
+- `corrosion_experimental_cbindgen()` can now be called multiple times on the same Rust target,
+  as long as the output header name differs. This may be useful to generate separate C and C++
+  bindings. [#507]
 
 ### Fixes
 
