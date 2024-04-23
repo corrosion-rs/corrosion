@@ -1250,11 +1250,15 @@ function(corrosion_set_features target_name)
 endfunction()
 
 function(corrosion_link_libraries target_name)
-    if(TARGET "${target_name}-static" AND NOT TARGET "${target_name}-shared")
-        message(WARNING "The target ${target_name} builds a static library."
-            "The linker is never invoked for a static libraries to link has effect "
-            " aside from establishing a build dependency."
-            )
+    if(TARGET "${target_name}-static")
+        message(DEBUG "The target ${target_name} builds a static Rust library."
+                "Calling `target_link_libraries()` instead."
+        )
+        target_link_libraries("${target_name}-static" INTERFACE ${ARGN})
+        if(NOT TARGET "${target_name}-shared")
+            # Early return, since Rust won't invoke the linker for static libraries
+            return()
+        endif()
     endif()
     add_dependencies(_cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
@@ -1268,7 +1272,7 @@ function(corrosion_link_libraries target_name)
         corrosion_add_target_local_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
         corrosion_add_target_local_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>")
     endforeach()
-endfunction(corrosion_link_libraries)
+endfunction()
 
 function(corrosion_install)
     # Default install dirs
