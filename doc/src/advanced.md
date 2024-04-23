@@ -40,17 +40,21 @@ For rust `cdylib`s and `bin`s, the linker is invoked via `rustc` and CMake just 
 
 When CMake invokes the linker, everything is as usual. CMake will call the linker with
 the compiler as the linker driver and users can just use the regular CMake functions to
-modify linking behaviour. The corrosion functions mentioned below have **no effect**.
+modify linking behaviour. `corrosion_set_linker()` has **no effect**.
+As a convenience, `corrosion_link_libraries()` will forward its arguments to `target_link_libraries()`.
 
 #### Rustc invokes the linker 
 
 Rust `cdylib`s and `bin`s are linked via `rustc`. Corrosion provides several helper functions
 to influence the linker invocation for such targets. 
 
-`corrosion_link_libraries()` is essentially the equivalent to `target_link_libraries()`, 
-if the target is a rust `cdylib` or `bin`.
+`corrosion_link_libraries()` is a limited version of `target_link_libraries()` 
+for rust `cdylib` or `bin` targets.
 Under the hood this function passes `-l` and `-L` flags to the linker invocation and
 ensures the linked libraries are built first.
+Much of the advanced functionality available in `target_link_libraries()` is not implemented yet,
+but pull-requests are welcome! In the meantime, users may want to use 
+`corrosion_add_target_local_rustflags()` to pass customized linking flags.
 
 `corrosion_set_linker()` can be used to specify a custom linker, in case the default one
 chosen by corrosion is not what you want.
