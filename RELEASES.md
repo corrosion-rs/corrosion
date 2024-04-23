@@ -12,16 +12,20 @@
 - Support using the `$<CONFIG>` generator expression in `OUTPUT_DIRECTORY`. [#459]
 - If `corrosion_link_libraries()` is called on a Rust static library target, then
   `target_link_libraries()` is called to propogate the dependencies to C/C++ consumers.
-  Previously a warning was emitted in this case and the arguments ignored.
+  Previously a warning was emitted in this case and the arguments ignored. [#506]
 
 ### Fixes
 
 - Combine `-framework` flags on macos to avoid linker deduplication errors [#455]
 - Set the `AR_<triple>` variable for `cc-rs` (except for msvc targets) [#456]
+- `corrosion_experimental_cbindgen()` now forwards the Rust target-triple (e.g. `aarch64-unknown-linux-gnu`)
+  to cbindgen via the `TARGET` environment variable. The `hostbuild` property is considered. [#507]
 
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459
 [#456]: https://github.com/corrosion-rs/corrosion/pull/456
 [#455]: https://github.com/corrosion-rs/corrosion/pull/455
+[#506]: https://github.com/corrosion-rs/corrosion/pull/506
+[#507]: https://github.com/corrosion-rs/corrosion/pull/507
 
 # v0.4.7 (2024-01-19)
 
