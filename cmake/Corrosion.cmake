@@ -1681,11 +1681,19 @@ function(corrosion_experimental_cbindgen)
         )
     endif()
 
-    add_custom_target(_corrosion_cbindgen_${rust_target}_bindings
-        DEPENDS "${generated_header}"
-        COMMENT "Generate cbindgen bindings for package ${rust_cargo_package}"
+    if(NOT TARGET "_corrosion_cbindgen_${rust_target}_bindings")
+        add_custom_target(_corrosion_cbindgen_${rust_target}_bindings
+                COMMENT "Generate cbindgen bindings for package ${rust_cargo_package}"
+        )
+    endif()
+    # Users might want to call cbindgen multiple times, e.g. to generate separate C++ and C header files.
+    string(MAKE_C_IDENTIFIER "${output_header_name}" header_identifier )
+    add_custom_target("_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}"
+            DEPENDS "${generated_header}"
+            COMMENT "Generate ${generated_header} for ${rust_target}"
     )
-    add_dependencies(${rust_target} _corrosion_cbindgen_${rust_target}_bindings)
+    add_dependencies("_corrosion_cbindgen_${rust_target}_bindings" "_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}")
+    add_dependencies(${rust_target} "_corrosion_cbindgen_${rust_target}_bindings")
 endfunction()
 
 # Parse the version of a Rust package from it's package manifest (Cargo.toml)
