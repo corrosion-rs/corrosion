@@ -6,6 +6,8 @@ message(DEBUG "Using Corrosion ${Corrosion_VERSION} with CMake ${CMAKE_VERSION} 
         "and the `${CMAKE_GENERATOR}` Generator"
 )
 
+set(CORROSION_CMAKE_SRC_DIR "${CMAKE_CURRENT_LIST_DIR}" CACHE INTERNAL "" FORCE)
+
 get_cmake_property(COR_IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
 set(COR_IS_MULTI_CONFIG "${COR_IS_MULTI_CONFIG}" CACHE BOOL "Do not change this" FORCE)
 mark_as_advanced(FORCE COR_IS_MULTI_CONFIG)
@@ -418,10 +420,6 @@ function(_corrosion_add_library_target)
 
         # Todo: NO_STD target property?
         if(NOT COR_NO_STD)
-            set_property(
-                    TARGET ${target_name}-static
-                    PROPERTY INTERFACE_LINK_LIBRARIES ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS}
-            )
             if(is_macos)
                 set_property(TARGET ${target_name}-static
                         PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
@@ -577,7 +575,26 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     if(NOT target_kinds)
         message(FATAL_ERROR "TARGET_KINDS not specified")
-    elseif("staticlib" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
+    elseif("staticlib" IN_LIST target_kinds)
+        set(cargo_rustc_filter "--lib")
+        set(rustc_print_native_libs "--print=native-static-libs")
+        set(native_libs_rsp_file "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_required_libs.rsp")
+        # Wrapper script around `cargo rustc` which captures the required link libraries into an rsp file.
+        set(cargo_native_libs_wrapper_script
+            ${CMAKE_COMMAND}
+                -D "COR_LIBS_OUTFILE=${native_libs_rsp_file}"
+                -D "COR_TARGET_NAME=${target_name}"
+                -D "COR_TARGET_IS_NO_STD=${COR_NO_STD}" # Todo: target property?
+                -P ${CORROSION_CMAKE_SRC_DIR}/CorrosionInvokeRustc.cmake
+                --)
+        if(Rust_CARGO_TARGET_ENV STREQUAL "msvc")
+            target_link_options(${target_name} INTERFACE "@${native_libs_rsp_file}")
+        else()
+            target_link_options(${target_name} INTERFACE "@$<SHELL_PATH:${native_libs_rsp_file}>")
+        endif()
+        #set_property(TARGET ${target_name} APPEND PROPERTY
+        #             INTERFACE_LINK_LIBRARIES "-Wl,@$<SHELL_PATH:${native_libs_rsp_file}>" )
+    elseif("cdylib" IN_LIST target_kinds)
         set(cargo_rustc_filter "--lib")
     elseif("bin" IN_LIST target_kinds)
         set(cargo_rustc_filter "--bin=${target_name}")
@@ -714,7 +731,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
 
-    # todo: this should probably also be guarded by if_not_host_build_condition.
     if(COR_NO_STD)
         corrosion_add_target_local_rustflags("${target_name}" "-Cdefault-linker-libraries=no")
     else()
@@ -763,6 +779,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
                 "CARGO_BUILD_RUSTC=${rustc_bin}"
+        # Wrapper script around cargo to intercept required link libraries
+        ${cargo_native_libs_wrapper_script}
+        # Actual build command
             "${cargo_bin}"
                 rustc
                 ${cargo_rustc_filter}
@@ -774,11 +793,13 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 --package ${package_name}
                 --manifest-path "${path_to_toml}"
                 --target-dir "${cargo_target_dir}"
+                --color never
                 ${cargo_profile}
                 ${flags_genex}
                 # Any arguments to cargo must be placed before this line
                 ${local_rustflags_delimiter}
                 ${local_rustflags_genex}
+                ${rustc_print_native_libs}
 
         # Note: Adding `build_byproducts` (the byproducts in the cargo target directory) here
         # causes CMake to fail during the Generate stage, because the target `target_name` was not
