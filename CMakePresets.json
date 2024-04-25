@@ -304,7 +304,8 @@
         },
         {
             "name": "x86_64-apple-darwin-clang",
-            "inherits": ["x86_64-apple-darwin", "clang"]
+            "inherits": ["x86_64-apple-darwin", "clang"],
+            "toolchainFile": "${sourceDir}/.github/scripts/toolchains/${presetName}.cmake"
         },
         {
             "name": "aarch64-apple-darwin-clang",
