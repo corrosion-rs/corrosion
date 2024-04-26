@@ -16,11 +16,14 @@
     the package and crate name are identical. 
 - Fix hostbuild when cross-compiling to windows [#477]
 - Set the `AR_<triple>` variable for `cc-rs` (except for msvc targets) [#456]
+- Detect msvc linker flags coming from `--print=native-static-libs` and put them into `INTERFACE_LINK_OPTIONS` instead of `INTERFACE_LINK_LIBRARIES` [#511]
+
 
 [#456]: https://github.com/corrosion-rs/corrosion/pull/456
 [#477]: https://github.com/corrosion-rs/corrosion/pull/477
 [#504]: https://github.com/corrosion-rs/corrosion/pull/504
 [#507]: https://github.com/corrosion-rs/corrosion/pull/507
+[#511]: https://github.com/corrosion-rs/corrosion/pull/511
 
 # v0.4.9 (2024-05-01)
 
