@@ -177,8 +177,8 @@ function(_corrosion_determine_libs_new target_triple out_libs out_flags)
                     continue()
                 endif()
                 
-                # Flags start with /
-                if (lib MATCHES "^/")
+                # Flags start with / for MSVC
+                if (lib MATCHES "^/" AND ${target_triple} MATCHES "msvc$")
                     list(APPEND flag_list "${lib}")
                 else()
                     # Strip leading `-l` (unix) and potential .lib suffix (windows)
