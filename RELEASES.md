@@ -1,3 +1,16 @@
+# v0.4.9 (2024-05-01)
+
+### New Features 
+
+- Automatically detect Rust target for OpenHarmony ([#510]).
+
+### Fixes
+
+- Make find_package portable ([#509]).
+
+[#510]: https://github.com/corrosion-rs/corrosion/pull/510
+[#509]: https://github.com/corrosion-rs/corrosion/pull/509
+
 # v0.4.8 (2024-04-03)
 
 ### Fixes
