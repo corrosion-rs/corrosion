@@ -1498,8 +1498,8 @@ ANCHOR: corrosion_cbindgen
 ```cmake
 corrosion_cbindgen(
         TARGET <imported_target_name>
-        CARGO_PACKAGE <cargo_package_name>
         HEADER_NAME <output_header_name>
+        [CARGO_PACKAGE <cargo_package_name>]
         [MANIFEST_DIRECTORY <package_manifest_directory>]
         [CBINDGEN_VERSION <version>]
         [FLAGS <flag1> ... <flagN>]
@@ -1517,8 +1517,8 @@ between multiple invocations of this function.
               `rlib`, you must additionally specify `MANIFEST_DIRECTORY`.
 
 * **CARGO_PACKAGE**: The name of the Rust cargo package that contains the library target. Note, that `cbindgen`
-                     expects this package name using the `--crate` parameter. If not specified, the **TARGET**
-                     will be used instead.
+                     expects this package name using the `--crate` parameter. If not specified, the **package** name
+                     of the imported **TARGET** will be used, which should be correct.
 
 * **MANIFEST_DIRECTORY**: Directory of the package defining the library crate bindings should be generated for.
     If you want to avoid specifying `MANIFEST_DIRECTORY` you could add a `staticlib` target to your package
@@ -1587,12 +1587,18 @@ function(corrosion_experimental_cbindgen)
 
     unset(rust_cargo_package)
     if(NOT DEFINED CCN_CARGO_PACKAGE)
-        message(STATUS "Using rust_target ${rust_target} as crate for cbindgen")
-        set(rust_cargo_package "${rust_target}")
+        get_target_property(rust_cargo_package "${rust_target}" COR_CARGO_PACKAGE_NAME )
+        if(NOT rust_cargo_package)
+            message(FATAL_ERROR "Could not determine cargo package name for cbindgen. "
+                                "You may want to explicitly pass the package name via the "
+                                "CARGO_PACKAGE argument to corrosion_experimental_cbindgen."
+            )
+        endif()
     else()
-        message(STATUS "Using crate ${CCN_CARGO_PACKAGE} as crate for cbindgen")
         set(rust_cargo_package "${CCN_CARGO_PACKAGE}")
     endif()
+    message(STATUS "Using package ${rust_cargo_package} as crate for cbindgen")
+
 
     set(output_header_name "${CCN_HEADER_NAME}")
 
