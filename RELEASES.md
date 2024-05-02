@@ -27,6 +27,9 @@
 - `corrosion_experimental_cbindgen()` now forwards the Rust target-triple (e.g. `aarch64-unknown-linux-gnu`)
   to cbindgen via the `TARGET` environment variable. The `hostbuild` property is considered. [#507]
 - Detect msvc linker flags coming from `--print=native-static-libs` and put them into `INTERFACE_LINK_OPTIONS` instead of `INTERFACE_LINK_LIBRARIES` [#511]
+- `corrosion_experimental_cbindgen()` will now correctly use the package name, instead of assuming that 
+  the package and crate name are identical.
+
 
 [issue #501]: https://github.com/corrosion-rs/corrosion/issues/501
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459
