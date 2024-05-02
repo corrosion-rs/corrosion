@@ -32,6 +32,28 @@
 [#507]: https://github.com/corrosion-rs/corrosion/pull/507
 [#511]: https://github.com/corrosion-rs/corrosion/pull/511
 
+# v0.4.9 (2024-05-01)
+
+### New Features
+
+- Automatically detect Rust target for OpenHarmony ([#510]).
+
+### Fixes
+
+- Make find_package portable ([#509]).
+
+[#510]: https://github.com/corrosion-rs/corrosion/pull/510
+[#509]: https://github.com/corrosion-rs/corrosion/pull/509
+
+# v0.4.8 (2024-04-03)
+
+### Fixes
+
+- Fix an internal error when passing both the `PROFILE` and `CRATES` option to
+  `corrosion_import_crate()` ([#496]).
+
+[#496]: https://github.com/corrosion-rs/corrosion/pull/496
+
 # v0.4.7 (2024-01-19)
 
 ### Fixes
