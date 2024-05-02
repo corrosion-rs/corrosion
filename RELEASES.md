@@ -1,3 +1,23 @@
+# v0.4.10 (2024-05-10)
+
+### New features
+
+- `corrosion_experimental_cbindgen()` can now be called multiple times on the same Rust target,
+  as long as the output header name differs. This may be useful to generate separate C and C++
+  bindings. [#507]
+
+### Fixes
+
+- Consider vworks executable suffix [#504]
+- `corrosion_experimental_cbindgen()` will now correctly use the package name, instead of assuming that
+    the package and crate name are identical. 
+- Fix hostbuild when cross-compiling to windows [#477]
+
+[#456]: https://github.com/corrosion-rs/corrosion/pull/456
+[#477]: https://github.com/corrosion-rs/corrosion/pull/477
+[#504]: https://github.com/corrosion-rs/corrosion/pull/504
+[#507]: https://github.com/corrosion-rs/corrosion/pull/507
+
 # v0.4.9 (2024-05-01)
 
 ### New Features 

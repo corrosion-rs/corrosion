@@ -1694,8 +1694,6 @@ between multiple invocations of this function.
 ANCHOR_END: corrosion_cbindgen
 #]=======================================================================]
 function(corrosion_experimental_cbindgen)
-    # Todo:
-    # - set the target-triple via the TARGET env variable based on the target triple for the rust crate.
     set(OPTIONS "")
     set(ONE_VALUE_KEYWORDS TARGET MANIFEST_DIRECTORY HEADER_NAME CBINDGEN_VERSION)
     set(MULTI_VALUE_KEYWORDS "FLAGS")
@@ -1711,6 +1709,10 @@ function(corrosion_experimental_cbindgen)
     endforeach()
     set(rust_target "${CCN_TARGET}")
     unset(package_manifest_dir)
+
+
+    set(hostbuild_override "$<BOOL:$<TARGET_PROPERTY:${rust_target},${_CORR_PROP_HOST_BUILD}>>")
+    set(cbindgen_target_triple "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${_CORROSION_RUST_CARGO_TARGET}>")
 
     if(TARGET "${rust_target}")
         get_target_property(package_manifest_path "${rust_target}" INTERFACE_COR_PACKAGE_MANIFEST_PATH)
@@ -1728,6 +1730,18 @@ function(corrosion_experimental_cbindgen)
             set(package_manifest_dir "${CCN_MANIFEST_DIRECTORY}")
         endif()
     endif()
+
+    unset(rust_cargo_package)
+    if(NOT DEFINED CCN_CARGO_PACKAGE)
+        get_target_property(rust_cargo_package "${rust_target}" INTERFACE_COR_CARGO_PACKAGE_NAME )
+        if(NOT rust_cargo_package)
+            message(FATAL_ERROR "Could not determine cargo package name for cbindgen!")
+        endif()
+    else()
+        set(rust_cargo_package "${CCN_CARGO_PACKAGE}")
+    endif()
+    message(STATUS "Using package ${rust_cargo_package} as crate for cbindgen")
+
 
     set(output_header_name "${CCN_HEADER_NAME}")
 
@@ -1764,6 +1778,8 @@ function(corrosion_experimental_cbindgen)
     set(corrosion_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated")
     set(generated_dir "${corrosion_generated_dir}/cbindgen/${rust_target}")
     set(header_placement_dir "${generated_dir}/include/")
+    set(depfile_placement_dir "${generated_dir}/depfile")
+    set(generated_depfile "${depfile_placement_dir}/${output_header_name}.d")
     set(generated_header "${header_placement_dir}/${output_header_name}")
     message(STATUS "rust target is ${rust_target}")
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.23")
@@ -1785,39 +1801,68 @@ function(corrosion_experimental_cbindgen)
     # This may be different from $header_placement_dir since the user specified HEADER_NAME may contain
     # relative directories.
     get_filename_component(generated_header_dir "${generated_header}" DIRECTORY)
-    file(MAKE_DIRECTORY ${generated_header_dir})
+    file(MAKE_DIRECTORY "${generated_header_dir}")
 
-    # Todo: Add dependencies on the source Rust files here to get proper dependency rules (hard).
-    # For now we just specify a dummy file we won't generate as an additional output, so that the rule
-    # always runs.
-    # Future Options: a) upstream depfile creation into cbindgen, b) spider our way through the source-code ourselves.
-    # c) ask the user to specify the dependencies (in order to relax the rules).
-    add_custom_command(
-        OUTPUT
-        "${generated_header}" "${CMAKE_CURRENT_BINARY_DIR}/corrosion/non-existing-file.h"
-        COMMAND
-        "${cbindgen}"
-                    --output "${generated_header}"
-                    --crate "${rust_target}"
-                    ${CCN_FLAGS}
-        COMMENT "Generate cbindgen bindings for crate ${rust_target}"
-        COMMAND_EXPAND_LISTS
-        WORKING_DIRECTORY "${package_manifest_dir}"
-    )
+    unset(depfile_cbindgen_arg)
+    unset(depfile_cmake_arg)
+    get_filename_component(generated_depfile_dir "${generated_depfile}" DIRECTORY)
+    file(MAKE_DIRECTORY "${generated_depfile_dir}")
+    set(depfile_cbindgen_arg "--depfile=${generated_depfile}")
+
+    # Users might want to call cbindgen multiple times, e.g. to generate separate C++ and C header files.
+    string(MAKE_C_IDENTIFIER "${output_header_name}" header_identifier )
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
+        add_custom_command(
+            OUTPUT
+            "${generated_header}"
+            COMMAND
+            "${CMAKE_COMMAND}" -E env
+                TARGET="${cbindgen_target_triple}"
+                "${cbindgen}"
+                        --output "${generated_header}"
+                        --crate "${rust_cargo_package}"
+                        ${depfile_cbindgen_arg}
+                        ${CCN_FLAGS}
+            COMMENT "Generate cbindgen bindings for package ${rust_cargo_package} and output header ${generated_header}"
+            DEPFILE "${generated_depfile}"
+            COMMAND_EXPAND_LISTS
+            WORKING_DIRECTORY "${package_manifest_dir}"
+        )
+        add_custom_target("_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}"
+                          DEPENDS "${generated_header}"
+                          COMMENT "Generate ${generated_header} for ${rust_target}"
+        )
+    else()
+        add_custom_target("_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}"
+                          "${CMAKE_COMMAND}" -E env
+                              TARGET="${cbindgen_target_triple}"
+                              "${cbindgen}"
+                              --output "${generated_header}"
+                              --crate "${rust_cargo_package}"
+                              ${depfile_cbindgen_arg}
+                              ${CCN_FLAGS}
+                          COMMENT "Generate ${generated_header} for ${rust_target}"
+                          COMMAND_EXPAND_LISTS
+                          WORKING_DIRECTORY "${package_manifest_dir}"
+        )
+    endif()
 
     if(NOT installed_cbindgen)
         add_custom_command(
-            OUTPUT "${generated_header}" "${CMAKE_CURRENT_BINARY_DIR}/corrosion/non-existing-file.h"
+            OUTPUT "${generated_header}"
             APPEND
             DEPENDS _corrosion_cbindgen
         )
     endif()
 
-    add_custom_target(_corrosion_cbindgen_${rust_target}_bindings
-        DEPENDS "${generated_header}"
-        COMMENT "Generate cbindgen bindings for crate ${rust_target}"
-    )
-    add_dependencies(${rust_target} _corrosion_cbindgen_${rust_target}_bindings)
+    if(NOT TARGET "_corrosion_cbindgen_${rust_target}_bindings")
+        add_custom_target(_corrosion_cbindgen_${rust_target}_bindings
+                COMMENT "Generate cbindgen bindings for package ${rust_cargo_package}"
+        )
+    endif()
+
+    add_dependencies("_corrosion_cbindgen_${rust_target}_bindings" "_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}")
+    add_dependencies(${rust_target} "_corrosion_cbindgen_${rust_target}_bindings")
 endfunction()
 
 # Parse the version of a Rust package from it's package manifest (Cargo.toml)
