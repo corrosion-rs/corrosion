@@ -144,7 +144,7 @@ impl CargoTarget {
                     )
                     ",
                     workspace_manifest_path = ws_manifest,
-                    target_name = self.cargo_target.name,
+                    target_name = self.target_name(),
                     lib_kinds = lib_kinds,
                 )?;
             }
@@ -159,7 +159,7 @@ impl CargoTarget {
                     list(APPEND byproducts \"${{bin_byproduct}}\" \"${{pdb_byproduct}}\")
                     ",
                     workspace_manifest_path = ws_manifest,
-                    target_name = self.cargo_target.name,
+                    target_name = self.target_name(),
                 )?;
             }
         };
@@ -202,9 +202,10 @@ impl CargoTarget {
                     {target_name} RUNTIME_OUTPUT_DIRECTORY \"${{cargo_build_out_dir}}\" \"${{bin_byproduct}}\" TRUE
                 )
             endif()
+            set_property(TARGET {target_name} PROPERTY INTERFACE_COR_CARGO_PACKAGE_NAME {package_name} )
             ",
             package_name = self.cargo_package.name,
-            target_name = self.cargo_target.name,
+            target_name = self.target_name(),
             package_manifest_path = self.cargo_package.manifest_path.as_str().replace("\\", "/"),
             workspace_manifest_path = ws_manifest,
             target_kinds = target_kinds,
