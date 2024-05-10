@@ -1,4 +1,4 @@
-# v0.4.10 (2024-05-10)
+# v0.4.10 (2024-05-11)
 
 ### New features
 
@@ -6,24 +6,33 @@
   as long as the output header name differs. This may be useful to generate separate C and C++
   bindings. [#507]
 - If `corrosion_link_libraries()` is called on a Rust static library target, then
-  `target_link_libraries()` is called to propogate the dependencies to C/C++ consumers.
-  Previously a warning was emitted in this case and the arguments ignored.
+  `target_link_libraries()` is called to propagate the dependencies to C/C++ consumers.
+  Previously a warning was emitted in this case and the arguments ignored. [#506]
+- `corrosion_experimental_cbindgen()` can now be called multiple times on the same Rust target,
+  as long as the output header name differs. This may be useful to generate separate C and C++
+  bindings. [#507]
 
 ### Fixes
 
-- Consider vworks executable suffix [#504]
+- Combine `-framework` flags on macos to avoid linker deduplication errors [#455]
 - `corrosion_experimental_cbindgen()` will now correctly use the package name, instead of assuming that
-    the package and crate name are identical. 
-- Fix hostbuild when cross-compiling to windows [#477]
+    the package and crate name are identical. ([11e27c])
 - Set the `AR_<triple>` variable for `cc-rs` (except for msvc targets) [#456]
-- Detect msvc linker flags coming from `--print=native-static-libs` and put them into `INTERFACE_LINK_OPTIONS` instead of `INTERFACE_LINK_LIBRARIES` [#511]
+- Fix hostbuild when cross-compiling to windows [#477]
+- Consider vworks executable suffix [#504]
+- `corrosion_experimental_cbindgen()` now forwards the Rust target-triple (e.g. `aarch64-unknown-linux-gnu`)
+  to cbindgen via the `TARGET` environment variable. The `hostbuild` property is considered. [#507]
+- Fix linking errors with Rust >= 1.79 and `-msvc` targets.` [#511]
 
 
+[#455]: https://github.com/corrosion-rs/corrosion/pull/455
 [#456]: https://github.com/corrosion-rs/corrosion/pull/456
 [#477]: https://github.com/corrosion-rs/corrosion/pull/477
 [#504]: https://github.com/corrosion-rs/corrosion/pull/504
+[#506]: https://github.com/corrosion-rs/corrosion/pull/506
 [#507]: https://github.com/corrosion-rs/corrosion/pull/507
 [#511]: https://github.com/corrosion-rs/corrosion/pull/511
+[11e27c]: https://github.com/corrosion-rs/corrosion/pull/514/commits/11e27cde2cf32c7ed539c96eb03c2f10035de538
 
 # v0.4.9 (2024-05-01)
 
