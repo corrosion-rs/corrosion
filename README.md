@@ -40,9 +40,9 @@ target_link_libraries(your_cpp_bin PUBLIC rust-lib)
 
 ## Requirements
 
-### Stable v0.4 Release
+### Stable v0.5 Release
 
-- CMake 3.15 or newer. Some features may only be available on more recents CMake versions
+- CMake 3.15 or newer. Some features may only be available on more recent CMake versions
 - Rust 1.46 or newer. Some platforms / features may require more recent Rust versions
 
 ### Development (master branch)

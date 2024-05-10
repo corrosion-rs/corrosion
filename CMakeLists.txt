@@ -5,7 +5,7 @@ project(Corrosion
     # tagged release. Users don't need to care about this, it is mainly to
     # clearly see in configure logs which version was used, without needing to
     # rely on `git`, since Corrosion may be installed or otherwise packaged.
-    VERSION 0.4.99.99 # a 0.5-pre-release
+    VERSION 0.99.99 # 1.0-pre-release
     LANGUAGES NONE
     HOMEPAGE_URL "https://corrosion-rs.github.io/corrosion/"
 )
@@ -63,7 +63,7 @@ write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake"
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY
-        SameMinorVersion # TODO: Should be SameMajorVersion when 1.0 is released
+        SameMajorVersion
     ARCH_INDEPENDENT
 )
 
