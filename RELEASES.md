@@ -1,3 +1,13 @@
+# v0.5.0 (2024-05-11)
+
+### Breaking Changes
+
+- Dashes (`-`) in names of imported CMake **library** targets are now replaced with underscores (`_`).
+  See [issue #501] for details. Users on older Corrosion versions will experience the same
+  change when using Rust 1.79 or newer. `bin` targets are not affected by this change.
+
+[issue #501]: https://github.com/corrosion-rs/corrosion/issues/501
+
 # v0.4.10 (2024-05-11)
 
 ### New features
