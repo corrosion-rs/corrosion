@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Build and deploy the documentation of master and the stable/v0.4 branch
+  # Build and deploy the documentation of master and the stable/v0.5 branch
   deploy:
     runs-on: ubuntu-latest
     environment:
@@ -36,18 +36,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: main
-      - name: Checkout stable/v0.4
+      - name: Checkout stable/v0.5
         uses: actions/checkout@v4
         with:
-          path: stable-v0.4
-          ref: 'stable/v0.4'
+          path: stable-v0.5
+          ref: 'stable/v0.5'
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Build mdbook for main branch
         working-directory: 'main/doc'
         run: mdbook build
-      - name: Build mdbook for stable/v0.4 branch
-        working-directory: 'stable-v0.4/doc'
+      - name: Build mdbook for stable/v0.5 branch
+        working-directory: 'stable-v0.5/doc'
         run: mdbook build
       # Override mdbooks default highlight.js with a custom version containing CMake support.
       - uses: actions/checkout@v4
@@ -66,9 +66,9 @@ jobs:
           cp highlightjs/build/highlight.min.js main/doc/book/highlight.js
           cp highlightjs/build/highlight.min.js stable-v0.4/doc/book/highlight.js
       - name: Copy stable doc into main
-        run: mkdir main/doc/book/v0.4 && cp -a stable-v0.4/doc/book/. main/doc/book/v0.4/
+        run: mkdir main/doc/book/v0.5 && cp -a stable-v0.5/doc/book/. main/doc/book/v0.5/
       - name: Debug print
-        run: ls -la main/doc/book/v0.4
+        run: ls -la main/doc/book/v0.5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
