@@ -64,7 +64,7 @@ jobs:
       - name: Override highlightjs
         run: |
           cp highlightjs/build/highlight.min.js main/doc/book/highlight.js
-          cp highlightjs/build/highlight.min.js stable-v0.4/doc/book/highlight.js
+          cp highlightjs/build/highlight.min.js stable-v0.5/doc/book/highlight.js
       - name: Copy stable doc into main
         run: mkdir main/doc/book/v0.5 && cp -a stable-v0.5/doc/book/. main/doc/book/v0.5/
       - name: Debug print
