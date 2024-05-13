@@ -1509,10 +1509,6 @@ between multiple invocations of this function.
               If the target was not previously imported by Corrosion, because the crate only produces an
               `rlib`, you must additionally specify `MANIFEST_DIRECTORY`.
 
-* **CARGO_PACKAGE**: The name of the Rust cargo package that contains the library target. Note, that `cbindgen`
-                     expects this package name using the `--crate` parameter. If not specified, the **package** name
-                     of the imported **TARGET** will be used, which should be correct.
-
 * **MANIFEST_DIRECTORY**: Directory of the package defining the library crate bindings should be generated for.
     If you want to avoid specifying `MANIFEST_DIRECTORY` you could add a `staticlib` target to your package
     manifest as a workaround to make corrosion import the crate.
@@ -1539,7 +1535,6 @@ function(corrosion_experimental_cbindgen)
     set(OPTIONS "")
     set(ONE_VALUE_KEYWORDS
             TARGET
-            CARGO_PACKAGE
             MANIFEST_DIRECTORY
             HEADER_NAME
             CBINDGEN_VERSION)
@@ -1578,17 +1573,10 @@ function(corrosion_experimental_cbindgen)
         endif()
     endif()
 
-    unset(rust_cargo_package)
-    if(NOT DEFINED CCN_CARGO_PACKAGE)
-        get_target_property(rust_cargo_package "${rust_target}" COR_CARGO_PACKAGE_NAME )
-        if(NOT rust_cargo_package)
-            message(FATAL_ERROR "Could not determine cargo package name for cbindgen. "
-                                "You may want to explicitly pass the package name via the "
-                                "CARGO_PACKAGE argument to corrosion_experimental_cbindgen."
-            )
-        endif()
-    else()
-        set(rust_cargo_package "${CCN_CARGO_PACKAGE}")
+    get_target_property(rust_cargo_package "${rust_target}" COR_CARGO_PACKAGE_NAME )
+    if(NOT rust_cargo_package)
+        message(FATAL_ERROR "Internal Error: Could not determine cargo package name for cbindgen. "
+        )
     endif()
     message(STATUS "Using package ${rust_cargo_package} as crate for cbindgen")
 
