@@ -406,8 +406,6 @@ function(_corrosion_add_library_target)
     endif()
     set("${CALT_OUT_ARCHIVE_OUTPUT_BYPRODUCTS}" "${archive_output_byproducts}" PARENT_SCOPE)
 
-    add_library(${target_name} INTERFACE)
-
     if(has_staticlib)
         add_library(${target_name}-static STATIC IMPORTED GLOBAL)
         add_dependencies(${target_name}-static cargo-build_${target_name})
@@ -491,11 +489,6 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
     # target property
     set(bin_filename "${bin_name}")
     set(${out_bin_byproduct} "${bin_filename}" PARENT_SCOPE)
-
-
-    # Todo: This is compatible with the way corrosion previously exposed the bin name,
-    # but maybe we want to prefix the exposed name with the package name?
-    add_executable(${bin_name} IMPORTED GLOBAL)
     add_dependencies(${bin_name} cargo-build_${bin_name})
 
     if(Rust_CARGO_TARGET_OS STREQUAL "darwin")
@@ -1751,6 +1744,22 @@ function(corrosion_parse_package_version package_manifest_path out_package_versi
             PARENT_SCOPE
         )
     endif()
+endfunction()
+
+function(_corrosion_initialize_properties target_name)
+    # Initialize the `<XYZ>_OUTPUT_DIRECTORY` properties based on `CMAKE_<XYZ>_OUTPUT_DIRECTORY`.
+    foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
+        if (DEFINED "CMAKE_${output_var}")
+            set_property(TARGET ${target_name} PROPERTY "${output_var}" "${CMAKE_${output_var}}")
+        endif()
+
+        foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+            string(TOUPPER "${config_type}" config_type_upper)
+            if (DEFINED "CMAKE_${output_var}_${config_type_upper}")
+                set_property(TARGET ${target_name} PROPERTY "${output_var}_${config_type_upper}" "${CMAKE_${output_var}_${config_type_upper}}")
+            endif()
+        endforeach()
+    endforeach()
 endfunction()
 
 # Helper macro to pass through an optional `OPTION` argument parsed via `cmake_parse_arguments`
