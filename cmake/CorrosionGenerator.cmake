@@ -306,7 +306,7 @@ function(_generator_add_cargo_targets)
     if(GGC_IMPORTED_CRATES)
         set(${GGC_IMPORTED_CRATES} "${created_targets}" PARENT_SCOPE)
     endif()
-
+    # Initialize the `<XYZ>_OUTPUT_DIRECTORY` properties based on `CMAKE_<XYZ>_OUTPUT_DIRECTORY`.
     foreach(target_name ${created_targets})
         foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
             get_target_property(output_dir ${target_name} "${output_var}")
