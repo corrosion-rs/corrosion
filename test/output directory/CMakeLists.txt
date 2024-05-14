@@ -1,7 +1,3 @@
-if(CMAKE_VERSION VERSION_LESS 3.19.0)
-    return()
-endif()
-
 if(CMAKE_C_COMPILER)
     set(TEST_C_COMPILER "C_COMPILER" "${CMAKE_C_COMPILER}")
 endif()
@@ -33,7 +29,12 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
     set_tests_properties("output_directory_build" PROPERTIES FIXTURES_REQUIRED "fixture_corrosion_install")
 endif()
 
-foreach(output_approach targetprop var)
+set(test_variants "var")
+if(NOT CORROSION_NATIVE_TOOLING)
+    list(APPEND test_variants "targetprop")
+endif()
+
+foreach(output_approach ${test_variants})
     if(output_approach STREQUAL "targetprop")
        set(rust_proj_suffix "1")
     elseif(output_approach STREQUAL "var")
@@ -128,13 +129,15 @@ foreach(output_approach targetprop var)
 
 endforeach()
 
-add_test(NAME postbuild_custom_command
-    COMMAND
-    "${CMAKE_COMMAND}"
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/build/another_dir/moved_bin"
-    )
-set_tests_properties("postbuild_custom_command" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+if(NOT CORROSION_NATIVE_TOOLING)
+    add_test(NAME postbuild_custom_command
+        COMMAND
+        "${CMAKE_COMMAND}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/TestFileExists.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/build/another_dir/moved_bin"
+        )
+    set_tests_properties("postbuild_custom_command" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
+endif()
 
 add_test(NAME "output_directory_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build")
 set_tests_properties("output_directory_cleanup" PROPERTIES FIXTURES_CLEANUP "build_fixture_output_directory")
