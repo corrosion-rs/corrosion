@@ -134,6 +134,8 @@ impl CargoTarget {
                 writeln!(
                     out_file,
                     "
+                    add_library({target_name} INTERFACE)
+                    _corrosion_initialize_properties({target_name})
                     _corrosion_add_library_target(
                             WORKSPACE_MANIFEST_PATH \"{workspace_manifest_path}\"
                             TARGET_NAME \"{target_name}\"
@@ -157,6 +159,8 @@ impl CargoTarget {
                 writeln!(
                     out_file,
                     "
+                    add_executable({target_name} IMPORTED GLOBAL)
+                    _corrosion_initialize_properties({target_name})
                     _corrosion_add_bin_target(\"{workspace_manifest_path}\" \"{target_name}\"
                         bin_byproduct pdb_byproduct
                     )
