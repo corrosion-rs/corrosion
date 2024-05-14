@@ -116,6 +116,8 @@ function(_generator_add_package_targets)
             set(shared_lib_byproduct "")
             set(pdb_byproduct "")
 
+            add_library(${target_name} INTERFACE)
+            _corrosion_initialize_properties(${target_name})
             _corrosion_add_library_target(
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 TARGET_NAME "${target_name}"
@@ -161,6 +163,8 @@ function(_generator_add_package_targets)
         elseif("bin" IN_LIST kinds)
             set(bin_byproduct "")
             set(pdb_byproduct "")
+            add_executable(${target_name} IMPORTED GLOBAL)
+            _corrosion_initialize_properties(${target_name})
             _corrosion_add_bin_target("${workspace_manifest_path}" "${target_name}"
                 "bin_byproduct" "pdb_byproduct"
             )
@@ -306,21 +310,4 @@ function(_generator_add_cargo_targets)
     if(GGC_IMPORTED_CRATES)
         set(${GGC_IMPORTED_CRATES} "${created_targets}" PARENT_SCOPE)
     endif()
-
-    foreach(target_name ${created_targets})
-        foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
-            get_target_property(output_dir ${target_name} "${output_var}")
-            if (NOT output_dir AND DEFINED "CMAKE_${output_var}")
-                set_property(TARGET ${target_name} PROPERTY ${output_var} "${CMAKE_${output_var}}")
-            endif()
-
-            foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
-                string(TOUPPER "${config_type}" config_type_upper)
-                get_target_property(output_dir ${target_name} "${output_var}_${config_type_upper}")
-                if (NOT output_dir AND DEFINED "CMAKE_${output_var}_${config_type_upper}")
-                    set_property(TARGET ${target_name} PROPERTY "${output_var}_${config_type_upper}" "${CMAKE_${output_var}_${config_type_upper}}")
-                endif()
-            endforeach()
-        endforeach()
-    endforeach()
 endfunction()
