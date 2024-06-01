@@ -17,15 +17,14 @@ include(FindPackageHandleStandardArgs)
 
 list(APPEND CMAKE_MESSAGE_CONTEXT "FindRust")
 
-# Print error message and return.
+# Print error message and return. Should not be used from inside functions
 macro(_findrust_failed)
     if("${Rust_FIND_REQUIRED}")
         message(FATAL_ERROR ${ARGN})
     elseif(NOT "${Rust_FIND_QUIETLY}")
         message(WARNING ${ARGN})
     endif()
-    # Note: PARENT_SCOPE is the scope of the caller of the caller of this macro.
-    set(Rust_FOUND "" PARENT_SCOPE)
+    set(Rust_FOUND "")
     return()
 endmacro()
 
