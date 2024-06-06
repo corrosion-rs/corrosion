@@ -347,10 +347,10 @@ function(_corrosion_add_library_target)
     set(workspace_manifest_path "${CALT_WORKSPACE_MANIFEST_PATH}")
     set(target_name "${CALT_TARGET_NAME}")
 
-    set(is_windows "")
-    set(is_windows_gnu "")
-    set(is_windows_msvc "")
-    set(is_macos "")
+    set(is_windows FALSE)
+    set(is_windows_gnu FALSE)
+    set(is_windows_msvc FALSE)
+    set(is_macos FALSE)
     if(Rust_CARGO_TARGET_OS STREQUAL "windows")
         set(is_windows TRUE)
         if(Rust_CARGO_TARGET_ENV STREQUAL "msvc")
@@ -571,13 +571,18 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(target_kinds "${ACB_TARGET_KINDS}")
     set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
 
-
+    
     if(NOT target_kinds)
         message(FATAL_ERROR "TARGET_KINDS not specified")
     elseif("staticlib" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
+        # --lib --crate-type=...
         set(cargo_rustc_filter "--lib")
+        string(REPLACE ";" "," cargo_rustc_crate_type "${target_kinds}")
+        set(cargo_rustc_crate_type "--crate-type=${cargo_rustc_crate_type}")
     elseif("bin" IN_LIST target_kinds)
+        # --bin=...
         set(cargo_rustc_filter "--bin=${target_name}")
+        set(cargo_rustc_crate_type "")
     else()
         message(FATAL_ERROR "TARGET_KINDS contained unknown kind `${target_kind}`")
     endif()
@@ -726,7 +731,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(deps_link_languages_prop "$<TARGET_PROPERTY:_cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>")
     set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
     set(target_uses_cxx  "$<IN_LIST:CXX,${deps_link_languages}>")
-    unset(default_linker)
+    set(default_linker "")
     # With the MSVC ABI rustc only supports directly invoking the linker - Invoking cl as the linker driver is not supported.
     if(NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
         set(default_linker "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER},${CMAKE_C_COMPILER}>")
@@ -763,6 +768,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
             "${cargo_bin}"
                 rustc
                 ${cargo_rustc_filter}
+                ${cargo_rustc_crate_type}
                 ${cargo_target_option}
                 ${_CORROSION_VERBOSE_OUTPUT_FLAG}
                 ${all_features_arg}
@@ -839,6 +845,7 @@ corrosion_import_crate(
         [PROFILE <cargo-profile>]
         [IMPORTED_CRATES <variable-name>]
         [CRATE_TYPES <crate_type1> ... <crate_typeN>]
+        [LIB_OVERRIDE <crate_type>]
         [CRATES <crate1> ... <crateN>]
         [FEATURES <feature1> ... <featureN>]
         [FLAGS <flag1> ... <flagN>]
@@ -853,7 +860,8 @@ corrosion_import_crate(
 * **FROZEN**: Pass [`--frozen`] to cargo build and cargo metadata.
 * **PROFILE**: Specify cargo build profile (`dev`/`release` or a [custom profile]; `bench` and `test` are not supported)
 * **IMPORTED_CRATES**: Save the list of imported crates into the variable with the provided name in the current scope.
-* **CRATE_TYPES**: Only import the specified crate types. Valid values: `staticlib`, `cdylib`, `bin`.
+* **CRATE_TYPES**: Only import the specified crate types. Valid values: `staticlib`, `cdylib`, `lib`, `bin`. If `lib` is specified, `LIB_OVERRIDE` must have a valid value.
+* **LIB_OVERRIDE**: Crates of type `lib` are compiled as this type instead. Must be one of: `cdylib`, `staticlib`. If `CRATE_TYPES` does not contain `lib`, this parameter is ignored.
 * **CRATES**: Only import the specified crates from a workspace. Values: Crate names.
 * **FEATURES**: Enable the specified features. Equivalent to [--features] passed to `cargo build`.
 * **FLAGS**:  Arbitrary flags to `cargo build`.
@@ -870,7 +878,7 @@ ANCHOR_END: corrosion-import-crate
 #]=======================================================================]
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD NO_LINKER_OVERRIDE LOCKED FROZEN)
-    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES LIB_OVERRIDE)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
     list(APPEND CMAKE_MESSAGE_CONTEXT "corrosion_import_crate")
@@ -893,6 +901,7 @@ function(corrosion_import_crate)
     _corrosion_option_passthrough_helper(FROZEN COR frozen)
     _corrosion_arg_passthrough_helper(CRATES COR crate_allowlist)
     _corrosion_arg_passthrough_helper(CRATE_TYPES COR crate_types)
+    _corrosion_arg_passthrough_helper(LIB_OVERRIDE COR lib_override)
 
     if(COR_PROFILE)
         if(Rust_VERSION VERSION_LESS 1.57.0)
@@ -923,6 +932,19 @@ function(corrosion_import_crate)
         list(APPEND additional_cargo_flags  "--frozen")
     endif()
 
+    if(("lib" IN_LIST COR_CRATE_TYPES))
+        # LIB_OVERRIDE must be set to one of these values
+        set(valid_lib_overrides "cdylib" "staticlib")
+
+        if(NOT DEFINED COR_LIB_OVERRIDE)
+            message(FATAL_ERROR "Specifying `lib` among the `CREATE_TYPES` requires the additional parameter `LIB_OVERRIDE` to be set.")
+        elseif(NOT ("${COR_LIB_OVERRIDE}" IN_LIST valid_lib_overrides))
+            message(FATAL_ERROR "Parameter `LIB_OVERRIDE` is set to an invalid value (${COR_LIB_OVERRIDE})."
+                    " Please refer to the documentation of corrosion_import_create to learn about valid values for this parameter."
+            )
+        endif()
+    endif()
+
     set(imported_crates "")
 
     _generator_add_cargo_targets(
@@ -932,6 +954,7 @@ function(corrosion_import_crate)
             imported_crates
         ${crate_allowlist}
         ${crate_types}
+        ${lib_override}
         ${no_linker_override}
     )
 
@@ -1106,7 +1129,7 @@ function(corrosion_install)
     set(INSTALL_TARGET_TYPES ARCHIVE LIBRARY RUNTIME PRIVATE_HEADER PUBLIC_HEADER)
 
     # Arguments to each install target type
-    set(OPTIONS)
+    set(OPTIONS "")
     set(ONE_VALUE_ARGS DESTINATION)
     set(MULTI_VALUE_ARGS PERMISSIONS CONFIGURATIONS)
     set(TARGET_ARGS ${OPTIONS} ${ONE_VALUE_ARGS} ${MULTI_VALUE_ARGS})
@@ -1164,7 +1187,7 @@ function(corrosion_install)
             endif()
 
             # Gather the arguments to this install type
-            set(ARGS)
+            set(ARGS "")
             while(ARGN_LENGTH)
                 # If the next keyword is an install target type, then break - arguments have been
                 # gathered.
@@ -1308,7 +1331,7 @@ welcome.
 ANCHOR_END: corrosion_add_cxxbridge
 #]=======================================================================]
 function(corrosion_add_cxxbridge cxx_target)
-    set(OPTIONS)
+    set(OPTIONS "")
     set(ONE_VALUE_KEYWORDS CRATE)
     set(MULTI_VALUE_KEYWORDS FILES)
     cmake_parse_arguments(PARSE_ARGV 1 _arg "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
@@ -1550,7 +1573,7 @@ function(corrosion_experimental_cbindgen)
         endif()
     endforeach()
     set(rust_target "${CCN_TARGET}")
-    unset(package_manifest_dir)
+    set(package_manifest_dir "")
 
 
     set(hostbuild_override "$<BOOL:$<TARGET_PROPERTY:${rust_target},${_CORR_PROP_HOST_BUILD}>>")
@@ -1590,7 +1613,7 @@ function(corrosion_experimental_cbindgen)
         set(cbindgen "${installed_cbindgen}")
     else()
         set(local_cbindgen_install_dir "${CMAKE_BINARY_DIR}/corrosion/cbindgen")
-        unset(executable_postfix)
+        set(executable_postfix "")
         if(Rust_CARGO_HOST_OS STREQUAL "windows")
             set(executable_postfix ".exe")
         endif()
@@ -1641,8 +1664,6 @@ function(corrosion_experimental_cbindgen)
     get_filename_component(generated_header_dir "${generated_header}" DIRECTORY)
     file(MAKE_DIRECTORY "${generated_header_dir}")
 
-    unset(depfile_cbindgen_arg)
-    unset(depfile_cmake_arg)
     get_filename_component(generated_depfile_dir "${generated_depfile}" DIRECTORY)
     file(MAKE_DIRECTORY "${generated_depfile_dir}")
     set(depfile_cbindgen_arg "--depfile=${generated_depfile}")
@@ -1775,4 +1796,3 @@ macro(_corrosion_arg_passthrough_helper arg_name prefix var_name)
 endmacro()
 
 list(POP_BACK CMAKE_MESSAGE_CONTEXT)
-

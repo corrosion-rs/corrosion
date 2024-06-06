@@ -1,4 +1,4 @@
-set(configure_cmake_args)
+set(configure_cmake_args "")
 if(CMAKE_C_COMPILER)
     list(APPEND configure_cmake_args "C_COMPILER" "${CMAKE_C_COMPILER}")
 endif()
@@ -150,5 +150,3 @@ set_tests_properties("postbuild_custom_command" PROPERTIES FIXTURES_REQUIRED "bu
 
 add_test(NAME "output_directory_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build")
 set_tests_properties("output_directory_cleanup" PROPERTIES FIXTURES_CLEANUP "build_fixture_output_directory")
-
-
