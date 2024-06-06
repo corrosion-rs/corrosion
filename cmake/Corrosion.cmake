@@ -932,7 +932,7 @@ function(corrosion_import_crate)
         list(APPEND additional_cargo_flags  "--frozen")
     endif()
 
-    if(("lib" IN_LIST COR_CRATE_TYPES))
+    if("lib" IN_LIST COR_CRATE_TYPES)
         # LIB_OVERRIDE must be set to one of these values
         set(valid_lib_overrides "cdylib" "staticlib")
 
