@@ -90,7 +90,7 @@ function(_generator_add_package_targets)
         endforeach()
 
         if(TARGET "${target_name}"
-            AND ("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "bin" IN_LIST kinds)
+            AND ("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "bin" IN_LIST kinds OR "lib" IN_LIST kinds)
             )
             message(WARNING "Failed to import Rust crate ${target_name} (kind: `${target_kind}`) because a target "
                 "with the same name already exists. Skipping this target.\n"
@@ -104,7 +104,7 @@ function(_generator_add_package_targets)
             continue()
         endif()
 
-        if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds)
+        if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "lib" IN_LIST kinds)
             # Explicitly set library names have always been forbidden from using dashes (by cargo).
             # Starting with Rust 1.79, names inherited from the package name will have dashes replaced
             # by underscores too. Corrosion will thus replace dashes with underscores, to make the target
@@ -127,6 +127,7 @@ function(_generator_add_package_targets)
                 OUT_PDB_BYPRODUCT pdb_byproduct
             )
 
+            # Note: type is "lib" we shouldn't have any byproducts since "lib" isn't guarenteed to produce binaries
             set(byproducts "")
             list(APPEND byproducts "${archive_byproducts}" "${shared_lib_byproduct}" "${pdb_byproduct}")
 
@@ -300,7 +301,7 @@ function(_generator_add_cargo_targets)
                 "Found no targets in ${pkgs_len} packages."
                 ${crates_error_message}.
                 "\nPlease keep in mind that corrosion will only import Rust `bin` targets or"
-                "`staticlib` or `cdylib` library targets."
+                "`staticlib` or `cdylib` or `lib` library targets."
                 "The following packages were found in the Manifest: ${available_package_names}"
         )
     else()
