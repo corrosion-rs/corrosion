@@ -570,6 +570,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(path_to_toml "${ACB_MANIFEST_PATH}")
     set(target_kinds "${ACB_TARGET_KINDS}")
     set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
+    set(build_byproducts "${ACB_BYPRODUCTS}")
 
 
     if(NOT target_kinds)
@@ -746,7 +747,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:${explicit_linker_defined}>:${rustflag_linker_arg}>")
     endif()
 
-    message(DEBUG "TARGET ${target_name} produces byproducts ${byproducts}")
+    message(DEBUG "TARGET ${target_name} produces byproducts ${build_byproducts}")
 
     add_custom_target(
         _cargo-build_${target_name}
@@ -777,12 +778,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 ${local_rustflags_delimiter}
                 ${local_rustflags_genex}
 
-        # Note: Adding `build_byproducts` (the byproducts in the cargo target directory) here
-        # causes CMake to fail during the Generate stage, because the target `target_name` was not
-        # found. I don't know why this happens, so we just don't specify byproducts here and
-        # only specify the actual byproducts in the `POST_BUILD` custom command that copies the
-        # byproducts to the final destination.
-        # BYPRODUCTS  ${build_byproducts}
+        # Note: `BYPRODUCTS` may not contain **target specific** generator expressions.
+        # This means we cannot use `${cargo_build_dir}`, since it currently uses `$<TARGET_PROPERTY>`
+        # to determine the correct target directory, depending on if the hostbuild target property is
+        # set or not.
+        # BYPRODUCTS  "${cargo_build_dir}/${build_byproducts}"
         # The build is conducted in the directory of the Manifest, so that configuration files such as
         # `.cargo/config.toml` or `toolchain.toml` are applied as expected.
         WORKING_DIRECTORY "${workspace_toml_dir}"
