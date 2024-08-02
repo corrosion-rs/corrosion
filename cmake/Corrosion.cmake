@@ -1333,6 +1333,41 @@ function(corrosion_install)
                     )
                 endif()
             endif()
+
+            # Executables can also have export tables, so they _might_ also need header files
+            if (DEFINED COR_INSTALL_PUBLIC_HEADER_PERMISSIONS)
+                set(PERMISSIONS ${COR_INSTALL_PUBLIC_HEADER_PERMISSIONS})
+            elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+                set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+            else()
+                # Directories need OWNER_EXECUTE in order to be deletable by owner
+                set(PERMISSIONS ${DEFAULT_PERMISSIONS} OWNER_EXECUTE)
+            endif()
+
+            if (DEFINED COR_INSTALL_PUBLIC_HEADER_CONFIGURATIONS)
+                set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_PUBLIC_HEADER_CONFIGURATIONS})
+            elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+                set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+            else()
+                set(CONFIGURATIONS)
+            endif()
+
+            set(PUBLIC_HEADER_PROPERTIES INCLUDE_DIRECTORIES PUBLIC_INCLUDE_DIRECTORIES INTERFACE_INCLUDE_DIRECTORIES)
+            foreach(PUBLIC_HEADER_PROPERTY ${PUBLIC_HEADER_PROPERTIES})
+                get_target_property(PUBLIC_HEADER ${INSTALL_TARGET} ${PUBLIC_HEADER_PROPERTY})
+
+                if(NOT PUBLIC_HEADER MATCHES .*-NOTFOUND)
+                    foreach(INCLUDE_DIRECTORY ${PUBLIC_HEADER})
+                        install(
+                                DIRECTORY ${INCLUDE_DIRECTORY}
+                                DESTINATION .
+                                FILE_PERMISSIONS ${PERMISSIONS}
+                                DIRECTORY_PERMISSIONS ${PERMISSIONS}
+                                ${CONFIGURATIONS}
+                        )
+                    endforeach()
+                endif()
+            endforeach()
         endforeach()
 
     elseif(INSTALL_TYPE STREQUAL "EXPORT")
