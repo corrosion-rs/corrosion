@@ -1245,6 +1245,78 @@ function(corrosion_install)
                     PERMISSIONS ${PERMISSIONS}
                     ${CONFIGURATIONS}
                 )
+            elseif(TARGET_TYPE STREQUAL "INTERFACE_LIBRARY")
+                if(TARGET ${INSTALL_TARGET}-static)
+                    if (DEFINED COR_INSTALL_ARCHIVE_DESTINATION)
+                        set(DESTINATION ${COR_INSTALL_ARCHIVE_DESTINATION})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+                        set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+                    else()
+                        set(DESTINATION ${CMAKE_INSTALL_LIBDIR})
+                    endif()
+
+                    if (DEFINED COR_INSTALL_ARCHIVE_PERMISSIONS)
+                        set(PERMISSIONS ${COR_INSTALL_ARCHIVE_PERMISSIONS})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+                        set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+                    else()
+                        set(
+                            PERMISSIONS
+                            ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
+                        )
+                    endif()
+
+                    if (DEFINED COR_INSTALL_ARCHIVE_CONFIGURATIONS)
+                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_ARCHIVE_CONFIGURATIONS})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+                    else()
+                        set(CONFIGURATIONS)
+                    endif()
+
+                    install(
+                            FILES $<TARGET_PROPERTY:is_odd-static,IMPORTED_LOCATION>
+                            PERMISSIONS ${PERMISSIONS}
+                            DESTINATION ${DESTINATION}
+                            ${CONFIGURATIONS}
+                    )
+                endif()
+
+                if(TARGET ${INSTALL_TARGET}-shared)
+                    if (DEFINED COR_INSTALL_LIBRARY_DESTINATION)
+                        set(DESTINATION ${COR_INSTALL_LIBRARY_DESTINATION})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+                        set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+                    else()
+                        set(DESTINATION ${CMAKE_INSTALL_LIBDIR})
+                    endif()
+
+                    if (DEFINED COR_INSTALL_LIBRARY_PERMISSIONS)
+                        set(PERMISSIONS ${COR_INSTALL_LIBRARY_PERMISSIONS})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+                        set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+                    else()
+                        set(
+                            PERMISSIONS
+                            ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
+                        )
+                    endif()
+
+                    if (DEFINED COR_INSTALL_LIBRARY_CONFIGURATIONS)
+                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_LIBRARY_CONFIGURATIONS})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+                    else()
+                        set(CONFIGURATIONS)
+                    endif()
+
+                    install(
+                            IMPORTED_RUNTIME_ARTIFACTS ${INSTALL_TARGET}-shared
+                            PERMISSIONS ${PERMISSIONS}
+                            DESTINATION ${DESTINATION}
+                            ${CONFIGURATIONS}
+                    )
+                endif()
             endif()
         endforeach()
 
