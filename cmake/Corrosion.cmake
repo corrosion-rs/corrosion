@@ -1092,6 +1092,25 @@ function(corrosion_link_libraries target_name)
     endforeach()
 endfunction()
 
+#[=======================================================================[.md:
+ANCHOR: corrosion-install
+```cmake
+corrosion_install(TARGETS <target1> ... <targetN> [EXPORT <export-name>]
+                  [[ARCHIVE|LIBRARY|RUNTIME|PRIVATE_HEADER|PUBLIC_HEADER]
+                   [DESTINATION <dir>]
+                   [PERMISSIONS <permissions...>]
+                   [CONFIGURATIONS [Debug|Release|<other-configuration>]]
+                  ] [...])
+```
+* **TARGETS**: Target or targets to install.
+* **EXPORT**: NOT IMPLEMENTED.
+
+TODO: The `ARCHIVE`/`LIBRARY`/... nonsense works like `<artifact-kind> <artifact-option>...` from [`install(TARGETS)`].
+
+[`install(TARGETS)`]: https://cmake.org/cmake/help/latest/command/install.html#targets
+
+ANCHOR_END: corrosion-install
+#]=======================================================================]
 function(corrosion_install)
     # Default install dirs
     include(GNUInstallDirs)
@@ -1112,13 +1131,6 @@ function(corrosion_install)
     set(TARGET_ARGS ${OPTIONS} ${ONE_VALUE_ARGS} ${MULTI_VALUE_ARGS})
 
     if (INSTALL_TYPE STREQUAL "TARGETS")
-        # corrosion_install(TARGETS ... [EXPORT <export-name>]
-        #                   [[ARCHIVE|LIBRARY|RUNTIME|PRIVATE_HEADER|PUBLIC_HEADER]
-        #                    [DESTINATION <dir>]
-        #                    [PERMISSIONS permissions...]
-        #                    [CONFIGURATIONS [Debug|Release|...]]
-        #                   ] [...])
-
         # Extract targets
         set(INSTALL_TARGETS)
         list(LENGTH ARGN ARGN_LENGTH)
