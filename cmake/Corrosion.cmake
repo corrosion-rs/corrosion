@@ -452,6 +452,7 @@ function(_corrosion_add_library_target)
                     "ARCHIVE_OUTPUT_DIRECTORY"
                     "${implib_name}"
             )
+            set_target_properties(${target_name}-shared PROPERTIES COR_IMPLIB_FILE_NAME ${implib_name})
         endif()
 
         if(is_macos)
@@ -1366,6 +1367,18 @@ set_target_properties(${INSTALL_TARGET}-shared
 )
 "
                         )
+
+                        get_target_property(COR_IMPLIB_FILE_NAME ${INSTALL_TARGET}-shared COR_IMPLIB_FILE_NAME)
+                        if (NOT COR_IMPLIB_FILE_NAME MATCHES .*-NOTFOUND)
+                            file(APPEND
+                                ${CMAKE_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}
+                                "
+set_target_properties(${INSTALL_TARGET}-shared
+    PROPERTIES
+    IMPORTED_IMPLIB \${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_IMPLIB_FILE_NAME}
+)"
+                            )
+                        endif()
                     endif()
                 endif()
             endif()
