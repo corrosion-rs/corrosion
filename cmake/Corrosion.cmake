@@ -1099,16 +1099,20 @@ ANCHOR: corrosion-install
 
 ```cmake
 corrosion_install(TARGETS <target1> ... <targetN>
-                  [[ARCHIVE|LIBRARY|RUNTIME]
+                  [[ARCHIVE|LIBRARY|RUNTIME|PUBLIC_HEADER]
                    [DESTINATION <dir>]
                    [PERMISSIONS <permissions...>]
                    [CONFIGURATIONS [Debug|Release|<other-configuration>]]
                   ] [...])
 ```
 * **TARGETS**: Target or targets to install.
-* **ARCHIVE**/**LIBRARY**/**RUNTIME**: Designates that the following settings only apply to that specific type of object.
+* **ARCHIVE**/**LIBRARY**/**RUNTIME**/PUBLIC_HEADER: Designates that the following settings only apply to that specific type of object.
 * **DESTINATION**: The subdirectory within the CMAKE_INSTALL_PREFIX that a specific object should be placed. Defaults to values from GNUInstallDirs.
 * **PERMISSIONS**: The permissions of files copied into the install prefix.
+
+Any `PUBLIC` or `INTERFACE` [file sets] will be installed.
+
+[file sets]: https://cmake.org/cmake/help/latest/command/target_sources.html#file-sets
 
 ANCHOR_END: corrosion-install
 #]=======================================================================]
@@ -1335,6 +1339,14 @@ function(corrosion_install)
             endif()
 
             # Executables can also have export tables, so they _might_ also need header files
+            if (DEFINED COR_INSTALL_PUBLIC_HEADER_DESTINATION)
+                set(DESTINATION ${COR_INSTALL_PUBLIC_HEADER_DESTINATION})
+            elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+                set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+            else()
+                set(DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+            endif()
+
             if (DEFINED COR_INSTALL_PUBLIC_HEADER_PERMISSIONS)
                 set(PERMISSIONS ${COR_INSTALL_PUBLIC_HEADER_PERMISSIONS})
             elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
@@ -1352,22 +1364,39 @@ function(corrosion_install)
                 set(CONFIGURATIONS)
             endif()
 
-            set(PUBLIC_HEADER_PROPERTIES INCLUDE_DIRECTORIES PUBLIC_INCLUDE_DIRECTORIES INTERFACE_INCLUDE_DIRECTORIES)
-            foreach(PUBLIC_HEADER_PROPERTY ${PUBLIC_HEADER_PROPERTIES})
-                get_target_property(PUBLIC_HEADER ${INSTALL_TARGET} ${PUBLIC_HEADER_PROPERTY})
+            get_target_property(HEADER_SETS ${INSTALL_TARGET} INTERFACE_HEADER_SETS)
+            if(NOT HEADER_SETS OR HEADER_SETS MATCHES .*-NOTFOUND)
+                set(TARGET_HAS_FILE_SET FALSE)
+            else()
+                set(TARGET_HAS_FILE_SET TRUE)
+            endif()
 
-                if(NOT PUBLIC_HEADER MATCHES .*-NOTFOUND)
-                    foreach(INCLUDE_DIRECTORY ${PUBLIC_HEADER})
-                        install(
-                                DIRECTORY ${INCLUDE_DIRECTORY}
-                                DESTINATION .
-                                FILE_PERMISSIONS ${PERMISSIONS}
-                                DIRECTORY_PERMISSIONS ${PERMISSIONS}
-                                ${CONFIGURATIONS}
-                        )
-                    endforeach()
-                endif()
-            endforeach()
+            if(NOT TARGET_HAS_FILE_SET)
+                set(PUBLIC_HEADER_PROPERTIES INCLUDE_DIRECTORIES PUBLIC_INCLUDE_DIRECTORIES INTERFACE_INCLUDE_DIRECTORIES)
+                foreach(PUBLIC_HEADER_PROPERTY ${PUBLIC_HEADER_PROPERTIES})
+                    get_target_property(PUBLIC_HEADER ${INSTALL_TARGET} ${PUBLIC_HEADER_PROPERTY})
+
+                    if(NOT PUBLIC_HEADER MATCHES .*-NOTFOUND)
+                        foreach(INCLUDE_DIRECTORY ${PUBLIC_HEADER})
+                            install(
+                                    DIRECTORY ${INCLUDE_DIRECTORY}
+                                    DESTINATION .
+                                    FILE_PERMISSIONS ${PERMISSIONS}
+                                    DIRECTORY_PERMISSIONS ${PERMISSIONS}
+                                    ${CONFIGURATIONS}
+                            )
+                        endforeach()
+                    endif()
+                endforeach()
+            else()
+                install(
+                        TARGETS ${INSTALL_TARGET}
+                        FILE_SET ${HEADER_SETS}
+                        DESTINATION ${DESTINATION}
+                        PERMISSIONS ${PERMISSIONS}
+                        ${CONFIGURATIONS}
+                )
+            endif()
         endforeach()
 
     elseif(INSTALL_TYPE STREQUAL "EXPORT")
