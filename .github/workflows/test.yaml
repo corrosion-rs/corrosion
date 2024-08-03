@@ -246,7 +246,7 @@ jobs:
           toolchain: ${{matrix.rust}}
           targets: ${{matrix.arch}}-apple-darwin
       - name: Configure
-        run: cmake -S. -Bbuild -G "${{ matrix.generator }}" "-DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}}" --preset "${{ matrix.arch }}-apple-darwin-${{ matrix.compiler }}"
+        run: cmake -S. -Bbuild --log-level=DEBUG -G "${{ matrix.generator }}" "-DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}}" --preset "${{ matrix.arch }}-apple-darwin-${{ matrix.compiler }}"
       - name: Run Tests
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
