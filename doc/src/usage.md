@@ -35,7 +35,7 @@ target, see [Per Target options](#per-target-options) for details.
 ### Experimental: Install crate and headers with `corrosion_install`
 
 The default CMake [install commands] do not work correctly with the targets exported from `corrosion_import_crate()`.
-Corrosion provies `corrosion_install` to automatically install relevant files:
+Corrosion provides `corrosion_install` to automatically install relevant files:
 
 {{#include ../../cmake/Corrosion.cmake:corrosion-install}}
 
