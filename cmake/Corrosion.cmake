@@ -409,6 +409,7 @@ function(_corrosion_add_library_target)
     if(has_staticlib)
         add_library(${target_name}-static STATIC IMPORTED GLOBAL)
         add_dependencies(${target_name}-static cargo-build_${target_name})
+        set_target_properties(${target_name}-static PROPERTIES COR_FILE_NAME ${static_lib_name})
 
         _corrosion_set_imported_location("${target_name}-static" "IMPORTED_LOCATION"
                 "ARCHIVE_OUTPUT_DIRECTORY"
@@ -435,6 +436,7 @@ function(_corrosion_add_library_target)
     if(has_cdylib)
         add_library(${target_name}-shared SHARED IMPORTED GLOBAL)
         add_dependencies(${target_name}-shared cargo-build_${target_name})
+        set_target_properties(${target_name}-shared PROPERTIES COR_FILE_NAME ${dynamic_lib_name})
 
         # Todo: (Not new issue): What about IMPORTED_SONAME and IMPORTED_NO_SYSTEM?
         _corrosion_set_imported_location("${target_name}-shared" "IMPORTED_LOCATION"
@@ -1098,7 +1100,7 @@ ANCHOR: corrosion-install
   and is not officially released yet. Feedback and Suggestions are welcome.
 
 ```cmake
-corrosion_install(TARGETS <target1> ... <targetN>
+corrosion_install(TARGETS <target1> ... <targetN> [EXPORT <export-name]
                   [[ARCHIVE|LIBRARY|RUNTIME|PUBLIC_HEADER]
                    [DESTINATION <dir>]
                    [PERMISSIONS <permissions...>]
@@ -1106,6 +1108,7 @@ corrosion_install(TARGETS <target1> ... <targetN>
                   ] [...])
 ```
 * **TARGETS**: Target or targets to install.
+* **EXPORT**: Creates an export that can be installed with `install(EXPORT)`. Also creates a file at ${CMAKE_BINARY_DIR}/corrosion/<export-name>TargetsCorrosion.cmake that must be included in the installed config file.
 * **ARCHIVE**/**LIBRARY**/**RUNTIME**/PUBLIC_HEADER: Designates that the following settings only apply to that specific type of object.
 * **DESTINATION**: The subdirectory within the CMAKE_INSTALL_PREFIX that a specific object should be placed. Defaults to values from GNUInstallDirs.
 * **PERMISSIONS**: The permissions of files copied into the install prefix.
@@ -1163,7 +1166,8 @@ function(corrosion_install)
 
                 list(GET ARGN 0 EXPORT_NAME)
                 list(REMOVE_AT ARGN 0) # Pop <export-name>
-                message(FATAL_ERROR "EXPORT keyword not yet implemented!")
+                set(EXTRA_TARGETS_EXPORT_NAME ${EXPORT_NAME}Corrosion.cmake)
+                set(EXPORT_NAME EXPORT ${EXPORT_NAME})
             endif()
         endif()
 
@@ -1297,6 +1301,20 @@ function(corrosion_install)
                             PERMISSIONS ${PERMISSIONS}
                             ${CONFIGURATIONS}
                     )
+
+                    if(EXPORT_NAME)
+                        get_target_property(COR_FILE_NAME ${INSTALL_TARGET}-static COR_FILE_NAME)
+                        file(APPEND
+                            ${CMAKE_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}
+"
+add_library(${INSTALL_TARGET}-static STATIC IMPORTED)
+set_target_properties(${INSTALL_TARGET}-static
+    PROPERTIES
+    IMPORTED_LOCATION \${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}
+)
+"
+                        )
+                    endif()
                 else()
                     message(FATAL_ERROR "Unknown target type ${TARGET_TYPE} for install target ${INSTALL_TARGET}")
                 endif()
@@ -1335,6 +1353,20 @@ function(corrosion_install)
                             DESTINATION ${DESTINATION}
                             ${CONFIGURATIONS}
                     )
+
+                    if(EXPORT_NAME)
+                        get_target_property(COR_FILE_NAME ${INSTALL_TARGET}-shared COR_FILE_NAME)
+                        file(APPEND
+                                ${CMAKE_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}
+                                "
+add_library(${INSTALL_TARGET}-shared SHARED IMPORTED)
+set_target_properties(${INSTALL_TARGET}-shared
+    PROPERTIES
+    IMPORTED_LOCATION \${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}
+)
+"
+                        )
+                    endif()
                 endif()
             endif()
 
@@ -1372,6 +1404,11 @@ function(corrosion_install)
             endif()
 
             if(NOT TARGET_HAS_FILE_SET)
+                if(EXPORT_NAME)
+                    # We still need to generate a EXPORT but we can't do that with install(DIRECTORY)
+                    install(TARGETS ${INSTALL_TARGET} ${EXPORT_NAME})
+                endif()
+
                 set(PUBLIC_HEADER_PROPERTIES INCLUDE_DIRECTORIES PUBLIC_INCLUDE_DIRECTORIES INTERFACE_INCLUDE_DIRECTORIES)
                 foreach(PUBLIC_HEADER_PROPERTY ${PUBLIC_HEADER_PROPERTIES})
                     get_target_property(PUBLIC_HEADER ${INSTALL_TARGET} ${PUBLIC_HEADER_PROPERTY})
@@ -1391,6 +1428,7 @@ function(corrosion_install)
             else()
                 install(
                         TARGETS ${INSTALL_TARGET}
+                        ${EXPORT_NAME}
                         FILE_SET ${HEADER_SETS}
                         DESTINATION ${DESTINATION}
                         PERMISSIONS ${PERMISSIONS}
