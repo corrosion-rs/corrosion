@@ -1106,11 +1106,9 @@ corrosion_install(TARGETS <target1> ... <targetN>
                   ] [...])
 ```
 * **TARGETS**: Target or targets to install.
-* **EXPORT**: NOT IMPLEMENTED.
-
-TODO: The `ARCHIVE`/`LIBRARY`/... nonsense works like `<artifact-kind> <artifact-option>...` from [`install(TARGETS)`].
-
-[`install(TARGETS)`]: https://cmake.org/cmake/help/latest/command/install.html#targets
+* **ARCHIVE**/**LIBRARY**/**RUNTIME**: Designates that the following settings only apply to that specific type of object.
+* **DESTINATION**: The subdirectory within the CMAKE_INSTALL_PREFIX that a specific object should be placed. Defaults to values from GNUInstallDirs.
+* **PERMISSIONS**: The permissions of files copied into the install prefix.
 
 ANCHOR_END: corrosion-install
 #]=======================================================================]
