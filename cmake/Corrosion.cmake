@@ -1094,9 +1094,12 @@ endfunction()
 
 #[=======================================================================[.md:
 ANCHOR: corrosion-install
+** EXPERIMENTAL **: This function is currently still considered experimental
+  and is not officially released yet. Feedback and Suggestions are welcome.
+
 ```cmake
-corrosion_install(TARGETS <target1> ... <targetN> [EXPORT <export-name>]
-                  [[ARCHIVE|LIBRARY|RUNTIME|PRIVATE_HEADER|PUBLIC_HEADER]
+corrosion_install(TARGETS <target1> ... <targetN>
+                  [[ARCHIVE|LIBRARY|RUNTIME]
                    [DESTINATION <dir>]
                    [PERMISSIONS <permissions...>]
                    [CONFIGURATIONS [Debug|Release|<other-configuration>]]
@@ -1272,10 +1275,7 @@ function(corrosion_install)
                     elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
                         set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
                     else()
-                        set(
-                            PERMISSIONS
-                            ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
-                        )
+                        set(PERMISSIONS ${DEFAULT_PERMISSIONS})
                     endif()
 
                     if (DEFINED COR_INSTALL_ARCHIVE_CONFIGURATIONS)
@@ -1287,7 +1287,7 @@ function(corrosion_install)
                     endif()
 
                     install(
-                            FILES $<TARGET_PROPERTY:is_odd-static,IMPORTED_LOCATION>
+                            FILES $<TARGET_PROPERTY:${INSTALL_TARGET}-static,IMPORTED_LOCATION>
                             PERMISSIONS ${PERMISSIONS}
                             DESTINATION ${DESTINATION}
                             ${CONFIGURATIONS}
