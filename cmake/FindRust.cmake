@@ -487,16 +487,15 @@ if (Rust_RESOLVE_RUSTUP_TOOLCHAINS)
         rustc
             HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
             NO_DEFAULT_PATH)
-elseif (Rust_RUSTUP)
-    get_filename_component(_RUST_TOOLCHAIN_PATH "${Rust_RUSTUP}" DIRECTORY)
-    get_filename_component(_RUST_TOOLCHAIN_PATH "${_RUST_TOOLCHAIN_PATH}" DIRECTORY)
-    find_program(
-        Rust_COMPILER_CACHED
-        rustc
-            HINTS "${_RUST_TOOLCHAIN_PATH}/bin"
-            NO_DEFAULT_PATH)
 else()
-    find_program(Rust_COMPILER_CACHED rustc)
+    message(DEBUG "Rust_RESOLVE_RUSTUP_TOOLCHAINS=OFF and Rust_RUSTUP=${Rust_RUSTUP}")
+    if(Rust_RUSTUP)
+        get_filename_component(_RUSTUP_DIR "${Rust_RUSTUP}" DIRECTORY)
+        find_program(Rust_COMPILER_CACHED rustc HINTS "${_RUSTUP_DIR}")
+    else()
+        find_program(Rust_COMPILER_CACHED rustc)
+    endif()
+    message(DEBUG "find_program rustc: ${Rust_COMPILER_CACHED}")
     if (EXISTS "${Rust_COMPILER_CACHED}")
         # rustc is expected to be at `<toolchain_path>/bin/rustc`.
         get_filename_component(_RUST_TOOLCHAIN_PATH "${Rust_COMPILER_CACHED}" DIRECTORY)
