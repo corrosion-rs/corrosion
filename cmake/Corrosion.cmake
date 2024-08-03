@@ -1092,6 +1092,26 @@ function(corrosion_link_libraries target_name)
     endforeach()
 endfunction()
 
+#[=======================================================================[.md:
+ANCHOR: corrosion-install
+** EXPERIMENTAL **: This function is currently still considered experimental
+  and is not officially released yet. Feedback and Suggestions are welcome.
+
+```cmake
+corrosion_install(TARGETS <target1> ... <targetN>
+                  [[ARCHIVE|LIBRARY|RUNTIME]
+                   [DESTINATION <dir>]
+                   [PERMISSIONS <permissions...>]
+                   [CONFIGURATIONS [Debug|Release|<other-configuration>]]
+                  ] [...])
+```
+* **TARGETS**: Target or targets to install.
+* **ARCHIVE**/**LIBRARY**/**RUNTIME**: Designates that the following settings only apply to that specific type of object.
+* **DESTINATION**: The subdirectory within the CMAKE_INSTALL_PREFIX that a specific object should be placed. Defaults to values from GNUInstallDirs.
+* **PERMISSIONS**: The permissions of files copied into the install prefix.
+
+ANCHOR_END: corrosion-install
+#]=======================================================================]
 function(corrosion_install)
     # Default install dirs
     include(GNUInstallDirs)
@@ -1112,13 +1132,6 @@ function(corrosion_install)
     set(TARGET_ARGS ${OPTIONS} ${ONE_VALUE_ARGS} ${MULTI_VALUE_ARGS})
 
     if (INSTALL_TYPE STREQUAL "TARGETS")
-        # corrosion_install(TARGETS ... [EXPORT <export-name>]
-        #                   [[ARCHIVE|LIBRARY|RUNTIME|PRIVATE_HEADER|PUBLIC_HEADER]
-        #                    [DESTINATION <dir>]
-        #                    [PERMISSIONS permissions...]
-        #                    [CONFIGURATIONS [Debug|Release|...]]
-        #                   ] [...])
-
         # Extract targets
         set(INSTALL_TARGETS)
         list(LENGTH ARGN ARGN_LENGTH)
@@ -1245,6 +1258,75 @@ function(corrosion_install)
                     PERMISSIONS ${PERMISSIONS}
                     ${CONFIGURATIONS}
                 )
+            elseif(TARGET_TYPE STREQUAL "INTERFACE_LIBRARY")
+                if(TARGET ${INSTALL_TARGET}-static)
+                    if (DEFINED COR_INSTALL_ARCHIVE_DESTINATION)
+                        set(DESTINATION ${COR_INSTALL_ARCHIVE_DESTINATION})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+                        set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+                    else()
+                        set(DESTINATION ${CMAKE_INSTALL_LIBDIR})
+                    endif()
+
+                    if (DEFINED COR_INSTALL_ARCHIVE_PERMISSIONS)
+                        set(PERMISSIONS ${COR_INSTALL_ARCHIVE_PERMISSIONS})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+                        set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+                    else()
+                        set(PERMISSIONS ${DEFAULT_PERMISSIONS})
+                    endif()
+
+                    if (DEFINED COR_INSTALL_ARCHIVE_CONFIGURATIONS)
+                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_ARCHIVE_CONFIGURATIONS})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+                    else()
+                        set(CONFIGURATIONS)
+                    endif()
+
+                    install(
+                            FILES $<TARGET_PROPERTY:${INSTALL_TARGET}-static,IMPORTED_LOCATION>
+                            PERMISSIONS ${PERMISSIONS}
+                            DESTINATION ${DESTINATION}
+                            ${CONFIGURATIONS}
+                    )
+                endif()
+
+                if(TARGET ${INSTALL_TARGET}-shared)
+                    if (DEFINED COR_INSTALL_LIBRARY_DESTINATION)
+                        set(DESTINATION ${COR_INSTALL_LIBRARY_DESTINATION})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+                        set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+                    else()
+                        set(DESTINATION ${CMAKE_INSTALL_LIBDIR})
+                    endif()
+
+                    if (DEFINED COR_INSTALL_LIBRARY_PERMISSIONS)
+                        set(PERMISSIONS ${COR_INSTALL_LIBRARY_PERMISSIONS})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+                        set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+                    else()
+                        set(
+                            PERMISSIONS
+                            ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
+                        )
+                    endif()
+
+                    if (DEFINED COR_INSTALL_LIBRARY_CONFIGURATIONS)
+                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_LIBRARY_CONFIGURATIONS})
+                    elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+                    else()
+                        set(CONFIGURATIONS)
+                    endif()
+
+                    install(
+                            IMPORTED_RUNTIME_ARTIFACTS ${INSTALL_TARGET}-shared
+                            PERMISSIONS ${PERMISSIONS}
+                            DESTINATION ${DESTINATION}
+                            ${CONFIGURATIONS}
+                    )
+                endif()
             endif()
         endforeach()
 

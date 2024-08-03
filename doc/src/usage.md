@@ -32,6 +32,15 @@ target, see [Per Target options](#per-target-options) for details.
 [`INTERFACE`]: https://cmake.org/cmake/help/latest/command/add_library.html#interface-libraries
 [target_link_libraries]: https://cmake.org/cmake/help/latest/command/target_link_libraries.html
 
+### Experimental: Install crate and headers with `corrosion_install`
+
+The default CMake [install commands] do not work correctly with the targets exported from `corrosion_import_crate()`.
+Corrosion provides `corrosion_install` to automatically install relevant files:
+
+{{#include ../../cmake/Corrosion.cmake:corrosion-install}}
+
+[install commands]: https://cmake.org/cmake/help/latest/command/install.html
+
 ### Per Target options
 
 Some configuration options can be specified individually for each target. You can set them via the
