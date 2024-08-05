@@ -44,7 +44,7 @@ endfunction()
 # Add targets (crates) of one package
 function(_generator_add_package_targets)
     set(OPTIONS NO_LINKER_OVERRIDE)
-    set(ONE_VALUE_KEYWORDS WORKSPACE_MANIFEST_PATH PACKAGE_MANIFEST_PATH PACKAGE_NAME PACKAGE_VERSION TARGETS_JSON OUT_CREATED_TARGETS)
+    set(ONE_VALUE_KEYWORDS WORKSPACE_MANIFEST_PATH PACKAGE_MANIFEST_PATH PACKAGE_NAME PACKAGE_VERSION TARGETS_JSON OUT_CREATED_TARGETS LIB_OVERRIDE)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES)
     cmake_parse_arguments(PARSE_ARGV 0 GAPT "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
@@ -64,6 +64,7 @@ function(_generator_add_package_targets)
     set(targets "${GAPT_TARGETS_JSON}")
     set(out_created_targets "${GAPT_OUT_CREATED_TARGETS}")
     set(crate_types "${GAPT_CRATE_TYPES}")
+    set(lib_override "${GAPT_LIB_OVERRIDE}")
 
     set(corrosion_targets "")
 
@@ -81,13 +82,22 @@ function(_generator_add_package_targets)
         string(JSON target_kind_len LENGTH "${target_kind}")
 
         math(EXPR target_kind_len-1 "${target_kind_len} - 1")
-        set(kinds)
+        set(kinds "")
         foreach(ix RANGE ${target_kind_len-1})
             string(JSON kind GET "${target_kind}" ${ix})
             if(NOT crate_types OR ${kind} IN_LIST crate_types)
                 list(APPEND kinds ${kind})
             endif()
         endforeach()
+
+        if(DEFINED GAPT_LIB_OVERRIDE)
+            # Replace the generic "lib" create type with the user-specified value.
+            # This neatly fits into the existing build system by utilizing the "--crate-type=..."
+            # rustc flag when building library targets. Otherwise, no special logic for processing
+            # generic libraries is required as long as the "lib" value is removed from this list.
+            list(TRANSFORM kinds REPLACE "lib" "${lib_override}")
+            list(REMOVE_DUPLICATES kinds)
+        endif()
 
         if(TARGET "${target_name}"
             AND ("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "bin" IN_LIST kinds)
@@ -127,8 +137,7 @@ function(_generator_add_package_targets)
                 OUT_PDB_BYPRODUCT pdb_byproduct
             )
 
-            set(byproducts "")
-            list(APPEND byproducts "${archive_byproducts}" "${shared_lib_byproduct}" "${pdb_byproduct}")
+            set(byproducts "${archive_byproducts}" "${shared_lib_byproduct}" "${pdb_byproduct}")
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
@@ -169,8 +178,7 @@ function(_generator_add_package_targets)
                 "bin_byproduct" "pdb_byproduct"
             )
 
-            set(byproducts "")
-            list(APPEND byproducts "${bin_byproduct}" "${pdb_byproduct}")
+            set(byproducts "${bin_byproduct}" "${pdb_byproduct}")
 
             set(cargo_build_out_dir "")
             _add_cargo_build(
@@ -212,7 +220,7 @@ endfunction()
 # `MANIFEST_PATH`.
 function(_generator_add_cargo_targets)
     set(options NO_LINKER_OVERRIDE)
-    set(one_value_args MANIFEST_PATH IMPORTED_CRATES)
+    set(one_value_args MANIFEST_PATH IMPORTED_CRATES LIB_OVERRIDE)
     set(multi_value_args CRATES CRATE_TYPES)
     cmake_parse_arguments(
         GGC
@@ -225,6 +233,7 @@ function(_generator_add_cargo_targets)
 
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GGC no_linker_override)
     _corrosion_arg_passthrough_helper(CRATE_TYPES GGC crate_types)
+    _corrosion_arg_passthrough_helper(LIB_OVERRIDE GGC lib_override)
 
     _cargo_metadata(json "${GGC_MANIFEST_PATH}")
     string(JSON packages GET "${json}" "packages")
@@ -254,11 +263,11 @@ function(_generator_add_cargo_targets)
 
         # probably this loop is not necessary at all, since when using --no-deps, the
         # contents of packages should already be only workspace members!
-        unset(pkg_is_ws_member)
+        set(pkg_is_ws_member FALSE)
         foreach(ix RANGE ${ws_mems_len-1})
             string(JSON ws_mem GET "${workspace_members}" ${ix})
             if(ws_mem STREQUAL pkg_id)
-                set(pkg_is_ws_member YES)
+                set(pkg_is_ws_member TRUE)
                 break()
             endif()
         endforeach()
@@ -284,6 +293,7 @@ function(_generator_add_cargo_targets)
             OUT_CREATED_TARGETS curr_created_targets
             ${no_linker_override}
             ${crate_types}
+            ${lib_override}
         )
         list(APPEND created_targets "${curr_created_targets}")
     endforeach()
@@ -299,8 +309,7 @@ function(_generator_add_cargo_targets)
         message(FATAL_ERROR
                 "Found no targets in ${pkgs_len} packages."
                 ${crates_error_message}.
-                "\nPlease keep in mind that corrosion will only import Rust `bin` targets or"
-                "`staticlib` or `cdylib` library targets."
+                "\nPlease keep in mind that corrosion will only import Rust `bin`, `staticlib`, `cdylib`, or `lib` targets."
                 "The following packages were found in the Manifest: ${available_package_names}"
         )
     else()
