@@ -349,6 +349,7 @@ function(_corrosion_add_library_target)
 
     set(is_windows "")
     set(is_windows_gnu "")
+    set(is_windows_gnullvm "")
     set(is_windows_msvc "")
     set(is_macos "")
     if(Rust_CARGO_TARGET_OS STREQUAL "windows")
@@ -357,6 +358,8 @@ function(_corrosion_add_library_target)
             set(is_windows_msvc TRUE)
         elseif(Rust_CARGO_TARGET_ENV STREQUAL "gnu")
             set(is_windows_gnu TRUE)
+        elseif(Rust_CARGO_TARGET_ENV STREQUAL "gnullvm")
+            set(is_windows_gnullvm TRUE)
         endif()
     elseif(Rust_CARGO_TARGET_OS STREQUAL "darwin")
         set(is_macos TRUE)
@@ -383,6 +386,9 @@ function(_corrosion_add_library_target)
         set(implib_name "${lib_name}.dll.lib")
     elseif(is_windows_gnu)
         set(implib_name "lib${lib_name}.dll.a")
+	elseif(is_windows_gnullvm)
+		# no implib for LLVM linker
+		set(implib_name "")
     elseif(is_windows)
         message(FATAL_ERROR "Unknown windows environment - Can't determine implib name")
     endif()
@@ -446,10 +452,17 @@ function(_corrosion_add_library_target)
         set_target_properties(${target_name}-shared PROPERTIES IMPORTED_NO_SONAME TRUE)
 
         if(is_windows)
-            _corrosion_set_imported_location("${target_name}-shared" "IMPORTED_IMPLIB"
-                    "ARCHIVE_OUTPUT_DIRECTORY"
-                    "${implib_name}"
-            )
+			if(is_windows_gnullvm)
+				_corrosion_set_imported_location("${target_name}-shared" "IMPORTED_IMPLIB"
+						"ARCHIVE_OUTPUT_DIRECTORY"
+						"${dynamic_lib_name}"
+				)
+			else()
+				_corrosion_set_imported_location("${target_name}-shared" "IMPORTED_IMPLIB"
+						"ARCHIVE_OUTPUT_DIRECTORY"
+						"${implib_name}"
+				)
+			endif()
         endif()
 
         if(is_macos)
