@@ -1314,7 +1314,7 @@ function(corrosion_install)
 add_library(${INSTALL_TARGET}-static STATIC IMPORTED)
 set_target_properties(${INSTALL_TARGET}-static
     PROPERTIES
-    IMPORTED_LOCATION \${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}
+    IMPORTED_LOCATION \"\${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}\"
 )
 "
                         )
@@ -1366,7 +1366,7 @@ set_target_properties(${INSTALL_TARGET}-static
 add_library(${INSTALL_TARGET}-shared SHARED IMPORTED)
 set_target_properties(${INSTALL_TARGET}-shared
     PROPERTIES
-    IMPORTED_LOCATION \${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}
+    IMPORTED_LOCATION \"\${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}\"
 )
 "
                         )
@@ -1378,7 +1378,7 @@ set_target_properties(${INSTALL_TARGET}-shared
                                 "
 set_target_properties(${INSTALL_TARGET}-shared
     PROPERTIES
-    IMPORTED_IMPLIB \${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_IMPLIB_FILE_NAME}
+    IMPORTED_IMPLIB \"\${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_IMPLIB_FILE_NAME}\"
 )"
                             )
                         endif()
