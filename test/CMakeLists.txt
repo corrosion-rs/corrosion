@@ -15,14 +15,14 @@ option(CORROSION_TESTS_KEEP_BUILDDIRS
 mark_as_advanced(CORROSION_TESTS_NO_CLEANUP)
 
 set(test_install_path "${CMAKE_CURRENT_BINARY_DIR}/test-install-corrosion")
-
+file(REAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.." corrosion_source_dir)
 set(test_header_contents
         "option(CORROSION_TESTS_FIND_CORROSION \"Use Corrosion as a subdirectory\" OFF)"
         "if (CORROSION_TESTS_FIND_CORROSION)"
         "    set(CMAKE_PREFIX_PATH \"${test_install_path}\" CACHE INTERNAL \"\" FORCE)"
         "    find_package(Corrosion REQUIRED PATHS \"${test_install_path}\" NO_CMAKE_SYSTEM_PATH)"
         "else()"
-        "    add_subdirectory(\"${CMAKE_CURRENT_SOURCE_DIR}/..\" corrosion)"
+        "    add_subdirectory(\"${corrosion_source_dir}\" corrosion)"
         "endif()"
 )
 
