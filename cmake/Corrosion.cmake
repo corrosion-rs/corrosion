@@ -1217,6 +1217,9 @@ function(corrosion_install)
 
         # Loop through each install target and register file installations
         foreach(INSTALL_TARGET ${INSTALL_TARGETS})
+            if(NOT TARGET ${INSTALL_TARGET})
+                message(FATAL_ERROR "Install target ${INSTALL_TARGET} is not a valid target")
+            endif()
             # Don't both implementing target type differentiation using generator expressions since
             # TYPE cannot change after target creation
             get_property(
@@ -1290,6 +1293,8 @@ function(corrosion_install)
                             DESTINATION ${DESTINATION}
                             ${CONFIGURATIONS}
                     )
+                else()
+                    message(FATAL_ERROR "Unknown target type ${TARGET_TYPE} for install target ${INSTALL_TARGET}")
                 endif()
 
                 if(TARGET ${INSTALL_TARGET}-shared)
@@ -1332,6 +1337,8 @@ function(corrosion_install)
 
     elseif(INSTALL_TYPE STREQUAL "EXPORT")
         message(FATAL_ERROR "install(EXPORT ...) not yet implemented")
+    else()
+        message(FATAL_ERROR "Unknown arg: ${INSTALL_TYPE}")
     endif()
 endfunction()
 
