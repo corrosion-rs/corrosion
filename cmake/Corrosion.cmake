@@ -1109,7 +1109,7 @@ corrosion_install(TARGETS <target1> ... <targetN> [EXPORT <export-name]
                   ] [...])
 ```
 * **TARGETS**: Target or targets to install.
-* **EXPORT**: Creates an export that can be installed with `install(EXPORT)`. Also creates a file at ${CMAKE_BINARY_DIR}/corrosion/<export-name>TargetsCorrosion.cmake that must be included in the installed config file.
+* **EXPORT**: Creates an export that can be installed with `install(EXPORT)`. Also creates a file at ${CMAKE_BINARY_DIR}/corrosion/<export-name>Corrosion.cmake that must be included in the installed config file.
 * **ARCHIVE**/**LIBRARY**/**RUNTIME**/PUBLIC_HEADER: Designates that the following settings only apply to that specific type of object.
 * **DESTINATION**: The subdirectory within the CMAKE_INSTALL_PREFIX that a specific object should be placed. Defaults to values from GNUInstallDirs.
 * **PERMISSIONS**: The permissions of files copied into the install prefix.
