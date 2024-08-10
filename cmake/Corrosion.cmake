@@ -1170,6 +1170,9 @@ function(corrosion_install)
                 set(EXTRA_TARGETS_EXPORT_NAME ${EXPORT_NAME}Corrosion.cmake)
                 set(EXPORT_NAME EXPORT ${EXPORT_NAME})
             endif()
+        else()
+            # Prevent variable set in user code from interfering
+            set(EXPORT_NAME)
         endif()
 
         # Loop over all arguments and get options for each install target type
