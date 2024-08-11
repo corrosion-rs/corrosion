@@ -1289,8 +1289,8 @@ function(corrosion_install)
 
                     install(
                             FILES $<TARGET_PROPERTY:${INSTALL_TARGET}-static,IMPORTED_LOCATION>
-                            PERMISSIONS ${PERMISSIONS}
                             DESTINATION ${DESTINATION}
+                            PERMISSIONS ${PERMISSIONS}
                             ${CONFIGURATIONS}
                     )
                 else()
