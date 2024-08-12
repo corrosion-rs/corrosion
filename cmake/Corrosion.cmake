@@ -1462,7 +1462,7 @@ function(corrosion_add_cxxbridge cxx_target)
     # No suitable version of cxxbridge was installed, so use custom target to build correct version.
     if(NOT cxxbridge)
         if(NOT TARGET "cxxbridge_v${cxx_required_version}")
-            add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge"
+            add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${CMAKE_EXECUTABLE_SUFFIX}"
                 COMMAND
                 ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                 COMMAND
@@ -1477,10 +1477,10 @@ function(corrosion_add_cxxbridge cxx_target)
                 COMMENT "Building cxxbridge (version ${cxx_required_version})"
                 )
             add_custom_target("cxxbridge_v${cxx_required_version}"
-                DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge"
+                DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${CMAKE_EXECUTABLE_SUFFIX}"
                 )
         endif()
-        set(cxxbridge "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge")
+        set(cxxbridge "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${CMAKE_EXECUTABLE_SUFFIX}")
     endif()
 
 
