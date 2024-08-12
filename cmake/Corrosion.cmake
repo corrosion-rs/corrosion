@@ -1462,7 +1462,11 @@ function(corrosion_add_cxxbridge cxx_target)
     # No suitable version of cxxbridge was installed, so use custom target to build correct version.
     if(NOT cxxbridge)
         if(NOT TARGET "cxxbridge_v${cxx_required_version}")
-            add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${CMAKE_EXECUTABLE_SUFFIX}"
+            unset(executable_postfix)
+            if(Rust_CARGO_HOST_OS STREQUAL "windows")
+                set(executable_postfix ".exe")
+            endif()
+            add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}"
                 COMMAND
                 ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                 COMMAND
@@ -1477,10 +1481,10 @@ function(corrosion_add_cxxbridge cxx_target)
                 COMMENT "Building cxxbridge (version ${cxx_required_version})"
                 )
             add_custom_target("cxxbridge_v${cxx_required_version}"
-                DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${CMAKE_EXECUTABLE_SUFFIX}"
+                DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}"
                 )
         endif()
-        set(cxxbridge "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${CMAKE_EXECUTABLE_SUFFIX}")
+        set(cxxbridge "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}")
     endif()
 
 
