@@ -1412,8 +1412,8 @@ set_target_properties(${INSTALL_TARGET}-shared
                 set(CONFIGURATIONS)
             endif()
 
-            get_target_property(HEADER_SETS ${INSTALL_TARGET} INTERFACE_HEADER_SETS)
-            if(NOT HEADER_SETS OR HEADER_SETS MATCHES .*-NOTFOUND)
+            get_target_property(FILE_SET ${INSTALL_TARGET} INTERFACE_HEADER_SETS)
+            if(NOT FILE_SET OR FILE_SET MATCHES .*-NOTFOUND)
                 set(TARGET_HAS_FILE_SET FALSE)
             else()
                 set(TARGET_HAS_FILE_SET TRUE)
@@ -1445,7 +1445,7 @@ set_target_properties(${INSTALL_TARGET}-shared
                 install(
                         TARGETS ${INSTALL_TARGET}
                         ${EXPORT_NAME}
-                        FILE_SET ${HEADER_SETS}
+                        FILE_SET HEADERS
                         DESTINATION ${DESTINATION}
                         PERMISSIONS ${PERMISSIONS}
                         ${CONFIGURATIONS}
