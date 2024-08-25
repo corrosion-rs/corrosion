@@ -143,6 +143,56 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
 
+  windows_gnullvm_msys2:
+    name: Test Windows gnullvm on msys2
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2022
+        arch:
+          - x86_64
+          # - i686
+          # - aarch64
+        generator:
+          - Ninja
+          - MSYS Makefiles
+        include:
+          - arch: x86_64
+            msystem: CLANG64
+#          - arch: i686
+#            msystem: CLANG32
+#          - arch: aarch64
+#            msystem: CLANGARM64
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{matrix.arch}}-pc-windows-gnullvm
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.msystem}}
+          path-type: inherit
+          install: >-
+            git
+            make
+          pacboy: >-
+            toolchain:p
+            cmake:p
+            ninja:p
+      - name: Configure
+        run: cmake -S. -Bbuild -G "${{matrix.generator}}" --toolchain=.github/scripts/toolchains/${{matrix.arch}}-pc-windows-gnullvm.cmake
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3
+
 # For now just test if hostbuild works when cross-compiling on windows.
 # For testing everything we would also need to install a cross-compiler first.
   windows_cross_hostbuild:
@@ -356,6 +406,7 @@ jobs:
       - visual_studio_stage2
       - windows_ninja_cl
       - windows_gnu
+      - windows_gnullvm_msys2
       - linux_stage2
       - darwin
       - test_cxxbridge
