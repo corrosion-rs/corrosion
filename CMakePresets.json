@@ -76,30 +76,6 @@
             }
         },
         {
-            "name": "x86_64-pc-windows-gnu",
-            "hidden": true,
-            "inherits": ["windows-only"],
-            "cacheVariables": {
-                "Rust_CARGO_TARGET": "x86_64-pc-windows-gnu"
-            }
-        },
-        {
-            "name": "i686-pc-windows-gnu",
-            "hidden": true,
-            "inherits": ["windows-only"],
-            "cacheVariables": {
-                "Rust_CARGO_TARGET": "i686-pc-windows-gnu"
-            }
-        },
-        {
-            "name": "aarch64-pc-windows-gnu",
-            "hidden": true,
-            "inherits": ["windows-only"],
-            "cacheVariables": {
-                "Rust_CARGO_TARGET": "aarch64-pc-windows-gnu"
-            }
-        },
-        {
             "name": "x86_64-unknown-linux-gnu",
             "hidden": true,
             "cacheVariables": {
@@ -191,7 +167,7 @@
             }
         },
         {
-            "name": "gcc",
+            "name": "host-gcc",
             "hidden": true,
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "gcc",
@@ -241,36 +217,22 @@
             "inherits": ["ninja", "aarch64-pc-windows-msvc", "clang-cl", "windows-10-cross"]
         },
         {
-            "name": "ninja-x86_64-pc-windows-gnu-clang",
-            "inherits": ["ninja", "x86_64-pc-windows-gnu", "clang"]
+            "name": "ninja-x86_64-pc-windows-gnullvm",
+            "inherits": ["ninja", "windows-only", "clang"],
+            "toolchainFile": "${sourceDir}/.github/scripts/toolchains/x86_64-pc-windows-gnullvm.cmake"
         },
         {
-            "name": "make-x86_64-pc-windows-gnu-clang",
-            "inherits": ["make", "x86_64-pc-windows-gnu", "clang"]
+            "name": "make-x86_64-pc-windows-gnullvm",
+            "inherits": ["make", "windows-only", "clang"],
+            "toolchainFile": "${sourceDir}/.github/scripts/toolchains/x86_64-pc-windows-gnullvm.cmake"
         },
         {
             "name": "ninja-x86_64-pc-windows-gnu-gcc",
-            "inherits": ["ninja", "x86_64-pc-windows-gnu", "gcc", "windows-only"]
+            "inherits": ["ninja", "host-gcc", "windows-only"]
         },
         {
             "name": "make-x86_64-pc-windows-gnu-gcc",
-            "inherits": ["make", "x86_64-pc-windows-gnu", "gcc", "windows-only"]
-        },
-        {
-            "name": "ninja-i686-pc-windows-gnu-clang",
-            "inherits": ["ninja", "i686-pc-windows-gnu", "clang", "windows-10-cross"]
-        },
-        {
-            "name": "make-i686-pc-windows-gnu-clang",
-            "inherits": ["make", "i686-pc-windows-gnu", "clang", "windows-10-cross"]
-        },
-        {
-            "name": "ninja-aarch64-pc-windows-gnu-clang",
-            "inherits": ["ninja", "aarch64-pc-windows-gnu", "clang", "windows-10-cross"]
-        },
-        {
-            "name": "make-aarch64-pc-windows-gnu-clang",
-            "inherits": ["make", "aarch64-pc-windows-gnu", "clang", "windows-10-cross"]
+            "inherits": ["make", "host-gcc", "windows-only"]
         },
         {
             "name": "x86_64-unknown-linux-gnu-clang",
