@@ -686,13 +686,29 @@ if (NOT Rust_CARGO_TARGET_CACHED)
             set(_CARGO_ABI msvc)
         elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"
             OR "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU"
-            OR "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "-gnu$"
-            OR "${CMAKE_C_COMPILER_TARGET}" MATCHES "-gnu$"
-            OR (NOT CMAKE_CROSSCOMPILING AND "${Rust_DEFAULT_HOST_TARGET}" MATCHES "-gnu$")
+            OR (NOT CMAKE_CROSSCOMPILING
+               AND NOT DEFINED CMAKE_CXX_COMPILER_ID
+               AND NOT DEFINED CMAKE_C_COMPILER_ID
+               AND "${Rust_DEFAULT_HOST_TARGET}" MATCHES "-gnu$"
             )
+        )
             set(_CARGO_ABI gnu)
+        elseif(("${CMAKE_C_COMPILER_ID}" MATCHES "Clang$" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang$")
+            AND ("${CMAKE_CXX_COMPILER_TARGET}" MATCHES "-gnu(llvm)?$"
+                OR "${CMAKE_C_COMPILER_TARGET}" MATCHES "-gnu(llvm)?$")
+        )
+            if("${Rust_VERSION}" VERSION_GREATER_EQUAL "1.79")
+                set(_CARGO_ABI gnullvm)
+            else()
+                message(WARNING "Your selected C/C++ compilers suggest you want to use the -gnullvm"
+                        " rust targets, however your Rust compiler version is ${Rust_VERSION}, which is"
+                        " before the promotion of the gnullvm target to tier2."
+                        " Please either use a more recent rust compiler or manually choose a target "
+                        " triple by specifying `Rust_CARGO_TARGET` manually."
+                )
+            endif()
         elseif(NOT "${CMAKE_CROSSCOMPILING}" AND "${Rust_DEFAULT_HOST_TARGET}" MATCHES "-msvc$")
-            # We first check if the gnu branch matches to ensure this fallback is only used
+            # We first check if the gnu branches match to ensure this fallback is only used
             # if no compiler is enabled.
             set(_CARGO_ABI msvc)
         else()
