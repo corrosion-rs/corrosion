@@ -1101,7 +1101,7 @@ ANCHOR: corrosion-install
   and is not officially released yet. Feedback and Suggestions are welcome.
 
 ```cmake
-corrosion_install(TARGETS <target1> ... <targetN> [EXPORT <export-name]
+corrosion_install(TARGETS <target1> ... <targetN> [EXPORT <export-name>]
                   [[ARCHIVE|LIBRARY|RUNTIME|PUBLIC_HEADER]
                    [DESTINATION <dir>]
                    [PERMISSIONS <permissions...>]
@@ -1109,7 +1109,8 @@ corrosion_install(TARGETS <target1> ... <targetN> [EXPORT <export-name]
                   ] [...])
 ```
 * **TARGETS**: Target or targets to install.
-* **EXPORT**: Creates an export that can be installed with `install(EXPORT)`. Also creates a file at ${CMAKE_BINARY_DIR}/corrosion/<export-name>Corrosion.cmake that must be included in the installed config file.
+* **EXPORT**: Creates an export that can be installed with `install(EXPORT)`. <export-name> must be globally unique.
+             Also creates a file at ${CMAKE_BINARY_DIR}/corrosion/<export-name>Corrosion.cmake that must be included in the installed config file.
 * **ARCHIVE**/**LIBRARY**/**RUNTIME**/PUBLIC_HEADER: Designates that the following settings only apply to that specific type of object.
 * **DESTINATION**: The subdirectory within the CMAKE_INSTALL_PREFIX that a specific object should be placed. Defaults to values from GNUInstallDirs.
 * **PERMISSIONS**: The permissions of files copied into the install prefix.
@@ -1169,6 +1170,10 @@ function(corrosion_install)
                 list(REMOVE_AT ARGN 0) # Pop <export-name>
                 set(EXTRA_TARGETS_EXPORT_NAME ${EXPORT_NAME}Corrosion.cmake)
                 set(EXPORT_NAME EXPORT ${EXPORT_NAME})
+                set(EXPORT_FILE_PATH "${CMAKE_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}")
+                # Remove first, since otherwise we will append to the file on every reconfigure.
+                # Assumes that the corrosion_install will only be called once for a given EXPORT_NAME.
+                file(REMOVE "${EXPORT_FILE_PATH}")
             endif()
         else()
             # Prevent variable set in user code from interfering
@@ -1308,9 +1313,7 @@ function(corrosion_install)
 
                     if(EXPORT_NAME)
                         get_target_property(COR_FILE_NAME ${INSTALL_TARGET}-static COR_FILE_NAME)
-                        if(NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}-static-exists)
-                            file(APPEND
-                                ${CMAKE_CURRENT_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}
+                        file(APPEND "${EXPORT_FILE_PATH}"
 "
 add_library(${INSTALL_TARGET}-static STATIC IMPORTED)
 set_target_properties(${INSTALL_TARGET}-static
@@ -1318,10 +1321,7 @@ set_target_properties(${INSTALL_TARGET}-static
     IMPORTED_LOCATION \"\${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}\"
 )
 "
-                            )
-
-                            file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}-static-exists)
-                        endif()
+                        )
                     endif()
                 endif()
 
@@ -1361,11 +1361,9 @@ set_target_properties(${INSTALL_TARGET}-static
                     )
 
                     if(EXPORT_NAME)
-                        if(NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}-shared-exists)
-                            get_target_property(COR_FILE_NAME ${INSTALL_TARGET}-shared COR_FILE_NAME)
-                            file(APPEND
-                                    ${CMAKE_CURRENT_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}
-                                "
+                        get_target_property(COR_FILE_NAME ${INSTALL_TARGET}-shared COR_FILE_NAME)
+                        file(APPEND "${EXPORT_FILE_PATH}"
+"
 add_library(${INSTALL_TARGET}-shared SHARED IMPORTED)
 set_target_properties(${INSTALL_TARGET}-shared
     PROPERTIES
@@ -1376,18 +1374,14 @@ set_target_properties(${INSTALL_TARGET}-shared
 
                             get_target_property(COR_IMPLIB_FILE_NAME ${INSTALL_TARGET}-shared COR_IMPLIB_FILE_NAME)
                             if (NOT COR_IMPLIB_FILE_NAME MATCHES .*-NOTFOUND)
-                                file(APPEND
-                                    ${CMAKE_CURRENT_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}
-                                "
+                                file(APPEND "${EXPORT_FILE_PATH}"
+"
 set_target_properties(${INSTALL_TARGET}-shared
     PROPERTIES
     IMPORTED_IMPLIB \"\${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_IMPLIB_FILE_NAME}\"
 )"
                                 )
                             endif()
-
-                            file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/corrosion/${EXTRA_TARGETS_EXPORT_NAME}-shared-exists)
-                        endif()
                     endif()
                 endif()
             else()
