@@ -1319,8 +1319,6 @@ set_target_properties(${INSTALL_TARGET}-static
 "
                         )
                     endif()
-                else()
-                    message(FATAL_ERROR "Unknown target type ${TARGET_TYPE} for install target ${INSTALL_TARGET}")
                 endif()
 
                 if(TARGET ${INSTALL_TARGET}-shared)
@@ -1384,6 +1382,8 @@ set_target_properties(${INSTALL_TARGET}-shared
                         endif()
                     endif()
                 endif()
+            else()
+                message(FATAL_ERROR "Unknown target type ${TARGET_TYPE} for install target ${INSTALL_TARGET}")
             endif()
 
             # Executables can also have export tables, so they _might_ also need header files
