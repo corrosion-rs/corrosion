@@ -155,7 +155,10 @@ Some configuration options can be specified individually for each target. You ca
 
 
 ### Global Corrosion Options
-All of the following variables are evaluated automatically in most cases. In typical cases you
+
+#### Selecting the Rust toolchain and target triple
+
+The following variables are evaluated automatically in most cases. In typical cases you
 shouldn't need to alter any of these. If you do want to specify them manually, make sure to set
 them **before** `find_package(Corrosion REQUIRED)`.
 
@@ -178,6 +181,11 @@ them **before** `find_package(Corrosion REQUIRED)`.
   Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
   the default target triple reported by `${Rust_COMPILER} --version --verbose`.
 
+#### Enable Convenience Options
+
+The following options are off by default, but may increase convenience:
+
+- `Rust_RUSTUP_INSTALL_MISSING_TARGET:BOOL`: Automatically install a missing target via `rustup` instead of failing.
 
 
 #### Developer/Maintainer Options
