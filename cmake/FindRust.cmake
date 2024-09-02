@@ -390,23 +390,20 @@ if (Rust_RESOLVE_RUSTUP_TOOLCHAINS)
         )
     endif()
 
-    set(Rust_RUSTUP_TOOLCHAINS CACHE INTERNAL "List of available Rustup toolchains" "${_DISCOVERED_TOOLCHAINS}")
-    set(Rust_RUSTUP_TOOLCHAINS_RUSTC_PATH
+    set(Rust_RUSTUP_TOOLCHAINS "${_DISCOVERED_TOOLCHAINS}" CACHE INTERNAL "List of available Rustup toolchains")
+    set(Rust_RUSTUP_TOOLCHAINS_RUSTC_PATH "${_DISCOVERED_TOOLCHAINS_RUSTC_PATH}"
         CACHE INTERNAL
         "List of the rustc paths corresponding to the toolchain at the same index in `Rust_RUSTUP_TOOLCHAINS`."
-        "${_DISCOVERED_TOOLCHAINS_RUSTC_PATH}"
     )
-    set(Rust_RUSTUP_TOOLCHAINS_CARGO_PATH
+    set(Rust_RUSTUP_TOOLCHAINS_CARGO_PATH "${_DISCOVERED_TOOLCHAINS_CARGO_PATH}"
         CACHE INTERNAL
         "List of the cargo paths corresponding to the toolchain at the same index in `Rust_RUSTUP_TOOLCHAINS`. \
         May also be `NOTFOUND` if the toolchain does not have a cargo executable."
-        "${_DISCOVERED_TOOLCHAINS_CARGO_PATH}"
     )
-    set(Rust_RUSTUP_TOOLCHAINS_VERSION
+    set(Rust_RUSTUP_TOOLCHAINS_VERSION "${_DISCOVERED_TOOLCHAINS_VERSION}"
         CACHE INTERNAL
         "List of the rust toolchain version corresponding to the toolchain at the same index in \
         `Rust_RUSTUP_TOOLCHAINS`."
-        "${_DISCOVERED_TOOLCHAINS_VERSION}"
     )
 
     # Rust_TOOLCHAIN is preferred over a requested version if it is set.
