@@ -31,9 +31,7 @@ add_executable(your_cool_cpp_bin main.cpp)
 # A target with the same name is now available in CMake and you can use it to link the rust library into
 # your C/C++ CMake target(s).
 target_link_libraries(your_cool_cpp_bin PUBLIC rust-lib)
-
-# Rust libraries and executables can also be installed using `corrosion_install`.
-corrosion_install(TARGETS rust-lib)
 ```
+
 
 Please see the [Usage chapter](usage.md) for a complete discussion of possible configuration options.

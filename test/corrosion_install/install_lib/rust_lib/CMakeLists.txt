@@ -13,5 +13,6 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set_target_properties(rust_lib-shared PROPERTIES IMPORTED_SONAME librust_lib.dylib)
 endif()
 
+target_sources(rust_lib INTERFACE include/rust_lib/rust_lib.hpp)
 
 corrosion_install(TARGETS rust_lib)
