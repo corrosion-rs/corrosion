@@ -44,8 +44,14 @@ endfunction()
 # Add targets (crates) of one package
 function(_generator_add_package_targets)
     set(OPTIONS NO_LINKER_OVERRIDE)
-    set(ONE_VALUE_KEYWORDS WORKSPACE_MANIFEST_PATH PACKAGE_MANIFEST_PATH PACKAGE_NAME PACKAGE_VERSION TARGETS_JSON OUT_CREATED_TARGETS)
-    set(MULTI_VALUE_KEYWORDS CRATE_TYPES)
+    set(ONE_VALUE_KEYWORDS
+        WORKSPACE_MANIFEST_PATH
+        PACKAGE_MANIFEST_PATH
+        PACKAGE_NAME
+        PACKAGE_VERSION
+        TARGETS_JSON
+        OUT_CREATED_TARGETS)
+    set(MULTI_VALUE_KEYWORDS CRATE_TYPES OVERRIDE_CRATE_TYPE_ARGS)
     cmake_parse_arguments(PARSE_ARGV 0 GAPT "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
     if(DEFINED GAPT_UNPARSED_ARGUMENTS)
@@ -64,6 +70,10 @@ function(_generator_add_package_targets)
     set(targets "${GAPT_TARGETS_JSON}")
     set(out_created_targets "${GAPT_OUT_CREATED_TARGETS}")
     set(crate_types "${GAPT_CRATE_TYPES}")
+    if(DEFINED GAPT_OVERRIDE_CRATE_TYPE_ARGS)
+        list(GET GAPT_OVERRIDE_CRATE_TYPE_ARGS 0 override_crate_name_list_ref)
+        list(GET GAPT_OVERRIDE_CRATE_TYPE_ARGS 1 override_crate_types_list_ref)
+    endif()
 
     set(corrosion_targets "")
 
@@ -82,13 +92,26 @@ function(_generator_add_package_targets)
 
         math(EXPR target_kind_len-1 "${target_kind_len} - 1")
         set(kinds)
-        foreach(ix RANGE ${target_kind_len-1})
-            string(JSON kind GET "${target_kind}" ${ix})
-            if(NOT crate_types OR ${kind} IN_LIST crate_types)
-                list(APPEND kinds ${kind})
-            endif()
-        endforeach()
-
+        unset(override_package_crate_type)
+        # OVERRIDE_CRATE_TYPE is more specific than the CRATE_TYPES argument to corrosion_import_crate, and thus takes
+        # priority.
+        if(DEFINED GAPT_OVERRIDE_CRATE_TYPE_ARGS)
+            foreach(override_crate_name override_crate_types IN ZIP_LISTS ${override_crate_name_list_ref} ${override_crate_types_list_ref})
+                if("${override_crate_name}" STREQUAL "${target_name}")
+                    message(DEBUG "Forcing crate ${target_name} to crate-type(s): ${override_crate_types}.")
+                    # Convert to CMake list
+                    string(REPLACE "," ";" kinds "${override_crate_types}")
+                    break()
+                endif()
+            endforeach()
+        else()
+            foreach(ix RANGE ${target_kind_len-1})
+                string(JSON kind GET "${target_kind}" ${ix})
+                if(NOT crate_types OR ${kind} IN_LIST crate_types)
+                    list(APPEND kinds ${kind})
+                endif()
+            endforeach()
+        endif()
         if(TARGET "${target_name}"
             AND ("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR "bin" IN_LIST kinds)
             )
@@ -213,7 +236,7 @@ endfunction()
 function(_generator_add_cargo_targets)
     set(options NO_LINKER_OVERRIDE)
     set(one_value_args MANIFEST_PATH IMPORTED_CRATES)
-    set(multi_value_args CRATES CRATE_TYPES)
+    set(multi_value_args CRATES CRATE_TYPES OVERRIDE_CRATE_TYPE_ARGS)
     cmake_parse_arguments(
         GGC
         "${options}"
@@ -225,6 +248,7 @@ function(_generator_add_cargo_targets)
 
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE GGC no_linker_override)
     _corrosion_arg_passthrough_helper(CRATE_TYPES GGC crate_types)
+    _corrosion_arg_passthrough_helper(OVERRIDE_CRATE_TYPE_ARGS GGC override_crate_types)
 
     _cargo_metadata(json "${GGC_MANIFEST_PATH}")
     string(JSON packages GET "${json}" "packages")
@@ -284,6 +308,7 @@ function(_generator_add_cargo_targets)
             OUT_CREATED_TARGETS curr_created_targets
             ${no_linker_override}
             ${crate_types}
+            ${override_crate_types}
         )
         list(APPEND created_targets "${curr_created_targets}")
     endforeach()

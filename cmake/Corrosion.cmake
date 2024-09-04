@@ -579,11 +579,20 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
     set(build_byproducts "${ACB_BYPRODUCTS}")
 
-
+    unset(cargo_rustc_crate_types)
     if(NOT target_kinds)
         message(FATAL_ERROR "TARGET_KINDS not specified")
     elseif("staticlib" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
         set(cargo_rustc_filter "--lib")
+        if("${Rust_VERSION}" VERSION_GREATER_EQUAL "1.64")
+            # https://doc.rust-lang.org/1.64.0/cargo/commands/cargo-rustc.html
+            # `--crate-type` is documented since Rust 1.64 for `cargo rustc`.
+            # We just unconditionally set it when available, to support overriding the crate type.
+            # Due to https://github.com/rust-lang/cargo/issues/14498 we can't use one argument and pass a
+            # comma seperated list. Instead we use multiple arguments.
+            set(cargo_rustc_crate_types "${target_kinds}")
+            list(TRANSFORM cargo_rustc_crate_types PREPEND "--crate-type=")
+        endif()
     elseif("bin" IN_LIST target_kinds)
         set(cargo_rustc_filter "--bin=${target_name}")
     else()
@@ -777,6 +786,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 ${no_default_features_arg}
                 ${features_genex}
                 --package ${package_name}
+                ${cargo_rustc_crate_types}
                 --manifest-path "${path_to_toml}"
                 --target-dir "${cargo_target_dir}"
                 ${cargo_profile}
@@ -846,6 +856,7 @@ corrosion_import_crate(
         [PROFILE <cargo-profile>]
         [IMPORTED_CRATES <variable-name>]
         [CRATE_TYPES <crate_type1> ... <crate_typeN>]
+        [OVERRIDE_CRATE_TYPE <crate_name>=<crate_type1,crate_type2,...> ...]
         [CRATES <crate1> ... <crateN>]
         [FEATURES <feature1> ... <featureN>]
         [FLAGS <flag1> ... <flagN>]
@@ -861,6 +872,9 @@ corrosion_import_crate(
 * **PROFILE**: Specify cargo build profile (`dev`/`release` or a [custom profile]; `bench` and `test` are not supported)
 * **IMPORTED_CRATES**: Save the list of imported crates into the variable with the provided name in the current scope.
 * **CRATE_TYPES**: Only import the specified crate types. Valid values: `staticlib`, `cdylib`, `bin`.
+* **OVERRIDE_CRATE_TYPE**: Override the crate-types of a cargo crate with the given comma-separated values.
+                           Internally uses the `rustc` flag [`--crate-type`] to override the crate-type.
+                           Valid values for the crate types are the library types `staticlib` and `cdylib`.
 * **CRATES**: Only import the specified crates from a workspace. Values: Crate names.
 * **FEATURES**: Enable the specified features. Equivalent to [--features] passed to `cargo build`.
 * **FLAGS**:  Arbitrary flags to `cargo build`.
@@ -871,6 +885,7 @@ corrosion_import_crate(
 [--features]: https://doc.rust-lang.org/cargo/reference/features.html#command-line-feature-options
 [`--locked`]: https://doc.rust-lang.org/cargo/commands/cargo.html#manifest-options
 [`--frozen`]: https://doc.rust-lang.org/cargo/commands/cargo.html#manifest-options
+[`--crate-type`]: https://doc.rust-lang.org/rustc/command-line-arguments.html#--crate-type-a-list-of-types-of-crates-for-the-compiler-to-emit
 [Cargo.toml Manifest]: https://doc.rust-lang.org/cargo/appendix/glossary.html#manifest
 
 ANCHOR_END: corrosion-import-crate
@@ -878,7 +893,7 @@ ANCHOR_END: corrosion-import-crate
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD NO_LINKER_OVERRIDE LOCKED FROZEN)
     set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
-    set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS)
+    set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS OVERRIDE_CRATE_TYPE)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
     list(APPEND CMAKE_MESSAGE_CONTEXT "corrosion_import_crate")
 
@@ -917,6 +932,46 @@ function(corrosion_import_crate)
         endif()
     endif()
 
+    # intended to be used with foreach(... ZIP_LISTS ...), meaning
+    # that the crate_types at index i of `override_crate_type_types_list` are
+    # for the package_name at index i of `override_crate_type_package_name_list`.
+    # It would really be nice if CMake had structs or dicts.
+    unset(override_crate_type_package_name_list)
+    unset(override_crate_type_types_list)
+    unset(OVERRIDE_CRATE_TYPE_ARGS)
+    if(DEFINED COR_OVERRIDE_CRATE_TYPE)
+        string(JOIN " " usage_help
+               "Each argument to OVERRIDE_CRATE_TYPE must be of the form `<package_name>=<crate_type(s)>."
+               "The package_name must be a valid cargo package name and the crate_type must be "
+               "a comma-seperated list with valid values being `staticlib`, `cdylib` and `bin`"
+        )
+        foreach(entry IN LISTS COR_OVERRIDE_CRATE_TYPE)
+            string(REPLACE "=" ";" key_val_list ${entry})
+            list(LENGTH key_val_list key_val_list_len)
+            if(NOT key_val_list_len EQUAL "2")
+                message(FATAL_ERROR "Invalid argument: `${entry}` for parameter OVERRIDE_CRATE_TYPE!\n"
+                    "${usage_help}"
+                )
+            endif()
+            list(GET key_val_list "0" package_name)
+            list(GET key_val_list "1" crate_types)
+            list(APPEND override_crate_type_package_name_list "${package_name}")
+            list(APPEND override_crate_type_types_list "${crate_types}")
+        endforeach()
+        list(LENGTH override_crate_type_package_name_list num_override_packages)
+        list(LENGTH override_crate_type_types_list num_override_packages2)
+        if("${Rust_VERSION}" VERSION_LESS "1.64")
+            message(WARNING "OVERRIDE_CRATE_TYPE requires at Rust 1.64 or newer. Ignoring the option")
+        elseif(NOT num_override_packages EQUAL num_override_packages2)
+            message(WARNING "Internal error while parsing OVERRIDE_CRATE_TYPE arguments.\n"
+                    "Corrosion will ignore this argument and continue."
+            )
+        else()
+            # Pass by ref: we intentionally pass the list names here!
+            set(override_crate_types_arg "OVERRIDE_CRATE_TYPE_ARGS" "override_crate_type_package_name_list" "override_crate_type_types_list")
+        endif()
+    endif()
+
     if (NOT IS_ABSOLUTE "${COR_MANIFEST_PATH}")
         set(COR_MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${COR_MANIFEST_PATH})
     endif()
@@ -940,6 +995,7 @@ function(corrosion_import_crate)
         ${crate_allowlist}
         ${crate_types}
         ${no_linker_override}
+        ${override_crate_types_arg}
     )
 
     # Not target props yet:
