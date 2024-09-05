@@ -10,7 +10,10 @@
 ### New features
 
 - Support using the `$<CONFIG>` generator expression in `OUTPUT_DIRECTORY`. [#459]
-
+- Add `OVERRIDE_CRATE_TYPE` option to corrosion_import_crate, allowing users to override
+  the crate-types of Rust libraries (e.g. force building as a staticlib instead of an rlib).
+- Support *-windows-gnullvm targets. 
+- experimental support in corrosion_install for installing libraries and header files
 
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459
 
