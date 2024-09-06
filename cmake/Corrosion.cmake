@@ -31,52 +31,7 @@ option(
     OFF
 )
 
-option(
-        Rust_RUSTUP_INSTALL_MISSING_TARGET
-        "Use Rustup to automatically install missing targets instead of giving up"
-        OFF
-)
-
 find_package(Rust REQUIRED)
-
-if(Rust_TOOLCHAIN_IS_RUSTUP_MANAGED)
-    execute_process(COMMAND rustup target list --toolchain "${Rust_TOOLCHAIN}"
-            OUTPUT_VARIABLE AVAILABLE_TARGETS_RAW
-    )
-    string(REPLACE "\n" ";" AVAILABLE_TARGETS_RAW "${AVAILABLE_TARGETS_RAW}")
-    string(REPLACE " (installed)" "" "AVAILABLE_TARGETS" "${AVAILABLE_TARGETS_RAW}")
-    set(INSTALLED_TARGETS_RAW "${AVAILABLE_TARGETS_RAW}")
-    list(FILTER INSTALLED_TARGETS_RAW INCLUDE REGEX " \\(installed\\)")
-    string(REPLACE " (installed)" "" "INSTALLED_TARGETS" "${INSTALLED_TARGETS_RAW}")
-    list(TRANSFORM INSTALLED_TARGETS STRIP)
-    if("${Rust_CARGO_TARGET}" IN_LIST AVAILABLE_TARGETS)
-        message(DEBUG "Cargo target ${Rust_CARGO_TARGET} is an official target-triple")
-        message(DEBUG "Installed targets: ${INSTALLED_TARGETS}")
-        if(NOT ("${Rust_CARGO_TARGET}" IN_LIST INSTALLED_TARGETS))
-            if(Rust_RUSTUP_INSTALL_MISSING_TARGET)
-                message(STATUS "Cargo target ${Rust_CARGO_TARGET} is not installed. Installing via rustup.")
-                execute_process(COMMAND "${Rust_RUSTUP}" target add
-                                --toolchain ${Rust_TOOLCHAIN}
-                                ${Rust_CARGO_TARGET}
-                                RESULT_VARIABLE target_add_result
-                )
-                if(NOT "${target_add_result}" EQUAL "0")
-                    message(FATAL_ERROR "Target ${Rust_CARGO_TARGET} is not installed for toolchain "
-                            "${Rust_TOOLCHAIN} and automatically installing failed with ${target_add_result}.\n"
-                            "You can try to manually install by running\n"
-                            "`rustup target add --toolchain ${Rust_TOOLCHAIN} ${Rust_CARGO_TARGET}`."
-                    )
-                endif()
-                message(STATUS "Installed target ${Rust_CARGO_TARGET_CACHED} successfully.")
-            else()
-                message(FATAL_ERROR "Target ${Rust_CARGO_TARGET} is not installed for toolchain ${Rust_TOOLCHAIN}.\n"
-                        "Help: Run `rustup target add --toolchain ${Rust_TOOLCHAIN} ${Rust_CARGO_TARGET}` to install "
-                        "the missing target or configure corrosion with `Rust_RUSTUP_INSTALL_MISSING_TARGET=ON`."
-                )
-            endif()
-        endif()
-    endif()
-endif()
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio"
         AND (NOT CMAKE_VS_PLATFORM_NAME STREQUAL CMAKE_VS_PLATFORM_NAME_DEFAULT)
