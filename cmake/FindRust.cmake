@@ -12,6 +12,12 @@ concrete Rust version, not a rustup proxy.
 
 cmake_minimum_required(VERSION 3.12)
 
+option(
+        Rust_RUSTUP_INSTALL_MISSING_TARGET
+        "Use Rustup to automatically install missing targets instead of giving up"
+        OFF
+)
+
 # search for Cargo here and set up a bunch of cool flags and stuff
 include(FindPackageHandleStandardArgs)
 
@@ -759,6 +765,46 @@ if (NOT Rust_CARGO_TARGET_CACHED)
     endif()
 
     message(STATUS "Rust Target: ${Rust_CARGO_TARGET_CACHED}")
+endif()
+
+
+if(Rust_TOOLCHAIN_IS_RUSTUP_MANAGED)
+    execute_process(COMMAND rustup target list --toolchain "${Rust_TOOLCHAIN}"
+                    OUTPUT_VARIABLE AVAILABLE_TARGETS_RAW
+    )
+    string(REPLACE "\n" ";" AVAILABLE_TARGETS_RAW "${AVAILABLE_TARGETS_RAW}")
+    string(REPLACE " (installed)" "" "AVAILABLE_TARGETS" "${AVAILABLE_TARGETS_RAW}")
+    set(INSTALLED_TARGETS_RAW "${AVAILABLE_TARGETS_RAW}")
+    list(FILTER INSTALLED_TARGETS_RAW INCLUDE REGEX " \\(installed\\)")
+    string(REPLACE " (installed)" "" "INSTALLED_TARGETS" "${INSTALLED_TARGETS_RAW}")
+    list(TRANSFORM INSTALLED_TARGETS STRIP)
+    if("${Rust_CARGO_TARGET_CACHED}" IN_LIST AVAILABLE_TARGETS)
+        message(DEBUG "Cargo target ${Rust_CARGO_TARGET} is an official target-triple")
+        message(DEBUG "Installed targets: ${INSTALLED_TARGETS}")
+        if(NOT ("${Rust_CARGO_TARGET_CACHED}" IN_LIST INSTALLED_TARGETS))
+            if(Rust_RUSTUP_INSTALL_MISSING_TARGET)
+                message(STATUS "Cargo target ${Rust_CARGO_TARGET_CACHED} is not installed. Installing via rustup.")
+                execute_process(COMMAND "${Rust_RUSTUP}" target add
+                                --toolchain ${Rust_TOOLCHAIN}
+                                ${Rust_CARGO_TARGET_CACHED}
+                                RESULT_VARIABLE target_add_result
+                )
+                if(NOT "${target_add_result}" EQUAL "0")
+                    message(FATAL_ERROR "Target ${Rust_CARGO_TARGET_CACHED} is not installed for toolchain "
+                            "${Rust_TOOLCHAIN} and automatically installing failed with ${target_add_result}.\n"
+                            "You can try to manually install by running\n"
+                            "`rustup target add --toolchain ${Rust_TOOLCHAIN} ${Rust_CARGO_TARGET}`."
+                    )
+                endif()
+                message(STATUS "Installed target ${Rust_CARGO_TARGET_CACHED} successfully.")
+            else()
+                message(FATAL_ERROR "Target ${Rust_CARGO_TARGET_CACHED} is not installed for toolchain ${Rust_TOOLCHAIN}.\n"
+                        "Help: Run `rustup target add --toolchain ${Rust_TOOLCHAIN} ${Rust_CARGO_TARGET}` to install "
+                        "the missing target or configure corrosion with `Rust_RUSTUP_INSTALL_MISSING_TARGET=ON`."
+                )
+            endif()
+        endif()
+    endif()
 endif()
 
 if(Rust_CARGO_TARGET_CACHED STREQUAL Rust_DEFAULT_HOST_TARGET)
