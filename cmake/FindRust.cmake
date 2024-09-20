@@ -799,7 +799,7 @@ if(Rust_TOOLCHAIN_IS_RUSTUP_MANAGED)
                 message(STATUS "Installed target ${Rust_CARGO_TARGET_CACHED} successfully.")
             else()
                 message(FATAL_ERROR "Target ${Rust_CARGO_TARGET_CACHED} is not installed for toolchain ${Rust_TOOLCHAIN}.\n"
-                        "Help: Run `rustup target add --toolchain ${Rust_TOOLCHAIN} ${Rust_CARGO_TARGET}` to install "
+                        "Help: Run `rustup target add --toolchain ${Rust_TOOLCHAIN} ${Rust_CARGO_TARGET_CACHED}` to install "
                         "the missing target or configure corrosion with `Rust_RUSTUP_INSTALL_MISSING_TARGET=ON`."
                 )
             endif()
