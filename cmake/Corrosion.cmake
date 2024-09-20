@@ -589,7 +589,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 -P ${CORROSION_CMAKE_SRC_DIR}/CorrosionInvokeRustc.cmake
                 --)
         if(Rust_CARGO_TARGET_ENV STREQUAL "msvc")
-            target_link_libraries(${target_name} INTERFACE "@${native_libs_rsp_file}")
+            target_link_libraries(${target_name} INTERFACE "/link@${native_libs_rsp_file}")
         else()
             target_link_libraries(${target_name} INTERFACE "-Wl,@$<SHELL_PATH:${native_libs_rsp_file}>")
         endif()
