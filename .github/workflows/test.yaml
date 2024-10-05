@@ -301,6 +301,28 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
 
+  ninja_multi_config_cross_config:
+    name: Test Ninja Multi-Config Cross-Configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CMake
+        uses: corrosion-rs/install-cmake@v2
+        with:
+          cmake: 3.23.5
+          ninja: 1.10.0
+      # Install cbindgen before Rust to use recent default Rust version.
+      - name: Install cbindgen
+        run: cargo install cbindgen
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Configure
+        run: cmake -S. -Bbuild -G "Ninja Multi-Config" -DCMAKE_CROSS_CONFIGS="Debug;Release" -DCMAKE_DEFAULT_CONFIGS="Debug;Release"
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure -j 3 --build-config Debug
+
 
   test_cxxbridge:
     name: Test cxxbridge integration
