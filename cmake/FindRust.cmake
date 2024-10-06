@@ -202,7 +202,7 @@ function(_corrosion_determine_libs_new target_triple out_libs out_flags)
             # We leave it up to the C/C++ executable that links in the Rust static-library
             # to determine which version of the msvc runtime library it should select.
             list(FILTER libs_list EXCLUDE REGEX "^msvcrtd?")
-            list(FILTER flag_list EXCLUDE REGEX "^/defaultlib:msvcrtd?")
+            list(FILTER flag_list EXCLUDE REGEX "^(-Wl,)?/defaultlib:msvcrtd?")
         else()
             message(DEBUG "Determining required native libraries - failed: Regex match failure.")
             message(DEBUG "`native-static-libs` not found in: `${cargo_build_error_message}`")
