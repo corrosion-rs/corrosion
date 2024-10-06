@@ -184,7 +184,13 @@ function(_corrosion_determine_libs_new target_triple out_libs out_flags)
                 
                 # Flags start with / for MSVC
                 if (lib MATCHES "^/" AND ${target_triple} MATCHES "msvc$")
-                    list(APPEND flag_list "${lib}")
+                    # Windows GNU uses the compiler to invoke the linker, so -Wl, prefix is needed
+                    # https://gitlab.kitware.com/cmake/cmake/-/blob/9bed4f4d817f139f0c2e050d7420e1e247949fe4/Modules/Platform/Windows-GNU.cmake#L156
+                    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+                        list(APPEND flag_list "-Wl,${lib}")
+                    else()
+                        list(APPEND flag_list "${lib}")
+                    endif()
                 else()
                     # Strip leading `-l` (unix) and potential .lib suffix (windows)
                     string(REGEX REPLACE "^-l" "" "stripped_lib" "${lib}")
