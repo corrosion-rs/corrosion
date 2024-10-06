@@ -61,6 +61,7 @@ jobs:
         compiler:
           - cl
           - clang-cl
+          - clang
         include:
           - os: windows-2022
             vs_version: vs-2022
@@ -78,6 +79,10 @@ jobs:
           - compiler: clang-cl
             arch: i686
           - compiler: clang-cl
+            arch: aarch64
+          - compiler: clang
+            arch: i686
+          - compiler: clang
             arch: aarch64
 
     steps:
