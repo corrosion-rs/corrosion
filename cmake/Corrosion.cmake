@@ -80,6 +80,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
     else()
         set(output_dir_prop_target_name "${target_name}")
     endif()
+    string(REPLACE "__" "::" output_dir_prop_target_name ${output_dir_prop_target_name})
 
     # Append .exe suffix for executable by-products if the target is windows or if it's a host
     # build and the host is Windows.
@@ -165,6 +166,7 @@ endfunction()
 #    artifact.
 # - filename of the artifact.
 function(_corrosion_set_imported_location target_name base_property output_directory_property filename)
+        message(STATUS ${target_name})
         cmake_language(EVAL CODE "
             cmake_language(DEFER
                 CALL
@@ -181,6 +183,8 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
     if(ARGN)
         message(FATAL_ERROR "Unexpected additional arguments")
     endif()
+
+    string(REPLACE "::" "__" target_name_cmake_underscore ${target_name})
 
     foreach(output_dir_prop_name ${output_dir_prop_names})
         get_target_property(output_dir ${target_name} "${output_dir_prop_name}")
@@ -249,7 +253,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
     list(TRANSFORM src_file_names PREPEND "${cargo_build_dir}/")
     list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
-    add_custom_command(TARGET _cargo-build_${target_name}
+    add_custom_command(TARGET _cargo-build_${target_name_cmake_underscore}
                         POST_BUILD
                         # output_dir may contain a Generator expression.
                         COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
@@ -294,6 +298,7 @@ function(_corrosion_add_library_target)
     set(ONE_VALUE_KEYWORDS
         WORKSPACE_MANIFEST_PATH
         TARGET_NAME
+        TARGET_NAME_CMAKE
         OUT_ARCHIVE_OUTPUT_BYPRODUCTS
         OUT_SHARED_LIB_BYPRODUCTS
         OUT_PDB_BYPRODUCT
@@ -327,6 +332,8 @@ function(_corrosion_add_library_target)
     endif()
     set(workspace_manifest_path "${CALT_WORKSPACE_MANIFEST_PATH}")
     set(target_name "${CALT_TARGET_NAME}")
+    set(target_name_cmake "${CALT_TARGET_NAME_CMAKE}")
+    string(REPLACE "::" "__" target_name_cmake_underscore ${target_name_cmake})
 
     set(is_windows "")
     set(is_windows_gnu "")
@@ -388,26 +395,26 @@ function(_corrosion_add_library_target)
     set("${CALT_OUT_ARCHIVE_OUTPUT_BYPRODUCTS}" "${archive_output_byproducts}" PARENT_SCOPE)
 
     if(has_staticlib)
-        add_library(${target_name}-static STATIC IMPORTED GLOBAL)
-        add_dependencies(${target_name}-static cargo-build_${target_name})
-        set_target_properties(${target_name}-static PROPERTIES COR_FILE_NAME ${static_lib_name})
+        add_library(${target_name_cmake_underscore}-static STATIC IMPORTED GLOBAL)
+        add_dependencies(${target_name_cmake_underscore}-static cargo-build_${target_name_cmake_underscore})
+        set_target_properties(${target_name_cmake_underscore}-static PROPERTIES COR_FILE_NAME ${static_lib_name})
 
-        _corrosion_set_imported_location("${target_name}-static" "IMPORTED_LOCATION"
+        _corrosion_set_imported_location("${target_name_cmake_underscore}-static" "IMPORTED_LOCATION"
                 "ARCHIVE_OUTPUT_DIRECTORY"
                 "${static_lib_name}")
 
         # Todo: NO_STD target property?
         if(NOT COR_NO_STD)
             set_property(
-                    TARGET ${target_name}-static
+                    TARGET ${target_name_cmake_underscore}-static
                     PROPERTY INTERFACE_LINK_LIBRARIES ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS}
             )
             set_property(
-                    TARGET ${target_name}-static
+                    TARGET ${target_name_cmake_underscore}-static
                     PROPERTY INTERFACE_LINK_OPTIONS ${Rust_CARGO_TARGET_LINK_OPTIONS}
             )
             if(is_macos)
-                set_property(TARGET ${target_name}-static
+                set_property(TARGET ${target_name_cmake_underscore}-static
                         PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
                         )
             endif()
@@ -415,29 +422,29 @@ function(_corrosion_add_library_target)
     endif()
 
     if(has_cdylib)
-        add_library(${target_name}-shared SHARED IMPORTED GLOBAL)
-        add_dependencies(${target_name}-shared cargo-build_${target_name})
-        set_target_properties(${target_name}-shared PROPERTIES COR_FILE_NAME ${dynamic_lib_name})
+        add_library(${target_name_cmake_underscore}-shared SHARED IMPORTED GLOBAL)
+        add_dependencies(${target_name_cmake_underscore}-shared cargo-build_${target_name_cmake_underscore})
+        set_target_properties(${target_name_cmake_underscore}-shared PROPERTIES COR_FILE_NAME ${dynamic_lib_name})
 
         # Todo: (Not new issue): What about IMPORTED_SONAME and IMPORTED_NO_SYSTEM?
-        _corrosion_set_imported_location("${target_name}-shared" "IMPORTED_LOCATION"
+        _corrosion_set_imported_location("${target_name_cmake_underscore}-shared" "IMPORTED_LOCATION"
                 "LIBRARY_OUTPUT_DIRECTORY"
                 "${dynamic_lib_name}"
         )
         # In the future we would probably prefer to let Rust set the soname for packages >= 1.0.
         # This is tracked in issue #333.
-        set_target_properties(${target_name}-shared PROPERTIES IMPORTED_NO_SONAME TRUE)
+        set_target_properties(${target_name_cmake_underscore}-shared PROPERTIES IMPORTED_NO_SONAME TRUE)
 
         if(is_windows)
-            _corrosion_set_imported_location("${target_name}-shared" "IMPORTED_IMPLIB"
+            _corrosion_set_imported_location("${target_name_cmake_underscore}-shared" "IMPORTED_IMPLIB"
                     "ARCHIVE_OUTPUT_DIRECTORY"
                     "${implib_name}"
             )
-            set_target_properties(${target_name}-shared PROPERTIES COR_IMPLIB_FILE_NAME ${implib_name})
+            set_target_properties(${target_name_cmake_underscore}-shared PROPERTIES COR_IMPLIB_FILE_NAME ${implib_name})
         endif()
 
         if(is_macos)
-            set_property(TARGET ${target_name}-shared
+            set_property(TARGET ${target_name_cmake_underscore}-shared
                     PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
                     )
         endif()
@@ -445,21 +452,23 @@ function(_corrosion_add_library_target)
 
     if(has_cdylib AND has_staticlib)
         if(BUILD_SHARED_LIBS)
-            target_link_libraries(${target_name} INTERFACE ${target_name}-shared)
+            target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake_underscore}-shared)
         else()
-            target_link_libraries(${target_name} INTERFACE ${target_name}-static)
+            target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake_underscore}-static)
         endif()
     elseif(has_cdylib)
-        target_link_libraries(${target_name} INTERFACE ${target_name}-shared)
+        target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake_underscore}-shared)
     else()
-        target_link_libraries(${target_name} INTERFACE ${target_name}-static)
+        target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake_underscore}-static)
     endif()
 endfunction()
 
-function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_byproduct out_pdb_byproduct)
+function(_corrosion_add_bin_target workspace_manifest_path bin_name target_name_cmake out_bin_byproduct out_pdb_byproduct)
     if(NOT bin_name)
         message(FATAL_ERROR "No bin_name in _corrosion_add_bin_target for target ${target_name}")
     endif()
+
+    string(REPLACE "::" "__" target_name_cmake_underscore ${target_name_cmake})
 
     string(REPLACE "-" "_" bin_name_underscore "${bin_name}")
 
@@ -473,15 +482,15 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
     # target property
     set(bin_filename "${bin_name}")
     set(${out_bin_byproduct} "${bin_filename}" PARENT_SCOPE)
-    add_dependencies(${bin_name} cargo-build_${bin_name})
+    add_dependencies(${target_name_cmake} cargo-build_${target_name_cmake_underscore})
 
     if(Rust_CARGO_TARGET_OS STREQUAL "darwin")
-        set_property(TARGET ${bin_name}
+        set_property(TARGET ${target_name_cmake}
                 PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
                 )
     endif()
 
-    _corrosion_set_imported_location("${bin_name}" "IMPORTED_LOCATION"
+    _corrosion_set_imported_location("${target_name_cmake}" "IMPORTED_LOCATION"
                         "RUNTIME_OUTPUT_DIRECTORY"
                         "${bin_filename}"
     )
@@ -531,7 +540,7 @@ set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
 # A target may be either a specific bin
 function(_add_cargo_build out_cargo_build_out_dir)
     set(options NO_LINKER_OVERRIDE)
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH WORKSPACE_MANIFEST_PATH)
+    set(one_value_args PACKAGE TARGET TARGET_NAME_CMAKE MANIFEST_PATH WORKSPACE_MANIFEST_PATH)
     set(multi_value_args BYPRODUCTS TARGET_KINDS)
     cmake_parse_arguments(
         ACB
@@ -551,6 +560,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     set(package_name "${ACB_PACKAGE}")
     set(target_name "${ACB_TARGET}")
+    set(target_name_cmake "${ACB_TARGET_NAME_CMAKE}")
+    string(REPLACE "::" "__" target_name_cmake_underscore ${target_name_cmake})
     set(path_to_toml "${ACB_MANIFEST_PATH}")
     set(target_kinds "${ACB_TARGET_KINDS}")
     set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
@@ -602,22 +613,22 @@ function(_add_cargo_build out_cargo_build_out_dir)
         set(no_default_features_arg --no-default-features)
     endif()
 
-    set(global_rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTFLAGS>>")
-    set(local_rustflags_target_property  "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_LOCAL_RUSTFLAGS>>")
+    set(global_rustflags_target_property "$<TARGET_GENEX_EVAL:${target_name_cmake},$<TARGET_PROPERTY:${target_name_cmake},INTERFACE_CORROSION_RUSTFLAGS>>")
+    set(local_rustflags_target_property  "$<TARGET_GENEX_EVAL:${target_name_cmake},$<TARGET_PROPERTY:${target_name_cmake},INTERFACE_CORROSION_LOCAL_RUSTFLAGS>>")
 
     # todo: this probably should be TARGET_GENEX_EVAL
-    set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_FEATURES}>>")
+    set(features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name_cmake},${_CORR_PROP_FEATURES}>>")
     set(features_genex "$<$<BOOL:${features_target_property}>:--features=$<JOIN:${features_target_property},$<COMMA>>>")
 
     # target property overrides corrosion_import_crate argument
-    set(all_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_ALL_FEATURES}>>")
+    set(all_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name_cmake},${_CORR_PROP_ALL_FEATURES}>>")
     set(all_features_arg "$<$<BOOL:${all_features_target_property}>:--all-features>")
 
-    set(no_default_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_NO_DEFAULT_FEATURES}>>")
+    set(no_default_features_target_property "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name_cmake},${_CORR_PROP_NO_DEFAULT_FEATURES}>>")
     set(no_default_features_arg "$<$<BOOL:${no_default_features_target_property}>:--no-default-features>")
 
-    set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_ENV_VARS}>>")
-    set(hostbuild_override "$<BOOL:$<TARGET_PROPERTY:${target_name},${_CORR_PROP_HOST_BUILD}>>")
+    set(build_env_variable_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name_cmake},${_CORR_PROP_ENV_VARS}>>")
+    set(hostbuild_override "$<BOOL:$<TARGET_PROPERTY:${target_name_cmake},${_CORR_PROP_HOST_BUILD}>>")
     set(if_not_host_build_condition "$<NOT:${hostbuild_override}>")
 
     set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
@@ -629,16 +640,16 @@ function(_add_cargo_build out_cargo_build_out_dir)
     _corrosion_strip_target_triple(${_CORROSION_RUST_CARGO_TARGET} stripped_target_triple)
     set(target_artifact_dir "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${stripped_target_triple}>")
 
-    set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
+    set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name_cmake},INTERFACE_CORROSION_CARGO_FLAGS>>")
 
-    set(explicit_linker_property "$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_LINKER>")
+    set(explicit_linker_property "$<TARGET_PROPERTY:${target_name_cmake},INTERFACE_CORROSION_LINKER>")
     set(explicit_linker_defined "$<BOOL:${explicit_linker_property}>")
 
-    set(cargo_profile_target_property "$<TARGET_GENEX_EVAL:${target_name},$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_PROFILE>>")
+    set(cargo_profile_target_property "$<TARGET_GENEX_EVAL:${target_name_cmake},$<TARGET_PROPERTY:${target_name_cmake},INTERFACE_CORROSION_CARGO_PROFILE>>")
 
     # Option to override the rustc/cargo binary to something other than the global default
-    set(rustc_override "$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_RUSTC>")
-    set(cargo_override "$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO>")
+    set(rustc_override "$<TARGET_PROPERTY:${target_name_cmake},INTERFACE_CORROSION_RUSTC>")
+    set(cargo_override "$<TARGET_PROPERTY:${target_name_cmake},INTERFACE_CORROSION_CARGO>")
     set(rustc_bin "$<IF:$<BOOL:${rustc_override}>,${rustc_override},${_CORROSION_RUSTC}>")
     set(cargo_bin "$<IF:$<BOOL:${cargo_override}>,${cargo_override},${_CORROSION_CARGO}>")
 
@@ -703,13 +714,13 @@ function(_add_cargo_build out_cargo_build_out_dir)
         list(APPEND corrosion_cc_rs_flags "SDKROOT=${CMAKE_OSX_SYSROOT}")
     endif()
 
-    corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
+    corrosion_add_target_local_rustflags("${target_name_cmake}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
 
     # todo: this should probably also be guarded by if_not_host_build_condition.
     if(COR_NO_STD)
-        corrosion_add_target_local_rustflags("${target_name}" "-Cdefault-linker-libraries=no")
+        corrosion_add_target_local_rustflags("${target_name_cmake}" "-Cdefault-linker-libraries=no")
     else()
-        corrosion_add_target_local_rustflags("${target_name}" "-Cdefault-linker-libraries=yes")
+        corrosion_add_target_local_rustflags("${target_name_cmake}" "-Cdefault-linker-libraries=yes")
     endif()
 
     set(global_joined_rustflags "$<JOIN:${global_rustflags_target_property}, >")
@@ -717,8 +728,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(local_rustflags_delimiter "$<$<BOOL:${local_rustflags_target_property}>:-->")
     set(local_rustflags_genex "$<$<BOOL:${local_rustflags_target_property}>:${local_rustflags_target_property}>")
 
-    set(deps_link_languages_prop "$<TARGET_PROPERTY:_cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>")
-    set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
+    set(deps_link_languages_prop "$<TARGET_PROPERTY:_cargo-build_${target_name_cmake_underscore},CARGO_DEPS_LINKER_LANGUAGES>")
+    set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name_cmake_underscore},${deps_link_languages_prop}>")
     set(target_uses_cxx  "$<IN_LIST:CXX,${deps_link_languages}>")
     unset(default_linker)
     # With the MSVC ABI rustc only supports directly invoking the linker - Invoking cl as the linker driver is not supported.
@@ -737,13 +748,13 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # Skip adding the linker argument, if the linker is explicitly set, since the
         # explicit_linker_property will not be set when this function runs.
         # Passing this rustflag is necessary for clang.
-        corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:${explicit_linker_defined}>:${rustflag_linker_arg}>")
+        corrosion_add_target_local_rustflags("${target_name_cmake}" "$<$<NOT:${explicit_linker_defined}>:${rustflag_linker_arg}>")
     endif()
 
-    message(DEBUG "TARGET ${target_name} produces byproducts ${build_byproducts}")
+    message(DEBUG "TARGET ${target_name_cmake} produces byproducts ${build_byproducts}")
 
     add_custom_target(
-        _cargo-build_${target_name}
+        _cargo-build_${target_name_cmake_underscore}
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
@@ -790,22 +801,22 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # ensures that they run before any user defined post build steps on this
     # target.
     add_custom_target(
-        cargo-build_${target_name}
+        cargo-build_${target_name_cmake_underscore}
         ALL
     )
-    add_dependencies(cargo-build_${target_name} _cargo-build_${target_name})
+    add_dependencies(cargo-build_${target_name_cmake_underscore} _cargo-build_${target_name_cmake_underscore})
 
     # Add custom target before actual build that user defined custom commands (e.g. code generators) can
     # use as a hook to do something before the build. This mainly exists to not expose the `_cargo-build` targets.
-    add_custom_target(cargo-prebuild_${target_name})
-    add_dependencies(_cargo-build_${target_name} cargo-prebuild_${target_name})
+    add_custom_target(cargo-prebuild_${target_name_cmake_underscore})
+    add_dependencies(_cargo-build_${target_name_cmake_underscore} cargo-prebuild_${target_name_cmake_underscore})
     if(NOT TARGET cargo-prebuild)
         add_custom_target(cargo-prebuild)
     endif()
-    add_dependencies(cargo-prebuild cargo-prebuild_${target_name})
+    add_dependencies(cargo-prebuild cargo-prebuild_${target_name_cmake_underscore})
 
     add_custom_target(
-        cargo-clean_${target_name}
+        cargo-clean_${target_name_cmake_underscore}
         COMMAND
             "${cargo_bin}" clean ${cargo_target_option}
             -p ${package_name} --manifest-path ${path_to_toml}
@@ -816,7 +827,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     if (NOT TARGET cargo-clean)
         add_custom_target(cargo-clean)
     endif()
-    add_dependencies(cargo-clean cargo-clean_${target_name})
+    add_dependencies(cargo-clean cargo-clean_${target_name_cmake_underscore})
 endfunction()
 
 #[=======================================================================[.md:
@@ -834,6 +845,8 @@ corrosion_import_crate(
         [IMPORTED_CRATES <variable-name>]
         [CRATE_TYPES <crate_type1> ... <crate_typeN>]
         [OVERRIDE_CRATE_TYPE <crate_name>=<crate_type1,crate_type2,...> ...]
+        [BIN_NAMESPACE <namespace>]
+        [LIB_NAMESPACE <namespace>]
         [CRATES <crate1> ... <crateN>]
         [FEATURES <feature1> ... <featureN>]
         [FLAGS <flag1> ... <flagN>]
@@ -852,6 +865,10 @@ corrosion_import_crate(
 * **OVERRIDE_CRATE_TYPE**: Override the crate-types of a cargo crate with the given comma-separated values.
                            Internally uses the `rustc` flag [`--crate-type`] to override the crate-type.
                            Valid values for the crate types are the library types `staticlib` and `cdylib`.
+* **BIN_NAMESPACE**: If specified, prefixes the CMake target corresponding to all binary crates with `<namespace>::`.
+                     This allows binary and library crates to have the same name.
+* **LIB_NAMESPACE**: If specified, prefixes the CMake target corresponding to all library crates with `<namespace>::`.
+                     This allows binary and library crates to have the same name.
 * **CRATES**: Only import the specified crates from a workspace. Values: Crate names.
 * **FEATURES**: Enable the specified features. Equivalent to [--features] passed to `cargo build`.
 * **FLAGS**:  Arbitrary flags to `cargo build`.
@@ -869,7 +886,7 @@ ANCHOR_END: corrosion-import-crate
 #]=======================================================================]
 function(corrosion_import_crate)
     set(OPTIONS ALL_FEATURES NO_DEFAULT_FEATURES NO_STD NO_LINKER_OVERRIDE LOCKED FROZEN)
-    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES BIN_NAMESPACE LIB_NAMESPACE)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS OVERRIDE_CRATE_TYPE)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
     list(APPEND CMAKE_MESSAGE_CONTEXT "corrosion_import_crate")
@@ -890,6 +907,8 @@ function(corrosion_import_crate)
     _corrosion_option_passthrough_helper(NO_LINKER_OVERRIDE COR no_linker_override)
     _corrosion_option_passthrough_helper(LOCKED COR locked)
     _corrosion_option_passthrough_helper(FROZEN COR frozen)
+    _corrosion_arg_passthrough_helper(BIN_NAMESPACE COR bin_namespace)
+    _corrosion_arg_passthrough_helper(LIB_NAMESPACE COR lib_namespace)
     _corrosion_arg_passthrough_helper(CRATES COR crate_allowlist)
     _corrosion_arg_passthrough_helper(CRATE_TYPES COR crate_types)
 
@@ -973,6 +992,8 @@ function(corrosion_import_crate)
         ${crate_types}
         ${no_linker_override}
         ${override_crate_types_arg}
+        ${bin_namespace}
+        ${lib_namespace}
     )
 
     # Not target props yet:
