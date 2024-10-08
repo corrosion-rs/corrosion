@@ -201,6 +201,10 @@
             "inherits": ["ninja", "x86_64-pc-windows-msvc", "clang-cl"]
         },
         {
+            "name": "ninja-x86_64-pc-windows-msvc-clang",
+            "inherits": ["ninja", "x86_64-pc-windows-msvc", "clang"]
+        },
+        {
             "name": "ninja-i686-pc-windows-msvc-cl",
             "inherits": ["ninja", "i686-pc-windows-msvc", "cl", "windows-10-cross"]
         },
@@ -209,12 +213,20 @@
             "inherits": ["ninja", "i686-pc-windows-msvc", "clang-cl", "windows-10-cross"]
         },
         {
+            "name": "ninja-i686-pc-windows-msvc-clang",
+            "inherits": ["ninja", "i686-pc-windows-msvc", "clang", "windows-10-cross"]
+        },
+        {
             "name": "ninja-aarch64-pc-windows-msvc-cl",
             "inherits": ["ninja", "aarch64-pc-windows-msvc", "cl", "windows-10-cross"]
         },
         {
             "name": "ninja-aarch64-pc-windows-msvc-clang-cl",
             "inherits": ["ninja", "aarch64-pc-windows-msvc", "clang-cl", "windows-10-cross"]
+        },
+        {
+            "name": "ninja-aarch64-pc-windows-msvc-clang",
+            "inherits": ["ninja", "aarch64-pc-windows-msvc", "clang", "windows-10-cross"]
         },
         {
             "name": "ninja-x86_64-pc-windows-gnullvm",
