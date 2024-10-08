@@ -178,7 +178,13 @@ function(_corrosion_determine_libs_new target_triple out_libs out_flags)
                 
                 # Flags start with / for MSVC
                 if (lib MATCHES "^/" AND ${target_triple} MATCHES "msvc$")
-                    list(APPEND flag_list "${lib}")
+                    # Windows GNU uses the compiler to invoke the linker, so -Wl, prefix is needed
+                    # https://gitlab.kitware.com/cmake/cmake/-/blob/9bed4f4d817f139f0c2e050d7420e1e247949fe4/Modules/Platform/Windows-GNU.cmake#L156
+                    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+                        list(APPEND flag_list "-Wl,${lib}")
+                    else()
+                        list(APPEND flag_list "${lib}")
+                    endif()
                 else()
                     # Strip leading `-l` (unix) and potential .lib suffix (windows)
                     string(REGEX REPLACE "^-l" "" "stripped_lib" "${lib}")
@@ -190,7 +196,7 @@ function(_corrosion_determine_libs_new target_triple out_libs out_flags)
             # We leave it up to the C/C++ executable that links in the Rust static-library
             # to determine which version of the msvc runtime library it should select.
             list(FILTER libs_list EXCLUDE REGEX "^msvcrtd?")
-            list(FILTER flag_list EXCLUDE REGEX "^/defaultlib:msvcrtd?")
+            list(FILTER flag_list EXCLUDE REGEX "^(-Wl,)?/defaultlib:msvcrtd?")
         else()
             message(DEBUG "Determining required native libraries - failed: Regex match failure.")
             message(DEBUG "`native-static-libs` not found in: `${cargo_build_error_message}`")
