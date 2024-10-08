@@ -704,7 +704,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     endif()
 
     # Ensure that cc-rs targets same Apple platform version as the CMake build
-    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_OSX_DEPLOYMENT_TARGET)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_OSX_DEPLOYMENT_TARGET)
         list(APPEND corrosion_cc_rs_flags "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
     endif()
 
