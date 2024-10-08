@@ -703,6 +703,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
         list(APPEND corrosion_cc_rs_flags "SDKROOT=${CMAKE_OSX_SYSROOT}")
     endif()
 
+    # Ensure that cc-rs targets same Apple platform version as the CMake build
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_OSX_DEPLOYMENT_TARGET)
+        list(APPEND corrosion_cc_rs_flags "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    endif()
+
     corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
 
     # todo: this should probably also be guarded by if_not_host_build_condition.
