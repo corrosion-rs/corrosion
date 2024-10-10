@@ -100,7 +100,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         if(output_dir_curr_config)
             set(curr_out_dir "${output_dir_curr_config}")
         elseif(output_directory)
-            set(curr_out_dir "${output_directory}")
+            set(curr_out_dir "${output_directory}/${config_type}")
         else()
             set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
