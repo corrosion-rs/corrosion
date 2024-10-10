@@ -22,7 +22,7 @@ add_custom_command(TARGET cargo-build_rust_bin1 POST_BUILD
     COMMAND
     ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/another_dir"
     COMMAND
-    ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_PROPERTY:rust_bin1,LOCATION>" "${CMAKE_CURRENT_BINARY_DIR}/another_dir/moved_bin"
+    ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_PROPERTY:rust_bin1,LOCATION_$<CONFIG>>" "${CMAKE_CURRENT_BINARY_DIR}/another_dir/moved_bin"
     )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/custom_bin_var")
