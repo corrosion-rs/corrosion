@@ -1836,6 +1836,28 @@ function(corrosion_experimental_cbindgen)
         else()
             set(package_manifest_dir "${CCN_MANIFEST_DIRECTORY}")
         endif()
+
+        # create non-existent target
+        add_library("${rust_target}" INTERFACE)
+
+        # get package name
+        file(REAL_PATH "${CCN_MANIFEST_DIRECTORY}/Cargo.toml" manifest_path)
+        _cargo_metadata(json "${manifest_path}")
+
+        string(JSON packages GET "${json}" "packages")
+        string(JSON pkgs_len LENGTH "${packages}")
+        math(EXPR pkgs_len-1 "${pkgs_len} - 1")
+
+        foreach(ix RANGE ${pkgs_len-1})
+            string(JSON pkg GET "${packages}" ${ix})
+            string(JSON pkg_name GET "${pkg}" "name")
+            string(JSON pkg_manifest_path GET "${pkg}" "manifest_path")
+            if(pkg_manifest_path STREQUAL manifest_path)
+                # found the package
+                set_target_properties("${rust_target}" PROPERTIES COR_CARGO_PACKAGE_NAME "${pkg_name}")
+                break()
+            endif()
+        endforeach()
     endif()
 
     get_target_property(rust_cargo_package "${rust_target}" COR_CARGO_PACKAGE_NAME )
