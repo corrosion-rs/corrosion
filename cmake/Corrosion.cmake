@@ -1523,6 +1523,7 @@ ANCHOR: corrosion_add_cxxbridge
 ```cmake
 corrosion_add_cxxbridge(cxx_target
         CRATE <imported_target_name>
+        REGEN_TARGET <regen_target_name>
         [FILES <file1.rs> <file2.rs>]
 )
 ```
@@ -1533,6 +1534,7 @@ Adds build-rules to create C++ bindings using the [cxx] crate.
 * `cxxtarget`: Name of the C++ library target for the bindings, which corrosion will create.
 * **FILES**: Input Rust source file containing #[cxx::bridge].
 * **CRATE**: Name of an imported Rust target. Note: Parameter may be renamed before release
+* **REGEN_TARGET**: Name of a custom target that will regenerate the cxx bindings **without** recompiling. Note: Parameter may be renamed before release
 
 #### Currently missing arguments
 
@@ -1570,7 +1572,7 @@ ANCHOR_END: corrosion_add_cxxbridge
 #]=======================================================================]
 function(corrosion_add_cxxbridge cxx_target)
     set(OPTIONS)
-    set(ONE_VALUE_KEYWORDS CRATE)
+    set(ONE_VALUE_KEYWORDS CRATE REGEN_TARGET)
     set(MULTI_VALUE_KEYWORDS FILES)
     cmake_parse_arguments(PARSE_ARGV 1 _arg "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
@@ -1712,6 +1714,8 @@ function(corrosion_add_cxxbridge cxx_target)
             COMMENT "Generating rust/cxx.h header"
     )
 
+    set(GENERATED_FILES "${generated_dir}/include/rust/cxx.h")
+
     foreach(filepath ${_arg_FILES})
         get_filename_component(filename ${filepath} NAME_WE)
         get_filename_component(directory ${filepath} DIRECTORY)
@@ -1739,16 +1743,21 @@ function(corrosion_add_cxxbridge cxx_target)
                     --output "${source_placement_dir}/${cxx_source}"
                     --include "${cxx_target}/${cxx_header}"
             DEPENDS "cxxbridge_v${cxx_required_version}" "${rust_source_path}"
-            COMMENT "Generating cxx bindings for crate ${_arg_CRATE}"
+            COMMENT "Generating cxx bindings for crate ${_arg_CRATE} and file src/${filepath}"
         )
 
-        target_sources(${cxx_target}
-            PRIVATE
-                "${header_placement_dir}/${cxx_header}"
-                "${generated_dir}/include/rust/cxx.h"
-                "${source_placement_dir}/${cxx_source}"
-        )
+        list(APPEND GENERATED_FILES
+            "${header_placement_dir}/${cxx_header}"
+            "${source_placement_dir}/${cxx_source}")
     endforeach()
+    target_sources(${cxx_target} PRIVATE ${GENERATED_FILES})
+
+    if(DEFINED _arg_REGEN_TARGET)
+        add_custom_target(${_arg_REGEN_TARGET}
+            DEPENDS ${GENERATED_FILES}
+            COMMENT "Generated cxx bindings for crate ${_arg_CRATE}")
+    endif()
+
 endfunction()
 
 #[=======================================================================[.md:
