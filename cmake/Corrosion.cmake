@@ -166,7 +166,6 @@ endfunction()
 #    artifact.
 # - filename of the artifact.
 function(_corrosion_set_imported_location target_name base_property output_directory_property filename)
-        message(STATUS ${target_name})
         cmake_language(EVAL CODE "
             cmake_language(DEFER
                 CALL
@@ -395,26 +394,26 @@ function(_corrosion_add_library_target)
     set("${CALT_OUT_ARCHIVE_OUTPUT_BYPRODUCTS}" "${archive_output_byproducts}" PARENT_SCOPE)
 
     if(has_staticlib)
-        add_library(${target_name_cmake_underscore}-static STATIC IMPORTED GLOBAL)
-        add_dependencies(${target_name_cmake_underscore}-static cargo-build_${target_name_cmake_underscore})
-        set_target_properties(${target_name_cmake_underscore}-static PROPERTIES COR_FILE_NAME ${static_lib_name})
+        add_library(${target_name_cmake}-static STATIC IMPORTED GLOBAL)
+        add_dependencies(${target_name_cmake}-static cargo-build_${target_name_cmake_underscore})
+        set_target_properties(${target_name_cmake}-static PROPERTIES COR_FILE_NAME ${static_lib_name})
 
-        _corrosion_set_imported_location("${target_name_cmake_underscore}-static" "IMPORTED_LOCATION"
+        _corrosion_set_imported_location("${target_name_cmake}-static" "IMPORTED_LOCATION"
                 "ARCHIVE_OUTPUT_DIRECTORY"
                 "${static_lib_name}")
 
         # Todo: NO_STD target property?
         if(NOT COR_NO_STD)
             set_property(
-                    TARGET ${target_name_cmake_underscore}-static
+                    TARGET ${target_name_cmake}-static
                     PROPERTY INTERFACE_LINK_LIBRARIES ${Rust_CARGO_TARGET_LINK_NATIVE_LIBS}
             )
             set_property(
-                    TARGET ${target_name_cmake_underscore}-static
+                    TARGET ${target_name_cmake}-static
                     PROPERTY INTERFACE_LINK_OPTIONS ${Rust_CARGO_TARGET_LINK_OPTIONS}
             )
             if(is_macos)
-                set_property(TARGET ${target_name_cmake_underscore}-static
+                set_property(TARGET ${target_name_cmake}-static
                         PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
                         )
             endif()
@@ -422,29 +421,29 @@ function(_corrosion_add_library_target)
     endif()
 
     if(has_cdylib)
-        add_library(${target_name_cmake_underscore}-shared SHARED IMPORTED GLOBAL)
-        add_dependencies(${target_name_cmake_underscore}-shared cargo-build_${target_name_cmake_underscore})
-        set_target_properties(${target_name_cmake_underscore}-shared PROPERTIES COR_FILE_NAME ${dynamic_lib_name})
+        add_library(${target_name_cmake}-shared SHARED IMPORTED GLOBAL)
+        add_dependencies(${target_name_cmake}-shared cargo-build_${target_name_cmake_underscore})
+        set_target_properties(${target_name_cmake}-shared PROPERTIES COR_FILE_NAME ${dynamic_lib_name})
 
         # Todo: (Not new issue): What about IMPORTED_SONAME and IMPORTED_NO_SYSTEM?
-        _corrosion_set_imported_location("${target_name_cmake_underscore}-shared" "IMPORTED_LOCATION"
+        _corrosion_set_imported_location("${target_name_cmake}-shared" "IMPORTED_LOCATION"
                 "LIBRARY_OUTPUT_DIRECTORY"
                 "${dynamic_lib_name}"
         )
         # In the future we would probably prefer to let Rust set the soname for packages >= 1.0.
         # This is tracked in issue #333.
-        set_target_properties(${target_name_cmake_underscore}-shared PROPERTIES IMPORTED_NO_SONAME TRUE)
+        set_target_properties(${target_name_cmake}-shared PROPERTIES IMPORTED_NO_SONAME TRUE)
 
         if(is_windows)
-            _corrosion_set_imported_location("${target_name_cmake_underscore}-shared" "IMPORTED_IMPLIB"
+            _corrosion_set_imported_location("${target_name_cmake}-shared" "IMPORTED_IMPLIB"
                     "ARCHIVE_OUTPUT_DIRECTORY"
                     "${implib_name}"
             )
-            set_target_properties(${target_name_cmake_underscore}-shared PROPERTIES COR_IMPLIB_FILE_NAME ${implib_name})
+            set_target_properties(${target_name_cmake}-shared PROPERTIES COR_IMPLIB_FILE_NAME ${implib_name})
         endif()
 
         if(is_macos)
-            set_property(TARGET ${target_name_cmake_underscore}-shared
+            set_property(TARGET ${target_name_cmake}-shared
                     PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
                     )
         endif()
@@ -452,14 +451,14 @@ function(_corrosion_add_library_target)
 
     if(has_cdylib AND has_staticlib)
         if(BUILD_SHARED_LIBS)
-            target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake_underscore}-shared)
+            target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake}-shared)
         else()
-            target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake_underscore}-static)
+            target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake}-static)
         endif()
     elseif(has_cdylib)
-        target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake_underscore}-shared)
+        target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake}-shared)
     else()
-        target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake_underscore}-static)
+        target_link_libraries(${target_name_cmake} INTERFACE ${target_name_cmake}-static)
     endif()
 endfunction()
 
