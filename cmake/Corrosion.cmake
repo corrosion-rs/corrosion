@@ -1561,6 +1561,9 @@ Corrosion does not import `rlib` only libraries. As a workaround users can add
 by either adding an option to also import Rlib targets (without build rules) or by
 adding a `MANIFEST_PATH` argument to this function, specifying where the crate is.
 
+The generated `cxxtarget` CMake library target does not yet link to anything.
+This is left to the user, as the exact requirements for linking are not known when creating the target.
+
 ### Contributing
 
 Specifically some more realistic test / demo projects and feedback about limitations would be
@@ -1694,16 +1697,6 @@ function(corrosion_add_cxxbridge cxx_target)
 
     # cxx generated code is using c++11 features in headers, so propagate c++11 as minimal requirement
     target_compile_features(${cxx_target} PUBLIC cxx_std_11)
-
-    # Todo: target_link_libraries is only necessary for rust2c projects.
-    # It is possible that checking if the rust crate is an executable is a sufficient check,
-    # but some more thought may be needed here.
-    # Maybe we should also let the user do this, since for c2rust, the user also has to call
-    # corrosion_link_libraries() themselves.
-    get_target_property(crate_target_type ${_arg_CRATE} TYPE)
-    if (NOT crate_target_type STREQUAL "EXECUTABLE")
-        target_link_libraries(${cxx_target} PRIVATE ${_arg_CRATE})
-    endif()
 
     file(MAKE_DIRECTORY "${generated_dir}/include/rust")
     add_custom_command(

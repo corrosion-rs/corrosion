@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED 1)
 
 corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
 corrosion_add_cxxbridge(cxxbridge-cpp CRATE cxxbridge_crate MANIFEST_PATH rust FILES lib.rs foo/mod.rs)
+target_link_libraries(cxxbridge-cpp PRIVATE cxxbridge_crate)
 
 add_executable(cxxbridge-exe main.cpp)
 target_link_libraries(cxxbridge-exe PUBLIC cxxbridge-cpp)
