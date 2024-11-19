@@ -255,7 +255,8 @@ else()
     else()
         find_program(_Rust_COMPILER_TEST rustc PATHS "$ENV{HOME}/.cargo/bin")
         if(NOT EXISTS "${_Rust_COMPILER_TEST}")
-            set(_ERROR_MESSAGE "`rustc` not found in PATH or `$ENV{HOME}/.cargo/bin`.\n"
+            cmake_path(CONVERT "$ENV{HOME}/.cargo/bin" TO_CMAKE_PATH_LIST _cargo_bin_dir)
+            set(_ERROR_MESSAGE "`rustc` not found in PATH or `${_cargo_bin_dir}`.\n"
                     "Hint: Check if `rustc` is in PATH or manually specify the location "
                     "by setting `Rust_COMPILER` to the path to `rustc`.")
             _findrust_failed(${_ERROR_MESSAGE})
