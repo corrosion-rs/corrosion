@@ -40,12 +40,12 @@ jobs:
       # The initial configure for MSVC is quite slow, so we cache the build directory
       # (including the build directories of the tests) since reconfiguring is
       # significantly faster.
-      - name: Cache MSVC build directory
-        id: cache-msvc-builddir
-        uses: actions/cache@v4
-        with:
-          path: build
-          key: ${{ inputs.os }}-${{ inputs.target_arch }}-${{ inputs.rust }}-msvc-${{ inputs.vs_version}}-build
+      # - name: Cache MSVC build directory
+      #   id: cache-msvc-builddir
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: build
+      #     key: ${{ inputs.os }}-${{ inputs.target_arch }}-${{ inputs.rust }}-msvc-${{ inputs.vs_version}}-build
       - name: Configure
         run: cmake -S. -Bbuild -DCORROSION_TESTS_KEEP_BUILDDIRS=ON "-DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}}" --preset "vs-${{ inputs.vs_version }}-${{ inputs.target_arch }}"
       - name: Run Tests
