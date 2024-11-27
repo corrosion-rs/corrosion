@@ -1707,7 +1707,8 @@ function(corrosion_add_cxxbridge cxx_target)
             COMMENT "Generating rust/cxx.h header"
     )
 
-    set(GENERATED_FILES "${generated_dir}/include/rust/cxx.h")
+    set(GENERATED_SOURCES "")
+    set(GENERATED_HEADERS "${generated_dir}/include/rust/cxx.h")
 
     foreach(filepath ${_arg_FILES})
         get_filename_component(filename ${filepath} NAME_WE)
@@ -1739,15 +1740,21 @@ function(corrosion_add_cxxbridge cxx_target)
             COMMENT "Generating cxx bindings for crate ${_arg_CRATE} and file src/${filepath}"
         )
 
-        list(APPEND GENERATED_FILES
-            "${header_placement_dir}/${cxx_header}"
-            "${source_placement_dir}/${cxx_source}")
+        list(APPEND GENERATED_SOURCES "${source_placement_dir}/${cxx_source}")
+        list(APPEND GENERATED_HEADERS "${header_placement_dir}/${cxx_header}")
     endforeach()
-    target_sources(${cxx_target} PRIVATE ${GENERATED_FILES})
+    target_sources(${cxx_target} PRIVATE ${GENERATED_SOURCES})
+    # Make sure to export the headers with PUBLIC.
+    # This ensures that any target that depends on cxx_target also has these files as a dependency
+    # CMake will then make sure to generate the files before building either target, which is important
+    # in the presence of circular dependencies
+    target_sources(${cxx_target} PUBLIC ${GENERATED_HEADERS})
 
     if(DEFINED _arg_REGEN_TARGET)
+        # Add only the headers to the regen target, as the sources are actually not needed
+        # For the IDE to pick everything up
         add_custom_target(${_arg_REGEN_TARGET}
-            DEPENDS ${GENERATED_FILES}
+            DEPENDS ${GENERATED_HEADERS}
             COMMENT "Generated cxx bindings for crate ${_arg_CRATE}")
     endif()
 
