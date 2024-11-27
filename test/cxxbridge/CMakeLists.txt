@@ -8,6 +8,9 @@ if(CORROSION_TESTS_CXXBRIDGE)
             PASS_THROUGH_ARGS -DTEST_CXXBRIDGE_VARIANT2=ON
     )
     corrosion_tests_add_test(cxxbridge_rust2cpp "cxxbridge-exe")
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+        corrosion_tests_add_test(cxxbridge_circular "cpp_bin")
+    endif()
 
     set_tests_properties("cxxbridge_cpp2rust_1_run_rust_bin"
         PROPERTIES PASS_REGULAR_EXPRESSION

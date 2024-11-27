@@ -340,7 +340,7 @@ jobs:
       - name: Install CMake
         uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
         with:
-          cmakeVersion: "~3.22.0"
+          cmakeVersion: "~3.24.0"
           ninjaVersion: "~1.10.0"
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
