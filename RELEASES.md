@@ -14,6 +14,8 @@
   the crate-types of Rust libraries (e.g. force building as a staticlib instead of an rlib).
 - Support *-windows-gnullvm targets. 
 - experimental support in corrosion_install for installing libraries and header files
+- Add support for namespacing library and binary crates into separate namespaces using `BIN_NAMESPACE`
+  and `LIB_NAMESPACE`. This allows disambiguating crates with binaries and libraries that share a name.
 
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459
 
