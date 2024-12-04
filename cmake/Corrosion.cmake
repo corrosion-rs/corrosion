@@ -100,7 +100,14 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         if(output_dir_curr_config)
             set(curr_out_dir "${output_dir_curr_config}")
         elseif(output_directory)
-            set(curr_out_dir "${output_directory}/${config_type}")
+            string(GENEX_STRIP "${output_directory}" output_dir_no_genex)
+            # Only add config dir if there is no genex in here. See
+            # https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
+            if(output_directory STREQUAL output_dir_no_genex)
+                set(curr_out_dir "${output_directory}/${config_type}")
+            else()
+                set(curr_out_dir "${output_directory}")
+            endif()
         else()
             set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
