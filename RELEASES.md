@@ -6,6 +6,14 @@
   [v0.4.0 Release notes](#040-lts-2023-06-01) for more details.
 - Removed native tooling and the corresponding option `CORROSION_NATIVE_TOOLING`.
   Corrosion now always uses pure CMake.
+- Fix Corrosion placing artifacts into the wrong directory when:
+  1. using a Multi-Config Generator (e.g Visual Studio or XCode) AND
+  2. `OUTPUT_DIRECTORY_<CONFIG>` is not set AND 
+  3. `OUTPUT_DIRECTORY` is set AND
+  4. `OUTPUT_DIRECTORY` does not contain a generator expression 
+  Corrosion now places artifacts into a `$<CONFIG>` subdirectory of the
+  specified `OUTPUT_DIRECTORY`. This matches the [documented behavior][doc-cmake-rt-output-dir]
+  of CMake for regular CMake targets. ([#568]).
 
 ### New features
 
@@ -15,7 +23,9 @@
 - Support *-windows-gnullvm targets. 
 - experimental support in corrosion_install for installing libraries and header files
 
+[doc-cmake-rt-output-dir]: https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459
+[#568]: https://github.com/corrosion-rs/corrosion/pull/568
 
 # v0.5.0 (2024-05-11)
 
