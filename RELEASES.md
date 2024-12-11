@@ -10,7 +10,8 @@
   1. using a Multi-Config Generator (e.g Visual Studio or XCode) AND
   2. `OUTPUT_DIRECTORY_<CONFIG>` is not set AND 
   3. `OUTPUT_DIRECTORY` is set AND
-  4. `OUTPUT_DIRECTORY` does not contain a generator expression 
+  4. `OUTPUT_DIRECTORY` does not contain a generator expression
+
   Corrosion now places artifacts into a `$<CONFIG>` subdirectory of the
   specified `OUTPUT_DIRECTORY`. This matches the [documented behavior][doc-cmake-rt-output-dir]
   of CMake for regular CMake targets. ([#568]).
