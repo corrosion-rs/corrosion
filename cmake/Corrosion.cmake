@@ -1670,6 +1670,7 @@ function(corrosion_add_cxxbridge cxx_target)
                     ${_CORROSION_CARGO} install
                     cxxbridge-cmd
                     --version "${cxx_required_version}"
+                    --locked
                     --root "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                     --quiet
                     # todo: use --target-dir to potentially reuse artifacts
@@ -1902,6 +1903,7 @@ function(corrosion_experimental_cbindgen)
                 "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
                 ${_CORROSION_CARGO} install
                     cbindgen
+                    --locked
                     --root "${local_cbindgen_install_dir}"
                     ${_CORROSION_QUIET_OUTPUT_FLAG}
                 COMMENT "Building cbindgen"
