@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/visual_studio.yaml
     with:
       vs_version: "2022"
-      rust: 1.46.0
+      rust: 1.54.0
 
   visual_studio_stage2:
     name: Test Visual Studio

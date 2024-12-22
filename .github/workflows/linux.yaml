@@ -20,7 +20,7 @@ on:
       rust:
         required: false
         type: string
-        default: 1.46.0
+        default: 1.54.0
       target_arch:
         required: false
         type: string
