@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 project(test_project VERSION 0.1.0)
-include(../../test_header.cmake)
 
+set(CORROSION_TOOLS_RUST_TOOLCHAIN "stable")
+include(../../test_header.cmake)
 corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
 corrosion_experimental_cbindgen(TARGET rust_lib HEADER_NAME "rust-lib.h")
 
