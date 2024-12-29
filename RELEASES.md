@@ -1,3 +1,10 @@
+# v0.5.1 (2024-12-29)
+
+### Fixes
+
+- Update FindRust to support `rustup` v1.28.0. Support for older rustup versions is retained,
+  so updating corrosion quickly is recommended to all rustup users.
+
 # v0.5.0 (2024-05-11)
 
 ### Breaking Changes
