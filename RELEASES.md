@@ -23,6 +23,9 @@
   the crate-types of Rust libraries (e.g. force building as a staticlib instead of an rlib).
 - Support *-windows-gnullvm targets. 
 - experimental support in corrosion_install for installing libraries and header files
+- Add `CORROSION_TOOLS_RUST_TOOLCHAIN` cache variable which allows users to select a different
+  rust toolchain for compiling build-tools used by corrosion (currently cbindgen and cxxbridge).
+  This mainly allows using a newer toolchain for such build-tools then for the actual project.
 
 [doc-cmake-rt-output-dir]: https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459

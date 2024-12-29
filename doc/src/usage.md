@@ -180,6 +180,9 @@ them **before** `find_package(Corrosion REQUIRED)`.
 - `Rust_CARGO_TARGET:STRING` - The default target triple to build for. Alter for cross-compiling.
   Default: On Visual Studio Generator, the matching triple for `CMAKE_VS_PLATFORM_NAME`. Otherwise,
   the default target triple reported by `${Rust_COMPILER} --version --verbose`.
+- `CORROSION_TOOLS_RUST_TOOLCHAIN:STRING`: Specify a different toolchain (e.g. `stable`) to use for compiling helper 
+   tools such as `cbindgen` or `cxxbridge`. This can be useful when you want to compile your project with an 
+   older rust version (e.g. for checking the MSRV), but you can build build-tools with a newer installed rust version.
 
 #### Enable Convenience Options
 
@@ -208,6 +211,10 @@ versions individually.
 - `Rust_LLVM_VERSION<_MAJOR|_MINOR|_PATCH>` - The LLVM version used by rustc.
 - `Rust_IS_NIGHTLY` - 1 if a nightly toolchain is used, otherwise 0. Useful for selecting an unstable feature for a
   crate, that is only available on nightly toolchains.
+- `Rust_RUSTUP_TOOLCHAINS`, `Rust_RUSTUP_TOOLCHAINS_RUSTC_PATH`, `Rust_RUSTUP_TOOLCHAINS_CARGO_PATH`
+  and `Rust_RUSTUP_TOOLCHAINS_VERSION`: These variables are lists, which should be iterated over with
+  CMakes `foreach(var IN ZIP_LISTS list1 list2 ...)` iterator. They provide a list of installed rustup managed toolchains and
+  the associated rustc and cargo paths as well as the corresponding rustc version.
 - Cache variables containing information based on the target triple for the selected target
   as well as the default host target:
   - `Rust_CARGO_TARGET_ARCH`, `Rust_CARGO_HOST_ARCH`: e.g. `x86_64` or `aarch64`

@@ -53,6 +53,26 @@ get_property(
     TARGET Rust::Cargo PROPERTY IMPORTED_LOCATION
 )
 
+set(corrosion_tools_rust_toolchain_docstring "Rust toolchain to use for building helper tools such as cbindgen or cxx-bridge")
+if(DEFINED CORROSION_TOOLS_RUST_TOOLCHAIN)
+    set(cor_default_tools_toolchain "${CORROSION_TOOLS_RUST_TOOLCHAIN}")
+else()
+    set(cor_default_tools_toolchain "${Rust_TOOLCHAIN}")
+endif()
+set(CORROSION_TOOLS_RUST_TOOLCHAIN "${cor_default_tools_toolchain}" CACHE STRING "${corrosion_tools_rust_toolchain_docstring}" FORCE)
+set_property(CACHE CORROSION_TOOLS_RUST_TOOLCHAIN PROPERTY STRINGS "${Rust_RUSTUP_TOOLCHAINS}")
+
+if(NOT "$CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN}" IN_LIST Rust_RUSTUP_TOOLCHAINS)
+    if("$CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN}-${Rust_CARGO_HOST_TARGET}" IN_LIST Rust_RUSTUP_TOOLCHAINS)
+        set(CORROSION_TOOLS_RUST_TOOLCHAIN "$CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN}-${Rust_CARGO_HOST_TARGET}"
+            CACHE PATH "${corrosion_tools_rust_toolchain_docstring}" FORCE)
+    else()
+        message(FATAL_ERROR "CORROSION_TOOLS_RUST_TOOLCHAIN must be set to a valid rustup managed toolchain path."
+            "You can select a valid toolchain "
+        )
+    endif()
+endif()
+
 function(_corrosion_bin_target_suffix target_name out_var_suffix)
     get_target_property(hostbuild "${target_name}" ${_CORR_PROP_HOST_BUILD})
     if((hostbuild AND CMAKE_HOST_WIN32)
@@ -1535,6 +1555,26 @@ set_target_properties(${INSTALL_TARGET}-shared
     endif()
 endfunction()
 
+# Helper function which places the cargo and rustc exectuble paths into the variable names specified by
+# `out_cargo` and `out_rustc` based on the value of the CORROSION_TOOLS_RUST_TOOLCHAIN cache variable.
+function(_corrosion_get_tools_rust_toolchain out_cargo out_rustc)
+    foreach(toolchain tc_rustc tc_cargo IN ZIP_LISTS Rust_RUSTUP_TOOLCHAINS Rust_RUSTUP_TOOLCHAINS_RUSTC_PATH Rust_RUSTUP_TOOLCHAINS_CARGO_PATH)
+        if("${toolchain}" STREQUAL $CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN})
+            # Minimum CMake version 3.29 for `IS_EXECUTABLE`.
+            if(NOT (EXISTS "${tc_cargo}" AND EXISTS "${tc_rustc}" ))
+                message(FATAL_ERROR "Failed to find executable rustc or cargo for toolchain `$CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN}`")
+            endif()
+            set("${out_cargo}" "${tc_cargo}" PARENT_SCOPE)
+            set( "${out_rustc}" "${tc_rustc}" PARENT_SCOPE)
+            return()
+        endif()
+    endforeach()
+
+    message(FATAL_ERROR "Internal error: Failed to find toolchain $CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN} in "
+            "list of rustup managed toolchains: ${Rust_RUSTUP_TOOLCHAINS}"
+    )
+endfunction()
+
 #[=======================================================================[.md:
 ** EXPERIMENTAL **: This function is currently still considered experimental
   and is not officially released yet. Feedback and Suggestions are welcome.
@@ -1661,20 +1701,21 @@ function(corrosion_add_cxxbridge cxx_target)
             if(Rust_CARGO_HOST_OS STREQUAL "windows")
                 set(executable_postfix ".exe")
             endif()
+            _corrosion_get_tools_rust_toolchain(builder_cargo builder_rustc)
             add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}"
                 COMMAND
                 ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                 COMMAND
                     ${CMAKE_COMMAND} -E env
-                        "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
-                    ${_CORROSION_CARGO} install
+                        "CARGO_BUILD_RUSTC=${builder_rustc}"
+                    ${builder_cargo} install
                     cxxbridge-cmd
                     --version "${cxx_required_version}"
                     --locked
                     --root "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                     --quiet
                     # todo: use --target-dir to potentially reuse artifacts
-                COMMENT "Building cxxbridge (version ${cxx_required_version})"
+                COMMENT "Building cxxbridge (version ${cxx_required_version}) with Rust toolchain $CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN}"
                 )
             add_custom_target("cxxbridge_v${cxx_required_version}"
                 DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}"
@@ -1818,7 +1859,7 @@ between multiple invocations of this function.
 * **CBINDGEN_VERSION**: Version requirement for cbindgen. Exact semantics to be specified. Currently not implemented.
 * **FLAGS**: Arbitrary other flags for `cbindgen`. Run `cbindgen --help` to see the possible flags.
 
-[cbindgen]: https://github.com/eqrion/cbindgen
+[cbindgen]: https://github.com/mozilla/cbindgen
 
 ### Current limitations
 
@@ -1832,12 +1873,13 @@ between multiple invocations of this function.
 ANCHOR_END: corrosion_cbindgen
 #]=======================================================================]
 function(corrosion_experimental_cbindgen)
-    set(OPTIONS "")
+    set(OPTIONS "USE_DEFAULT_RUST_TOOLCHAIN")
     set(ONE_VALUE_KEYWORDS
             TARGET
             MANIFEST_DIRECTORY
             HEADER_NAME
-            CBINDGEN_VERSION)
+            CBINDGEN_VERSION
+    )
     set(MULTI_VALUE_KEYWORDS "FLAGS")
     cmake_parse_arguments(PARSE_ARGV 0 CCN "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}")
 
@@ -1895,18 +1937,24 @@ function(corrosion_experimental_cbindgen)
             set(executable_postfix ".exe")
         endif()
         set(cbindgen "${local_cbindgen_install_dir}/bin/cbindgen${executable_postfix}")
+
         if(NOT TARGET "_corrosion_cbindgen")
             file(MAKE_DIRECTORY "${local_cbindgen_install_dir}")
+            unset(cbindgen_cargo)
+            unset(cbindgen_rustc)
+            _corrosion_get_tools_rust_toolchain(cbindgen_cargo cbindgen_rustc)
+
             add_custom_command(OUTPUT "${cbindgen}"
                 COMMAND ${CMAKE_COMMAND}
                 -E env
-                "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
-                ${_CORROSION_CARGO} install
+                "CARGO_BUILD_RUSTC=${cbindgen_rustc}"
+                ${cbindgen_cargo} install
                     cbindgen
                     --locked
                     --root "${local_cbindgen_install_dir}"
                     ${_CORROSION_QUIET_OUTPUT_FLAG}
-                COMMENT "Building cbindgen"
+                COMMENT "Building cbindgen with Rust toolchain $CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN}"
+                VERBATIM
                 )
             add_custom_target("_corrosion_cbindgen"
                 DEPENDS "${cbindgen}"
