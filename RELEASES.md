@@ -31,6 +31,14 @@
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459
 [#568]: https://github.com/corrosion-rs/corrosion/pull/568
 
+# v0.5.1 (2024-12-29)
+
+### Fixes
+
+- Update FindRust to support `rustup` v1.28.0. Support for older rustup versions is retained,
+  so updating corrosion quickly is recommended to all rustup users.
+
+
 # v0.5.0 (2024-05-11)
 
 ### Breaking Changes
@@ -76,7 +84,7 @@
 
 # v0.4.9 (2024-05-01)
 
-### New Features
+### New Features 
 
 - Automatically detect Rust target for OpenHarmony ([#510]).
 
