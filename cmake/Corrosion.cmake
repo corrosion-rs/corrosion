@@ -1656,6 +1656,13 @@ function(corrosion_add_cxxbridge cxx_target)
         endif()
     endforeach()
 
+    if(DEFINED _arg_UNPARSED_ARGUMENTS)
+        message(AUTHOR_WARNING "corrosion_add_cxxbridge was called with the following unknown arguments: "
+                "`${_arg_UNPARSED_ARGUMENTS}`\n"
+                "Unknown arguments will be ignored."
+        )
+    endif()
+
     get_target_property(manifest_path "${_arg_CRATE}" INTERFACE_COR_PACKAGE_MANIFEST_PATH)
 
     if(NOT EXISTS "${manifest_path}")
@@ -1902,6 +1909,13 @@ function(corrosion_experimental_cbindgen)
         endif()
     endforeach()
     set(rust_target "${CCN_TARGET}")
+
+    if(DEFINED CCN_UNPARSED_ARGUMENTS)
+        message(AUTHOR_WARNING "corrosion_experimental_cbindgen was called with the following unknown arguments: "
+                "`${CCN_UNPARSED_ARGUMENTS}`\n"
+                "Unknown arguments will be ignored."
+        )
+    endif()
     unset(package_manifest_dir)
 
 
