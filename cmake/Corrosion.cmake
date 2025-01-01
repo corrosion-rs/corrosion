@@ -1883,7 +1883,7 @@ between multiple invocations of this function.
 ANCHOR_END: corrosion_cbindgen
 #]=======================================================================]
 function(corrosion_experimental_cbindgen)
-    set(OPTIONS "USE_DEFAULT_RUST_TOOLCHAIN")
+    set(OPTIONS "")
     set(ONE_VALUE_KEYWORDS
             TARGET
             MANIFEST_DIRECTORY
