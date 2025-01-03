@@ -805,9 +805,17 @@ function(_add_cargo_build out_cargo_build_out_dir)
         corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:${explicit_linker_defined}>:${rustflag_linker_arg}>")
     endif()
 
-    # Unset `VSTEL_MSBuildProjectFullPath` environment variable when building 32-bit binaries on 64-bit hosts with MSVC.
+    # Unset `VSTEL_MSBuildProjectFullPath` environment variable when:
+    #   - Building with MSVC
+    #   - Using the 32-bit target platform
+    #   - The host system is not 32-bit
+    #   - The Rust version is greater or equal to 1.83
+    #   - (NOTE: If the issue is fixed in a newer version of Rust, please add upper bound to the version)
     # Related Issue: https://github.com/corrosion-rs/corrosion/issues/599
-    if(MSVC AND CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" AND NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86")
+    if(MSVC AND
+        CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" AND
+        NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86" AND
+        "${Rust_CARGO_TARGET_ENV}" VERSION_GREATER_EQUAL "1.83")
         set(unset_project_path "--unset=VSTEL_MSBuildProjectFullPath")
         message(DEBUG "Unsetting VSTEL_MSBuildProjectFullPath for 32-bit build on 64-bit host")
     endif()
