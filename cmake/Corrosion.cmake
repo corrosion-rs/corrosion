@@ -805,8 +805,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         corrosion_add_target_local_rustflags("${target_name}" "$<$<NOT:${explicit_linker_defined}>:${rustflag_linker_arg}>")
     endif()
 
-    # Unset `VSTEL_MSBuildProjectFullPath` environment variable, which causes it fail to compile proc-macros.
-    # To make the effect minimal, this branch is only executed for 32-bit builds on non-x86 hosts.
+    # Unset `VSTEL_MSBuildProjectFullPath` environment variable when building 32-bit binaries on 64-bit hosts with MSVC.
     # Related Issue: https://github.com/corrosion-rs/corrosion/issues/599
     if(MSVC AND CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" AND NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86")
         set(unset_project_path "--unset=VSTEL_MSBuildProjectFullPath")
