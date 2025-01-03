@@ -815,7 +815,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     if(MSVC AND
         CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" AND
         NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86" AND
-        "${Rust_CARGO_TARGET_ENV}" VERSION_GREATER_EQUAL "1.83")
+        "${Rust_VERSION}" VERSION_GREATER_EQUAL "1.83")
         set(unset_project_path "--unset=VSTEL_MSBuildProjectFullPath")
         message(DEBUG "Unsetting VSTEL_MSBuildProjectFullPath for 32-bit build on 64-bit host")
     endif()
