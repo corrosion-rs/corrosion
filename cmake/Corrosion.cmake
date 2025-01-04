@@ -1870,7 +1870,7 @@ corrosion_experimental_cbindgen(
 * **TARGET**: The name of an imported Rust library target, for which bindings should be generated.
               If the target is not imported by Corrosion, because the crate only produces an
               `rlib`, you can instead use the second signature and manually pass `MANIFEST_DIRECTORY`,
-              `CARGO_PACKAGE` and `BINDINGS_CMAKE_TARGET`
+              `CARGO_PACKAGE` and `BINDINGS_TARGET`
 
 ### Manual mode (Without a Rust target imported by corrosion)
 ```cmake
