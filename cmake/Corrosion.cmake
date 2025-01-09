@@ -2049,7 +2049,7 @@ function(corrosion_experimental_cbindgen)
 
     set(corrosion_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated")
     set(generated_dir "${corrosion_generated_dir}/cbindgen/${cbindgen_bindings_target}")
-    set(header_placement_dir "${generated_dir}/include/")
+    set(header_placement_dir "${generated_dir}/include")
     set(depfile_placement_dir "${generated_dir}/depfile")
     set(generated_depfile "${depfile_placement_dir}/${output_header_name}.d")
     set(generated_header "${header_placement_dir}/${output_header_name}")
