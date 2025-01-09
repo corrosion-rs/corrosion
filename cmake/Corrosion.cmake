@@ -2113,6 +2113,7 @@ function(corrosion_experimental_cbindgen)
     # Users might want to call cbindgen multiple times, e.g. to generate separate C++ and C header files.
     string(MAKE_C_IDENTIFIER "${output_header_name}" header_identifier )
     add_custom_target("_corrosion_cbindgen_${cbindgen_bindings_target}_bindings_${header_identifier}"
+            ALL
             DEPENDS "${generated_header}"
             COMMENT "Generate ${generated_header} for ${cbindgen_bindings_target}"
     )
