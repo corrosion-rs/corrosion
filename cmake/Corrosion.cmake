@@ -1316,6 +1316,7 @@ function(corrosion_install)
 
             # Gather the arguments to this install type
             set(ARGS)
+            list(LENGTH ARGN ARGN_LENGTH)
             while(ARGN_LENGTH)
                 # If the next keyword is an install target type, then break - arguments have been
                 # gathered.
