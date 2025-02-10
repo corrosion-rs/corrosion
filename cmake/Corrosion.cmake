@@ -1584,6 +1584,54 @@ set_target_properties(${INSTALL_TARGET}-shared
     endif()
 endfunction()
 
+function(_corrosion_check_cxx_version_helper manifest_dir cxx_name out_required_version)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E env
+                    "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
+                    ${_CORROSION_CARGO} tree -i "${cxx_name}"
+                    # Usage of `cxx` could be gated behind a feature. Features can use Generator expressions,
+                    # so we can't really know what features we will enable when building at this point.
+                    # Features should be additive though, so simply enabling all-features should work for
+                    # dependency resolution.
+                    --all-features
+                    --target all
+                    --depth=0
+                    WORKING_DIRECTORY "${manifest_dir}"
+                    RESULT_VARIABLE cxx_version_result
+                    OUTPUT_VARIABLE cxx_version_output
+                    ERROR_VARIABLE cxx_version_error
+    )
+    if(NOT "${cxx_version_result}" EQUAL "0")
+        message(DEBUG "`cargo tree -i ${cxx_name}` returned an error: ${cxx_version_error}")
+        set("${out_required_version}" "${cxx_name}-NOTFOUND" PARENT_SCOPE)
+        return()
+    endif()
+    if(cxx_version_output MATCHES "${cxx_name} v([0-9]+.[0-9]+.[0-9]+)")
+        set("${out_required_version}" "${CMAKE_MATCH_1}" PARENT_SCOPE)
+    else()
+        message(DEBUG "Failed to parse `cargo tree -i ${cxx_name}` output: ${cxx_version_output}")
+        set("${out_required_version}" "${cxx_name}-NOTFOUND" PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(_corrosion_check_cxx_version manifest_dir out_required_version)
+    # cxxbridge-cmd is known to be available in lockfiles since cxx 1.0.131.
+    # We include `cxx` as a fallback to support older versions too. `cxxbridge` should always
+    # be exactly the same version as `cxx`, so falling back to `cxx` version should not cause issues.
+    foreach(cxxbridge_name cxxbridge-cmd cxx)
+        unset(cxx_required_version)
+        _corrosion_check_cxx_version_helper("${manifest_dir}"
+                                            "${cxxbridge_name}"
+                                            cxx_required_version)
+        if(cxx_required_version)
+            set("${out_required_version}" "${cxx_required_version}" PARENT_SCOPE)
+            break()
+        else()
+            set("${out_required_version}" "cxx-NOTFOUND" PARENT_SCOPE)
+        endif()
+    endforeach()
+
+endfunction()
+
 
 
 #[=======================================================================[.md:
@@ -1672,20 +1720,12 @@ function(corrosion_add_cxxbridge cxx_target)
 
     get_filename_component(manifest_dir ${manifest_path} DIRECTORY)
 
-    execute_process(COMMAND ${CMAKE_COMMAND} -E env
-        "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
-        ${_CORROSION_CARGO} tree -i cxx --depth=0
-        WORKING_DIRECTORY "${manifest_dir}"
-        RESULT_VARIABLE cxx_version_result
-        OUTPUT_VARIABLE cxx_version_output
-    )
-    if(NOT "${cxx_version_result}" EQUAL "0")
-        message(FATAL_ERROR "Crate ${_arg_CRATE} does not depend on cxx.")
-    endif()
-    if(cxx_version_output MATCHES "cxx v([0-9]+.[0-9]+.[0-9]+)")
-        set(cxx_required_version "${CMAKE_MATCH_1}")
-    else()
-        message(FATAL_ERROR "Failed to parse cxx version from cargo tree output: `cxx_version_output`")
+    _corrosion_check_cxx_version("${manifest_dir}" cxx_required_version)
+
+    if(NOT cxx_required_version)
+        message(FATAL_ERROR
+                "Failed to find a dependency on `cxxbridge-cmd` / `cxx` for crate ${_arg_CRATE}"
+        )
     endif()
 
     # First check if a suitable version of cxxbridge is installed
