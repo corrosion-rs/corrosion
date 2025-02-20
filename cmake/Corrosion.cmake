@@ -734,7 +734,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(default_build_type_dir "$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>")
     set(build_type_dir "$<IF:${cargo_profile_set},${custom_profile_build_type_dir},${default_build_type_dir}>")
 
-    set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build")
+    set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${package_name}")
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 
