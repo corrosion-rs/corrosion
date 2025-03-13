@@ -734,7 +734,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(default_build_type_dir "$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>")
     set(build_type_dir "$<IF:${cargo_profile_set},${custom_profile_build_type_dir},${default_build_type_dir}>")
 
-    set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${package_name}")
+    # We set a target folder based on the manifest path so if you build multiple workspaces (or standalone projects
+    # without workspace) they won't collide if they use a common dependency. This would confuse cargo and trigger
+    # unnecessary rebuilds
+    string(SHA1 CARGO_TARGET_SUBDIR ${workspace_manifest_path})
+    set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${CARGO_TARGET_SUBDIR}")
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 
