@@ -58,17 +58,17 @@ function(_generator_add_cbindgen_targets)
     math(EXPR headers_len-1 "${headers_len} - 1")
     # message(STATUS "Got metadata ${cbindgen_json} and len ${headers_len}")
     foreach(ix RANGE ${headers_len-1})
-      string(JSON header GET "${cbindgen_json}" ${ix})
-      string(JSON header_name GET "${header}" "header")
-      string(JSON header_target GET "${header}" "target")
-      string(JSON header_flags GET "${header}" "flags")
-      separate_arguments(header_flags)
-      message(STATUS "Got header ${header_name} and flags ${header_flags} for ${header_target}")
-      corrosion_experimental_cbindgen(
-	TARGET ${header_target}
-	HEADER_NAME ${header_name}
-	FLAGS ${header_flags}
-      )
+        string(JSON header GET "${cbindgen_json}" ${ix})
+        string(JSON header_name GET "${header}" "header")
+        string(JSON header_target GET "${header}" "target")
+        string(JSON header_flags GET "${header}" "flags")
+        separate_arguments(header_flags)
+        message(STATUS "Got header ${header_name} and flags ${header_flags} for ${header_target}")
+        corrosion_experimental_cbindgen(
+            TARGET ${header_target}
+            HEADER_NAME ${header_name}
+            FLAGS ${header_flags}
+        )
     endforeach()
 endfunction()
 
