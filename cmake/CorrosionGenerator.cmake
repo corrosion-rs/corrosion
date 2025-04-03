@@ -341,11 +341,15 @@ function(_generator_add_cargo_targets)
             ${crate_types}
             ${override_crate_types}
         )
-	string(JSON pkg_cbindgen_metadata GET "${pkg}" "metadata" "corrosion" "cbindgen")
-	if(NOT ("${pkg_cbindgen_metadata}" STREQUAL "metadata-corrosion-NOTFOUND"))
-	  _generator_add_cbindgen_targets(
-	    CBINDGEN_JSON "${pkg_cbindgen_metadata}")
-	endif()
+        set(json_key_error "")
+        string(JSON pkg_cbindgen_metadata
+                ERROR_VARIABLE json_key_error
+                GET "${pkg}" "metadata" "corrosion" "cbindgen")
+        # Error variable will be set to NOTFOUND if operation successfull
+        if("${json_key_error}" STREQUAL "NOTFOUND")
+            _generator_add_cbindgen_targets(
+                CBINDGEN_JSON "${pkg_cbindgen_metadata}")
+        endif()
         list(APPEND created_targets "${curr_created_targets}")
     endforeach()
 
