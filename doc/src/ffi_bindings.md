@@ -30,8 +30,11 @@ This is not available on a stable released version yet, and the details are subj
 {{#include ../../cmake/Corrosion.cmake:corrosion_cbindgen}}
 
 Additionally, it is possible to enable and configure cbindgen invocation by putting configuration
-for Corrosion into `Cargo.toml` rather than CMake files. The following format can be used in this case:
+for Corrosion into the package metadata of `Cargo.toml` rather than CMake files.
+
+Example:
 ```toml
+[package.metadata.corrosion]
 cbindgen = [
 	 { header = "header-file-name.h",
 	   target = "lib-target-name",
