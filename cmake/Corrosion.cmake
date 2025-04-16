@@ -637,11 +637,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
     get_filename_component(workspace_toml_dir ${path_to_toml} DIRECTORY )
 
     if (CMAKE_VS_PLATFORM_NAME)
-        set (build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
+        set(build_dir "${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
     elseif(COR_IS_MULTI_CONFIG)
-        set (build_dir "$<CONFIG>")
+        set(build_dir "$<CONFIG>")
     else()
-        set (build_dir .)
+        unset(build_dir)
     endif()
 
     # If a CMake sysroot is specified, forward it to the linker rustc invokes, too. CMAKE_SYSROOT is documented
@@ -743,7 +743,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
     string(SHA1 cargo_path_hash ${workspace_manifest_path})
     # Include a hash of the full path in case there are multiple projects with the same folder name
     string(SUBSTRING "${cargo_path_hash}" 0 5 cargo_path_hash)
-    set(cargo_target_dir "${CMAKE_BINARY_DIR}/${build_dir}/cargo/build/${cargo_folder_name}_${cargo_path_hash}")
+    cmake_path(APPEND CMAKE_BINARY_DIR ${build_dir} cargo "${cargo_folder_name}_${cargo_path_hash}"
+               OUTPUT_VARIABLE cargo_target_dir)
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 
