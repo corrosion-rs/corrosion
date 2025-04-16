@@ -2137,6 +2137,8 @@ function(corrosion_experimental_cbindgen)
         COMMAND
         "${CMAKE_COMMAND}" -E env
             TARGET="${cbindgen_target_triple}"
+            # cbindgen invokes cargo-metadata and checks the CARGO environment variable
+            CARGO="${_CORROSION_CARGO}"
             "${cbindgen}"
                     --output "${generated_header}"
                     --crate "${rust_cargo_package}"
