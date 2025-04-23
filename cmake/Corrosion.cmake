@@ -1782,6 +1782,13 @@ function(corrosion_experimental_cbindgen)
                           DEPENDS "${generated_header}"
                           COMMENT "Generate ${generated_header} for ${rust_target}"
         )
+        if(NOT installed_cbindgen)
+            add_custom_command(
+                    OUTPUT "${generated_header}"
+                    APPEND
+                    DEPENDS _corrosion_cbindgen
+            )
+        endif()
     else()
         add_custom_target("_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}"
                           "${CMAKE_COMMAND}" -E env
@@ -1795,14 +1802,9 @@ function(corrosion_experimental_cbindgen)
                           COMMAND_EXPAND_LISTS
                           WORKING_DIRECTORY "${package_manifest_dir}"
         )
-    endif()
-
-    if(NOT installed_cbindgen)
-        add_custom_command(
-            OUTPUT "${generated_header}"
-            APPEND
-            DEPENDS _corrosion_cbindgen
-        )
+        if(NOT installed_cbindgen)
+            add_dependencies("_corrosion_cbindgen_${rust_target}_bindings_${header_identifier}" _corrosion_cbindgen)
+        endif()
     endif()
 
     if(NOT TARGET "_corrosion_cbindgen_${rust_target}_bindings")
