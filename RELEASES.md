@@ -1,3 +1,12 @@
+# v0.5.2 (2025-04-23)
+
+### Fixes
+
+- Leave choosing the MSVC runtime up to the C/C++ CMake code ([#573], [#566])
+
+[#573]: https://github.com/corrosion-rs/corrosion/pull/573
+[#566]: https://github.com/corrosion-rs/corrosion/pull/566
+
 # v0.5.1 (2024-12-29)
 
 ### Fixes
