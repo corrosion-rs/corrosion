@@ -13,13 +13,13 @@ jobs:
     name: Test Corrosion (CMake 3.15)
     uses: ./.github/workflows/test_legacy.yaml
     with :
-      os: ubuntu-20.04
+      os: ubuntu-22.04
       rust: 1.46.0
   test_legacy_mac:
     name: Test Corrosion (CMake 3.15)
     uses: ./.github/workflows/test_legacy.yaml
     with:
-      os: macos-12
+      os: macos-13
       rust: 1.54.0
   test_legacy_windows:
     name: Test Corrosion (CMake 3.15)
@@ -36,8 +36,8 @@ jobs:
       matrix:
         os:
           - windows-2019 # windows-latest is currently not having a supported MSVC compiler
-          - ubuntu-20.04
-          - macos-12
+          - ubuntu-22.04
+          - macos-13
     with:
       os: ${{ matrix.os }}
       rust: stable
@@ -46,12 +46,12 @@ jobs:
     name: Legacy CMake + nightly Rust
     uses: ./.github/workflows/test_legacy.yaml
     with:
-      os: ubuntu-20.04
+      os: ubuntu-22.04
       rust: nightly
 
   test_legacy_new_lockfile_msrv:
     name: Test MSRV of the new lockfile
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
@@ -71,7 +71,7 @@ jobs:
         os:
           - windows-2019 # windows-latest is currently not having a supported MSVC compiler
           - ubuntu-latest
-          - macos-12
+          - macos-13
         arch:
           - x86_64
           - i686
@@ -108,7 +108,7 @@ jobs:
             generator: ninja
             arch: x86_64
             abi: darwin
-            os: macos-12
+            os: macos-13
           - rust: 1.54
             cmake: 3.19.0
             generator: ninja
@@ -144,11 +144,11 @@ jobs:
             generator: ninja
           - os: windows-2019
             arch: powerpc64le
-          - os: macos-12
+          - os: macos-13
             arch: i686
-          - os: macos-12
+          - os: macos-13
             arch: aarch64
-          - os: macos-12
+          - os: macos-13
             arch: powerpc64le
 
           # ABI
@@ -158,9 +158,9 @@ jobs:
             abi: darwin
           - os: windows-2019
             abi: darwin
-          - os: macos-12
+          - os: macos-13
             abi: msvc
-          - os: macos-12
+          - os: macos-13
             abi: gnu
 
     steps:
@@ -237,7 +237,7 @@ jobs:
         os:
           - windows-2019
           - ubuntu-latest
-          - macos-12
+          - macos-13
         include:
           - abi: default
         #  - os: windows-2019
@@ -277,10 +277,10 @@ jobs:
         os:
           - windows-2019
           - ubuntu-latest
-          - macos-12
+          - macos-13
         include:
           - rust: 1.46.0
-          - os: macos-12
+          - os: macos-13
             rust: 1.54.0  # On MacOS-12 linking fails before Rust 1.54
     steps:
       - uses: actions/checkout@v4
