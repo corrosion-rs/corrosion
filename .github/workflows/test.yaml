@@ -25,7 +25,7 @@ jobs:
     name: Test Corrosion (CMake 3.15)
     uses: ./.github/workflows/test_legacy.yaml
     with:
-      os: windows-2019
+      os: windows-2022
       rust: 1.46.0
 
   test_legacy_stable:
@@ -35,7 +35,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-2019 # windows-latest is currently not having a supported MSVC compiler
+          - windows-2022 # windows-latest is currently not having a supported MSVC compiler
           - ubuntu-22.04
           - macos-13
     with:
@@ -69,7 +69,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-2019 # windows-latest is currently not having a supported MSVC compiler
+          - windows-2022 # windows-latest is currently not having a supported MSVC compiler
           - ubuntu-latest
           - macos-13
         arch:
@@ -96,7 +96,7 @@ jobs:
             generator: ninja
             arch: x86_64
             abi: msvc
-            os: windows-2019
+            os: windows-2022
           - rust: nightly
             cmake: 3.19.0
             generator: ninja
@@ -114,7 +114,7 @@ jobs:
             generator: ninja
             arch: x86_64
             abi: msvc
-            os: windows-2019
+            os: windows-2022
             compiler: clang
           - os: ubuntu-latest
             arch: x86_64
@@ -126,23 +126,23 @@ jobs:
         exclude:
 
           # We have a separate test Matrix for the Visual Studio Generator
-          - os: windows-2019
+          - os: windows-2022
             generator: default # Default generator is Visual Studio
 
           # ARCH
-          - os: windows-2019
+          - os: windows-2022
             arch: i686
             abi: gnu
-          - os: windows-2019
+          - os: windows-2022
             arch: aarch64
             abi: gnu
-          - os: windows-2019
+          - os: windows-2022
             arch: i686
             generator: ninja
-          - os: windows-2019
+          - os: windows-2022
             arch: aarch64
             generator: ninja
-          - os: windows-2019
+          - os: windows-2022
             arch: powerpc64le
           - os: macos-13
             arch: i686
@@ -156,7 +156,7 @@ jobs:
             abi: msvc
           - os: ubuntu-latest
             abi: darwin
-          - os: windows-2019
+          - os: windows-2022
             abi: darwin
           - os: macos-13
             abi: msvc
@@ -187,7 +187,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-2019
+          - windows-2022
           - windows-2022
         arch:
           - x86_64
@@ -198,7 +198,7 @@ jobs:
           # Override rust version for x86_64
           - arch: x86_64
             rust: 1.46.0
-          - os: windows-2019
+          - os: windows-2022
             cmake: 3.20.6  # Multi-config Generators require at least CMake 3.20
           - os: windows-2022
             cmake: 3.21.5 # VS on windows-2022 requires at least CMake 3.21
@@ -235,12 +235,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-2019
+          - windows-2022
           - ubuntu-latest
           - macos-13
         include:
           - abi: default
-        #  - os: windows-2019
+        #  - os: windows-2022
         #    abi: gnu
     steps:
       - uses: actions/checkout@v4
@@ -275,7 +275,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - windows-2019
+          - windows-2022
           - ubuntu-latest
           - macos-13
         include:
