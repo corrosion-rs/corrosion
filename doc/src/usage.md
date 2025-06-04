@@ -165,8 +165,6 @@ them **before** `find_package(Corrosion REQUIRED)`.
 - `Rust_TOOLCHAIN:STRING` - Specify a named rustup toolchain to use. Changes to this variable
   resets all other options. Default: If the first-found `rustc` is a `rustup` proxy, then the default
   rustup toolchain (see `rustup show`) is used. Otherwise, the variable is unset by default.
-- `Rust_ROOT:STRING` - CMake provided. Path to a Rust toolchain to use. This is an alternative if
-  you want to select a specific Rust toolchain, but it's not managed by rustup. Default: Nothing
 - `Rust_COMPILER:STRING` - Path to `rustc`, which should be used for compiling or for toolchain
   detection (if it is a `rustup` proxy). Default: The `rustc` in the first-found toolchain, either
   from `rustup`, or from a toolchain available in the user's `PATH`.
