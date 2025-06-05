@@ -2139,6 +2139,7 @@ function(corrosion_experimental_cbindgen)
             TARGET="${cbindgen_target_triple}"
             # cbindgen invokes cargo-metadata and checks the CARGO environment variable
             CARGO="${_CORROSION_CARGO}"
+            RUSTC="${_CORROSION_RUSTC}"
             "${cbindgen}"
                     --output "${generated_header}"
                     --crate "${rust_cargo_package}"
