@@ -380,7 +380,7 @@ if (Rust_RESOLVE_RUSTUP_TOOLCHAINS)
             else()
                 message(AUTHOR_WARNING "Unexpected output from `rustc --version` for Toolchain `${_TOOLCHAIN}`: "
                         "`${_TOOLCHAIN_RAW_VERSION}`.\n"
-                        "Ignoring this toolchain."
+                        "Ignoring this toolchain (Path: `${_TOOLCHAIN_PATH}`)."
                 )
             endif()
         else()
