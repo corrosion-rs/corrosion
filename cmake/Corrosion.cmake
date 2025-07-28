@@ -114,6 +114,35 @@ function(_corrosion_bin_target_suffix target_name out_var_suffix)
     set(${out_var_suffix} "${_suffix}" PARENT_SCOPE)
 endfunction()
 
+function(_corrosion_genex_expand config_type genex_out genex)
+    string(GENEX_STRIP "${genex}" stripped)
+    while(NOT "${genex}" STREQUAL stripped)
+        set(genex_last "${genex}")
+
+        # NOTE: in all of the following example comments, config_type was Debug.
+        # $<CONFIG> -> Debug
+        string(REPLACE "\$<CONFIG>" "${config_type}" genex "${genex}")
+        # $<CONFIG:Debug> -> 1
+        string(REPLACE "\$<CONFIG:${config_type}>" "1" genex "${genex}")
+        # $<CONFIG:Release> -> 0
+        string(REGEX REPLACE "\\\$<CONFIG:[^>]*>" "0" genex "${genex}")
+        # $<1:true-string> -> true-string
+        string(REGEX REPLACE "\\\$<1:([^>]*)>" "\\1" genex "${genex}")
+        # $<0:true-string> ->
+        string(REGEX REPLACE "\\\$<0:([^>]*)>" "" genex "${genex}")
+        # $<IF:1,true-string,false-string> -> true-string
+        string(REGEX REPLACE "\\\$<IF:1,([^>,]*),([^>]*)>" "\\1" genex "${genex}")
+        # $<IF:0,true-string,false-string> -> false-string
+        string(REGEX REPLACE "\\\$<IF:0,([^>,]*),([^>]*)>" "\\2" genex "${genex}")
+
+        # no forward progress? stop trying.
+        if("${genex_last}" STREQUAL "${genex}")
+            break()
+        endif()
+    endwhile()
+    set("${genex_out}" "${genex}" PARENT_SCOPE)
+endfunction()
+
 # Do not call this function directly!
 #
 # This function should be called deferred to evaluate target properties late in the configure stage.
@@ -159,7 +188,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         else()
             set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
-        string(REPLACE "\$<CONFIG>" "${config_type}" curr_out_dir "${curr_out_dir}")
+        _corrosion_genex_expand("${config_type}" curr_out_dir "${curr_out_dir}")
         message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
                 " to `${curr_out_dir}/${filename}`.")
 
@@ -185,7 +214,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         else()
             set(base_output_directory "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
-        string(REPLACE "\$<CONFIG>" "${CMAKE_BUILD_TYPE}" base_output_directory "${base_output_directory}")
+        _corrosion_genex_expand("${CMAKE_BUILD_TYPE}" base_output_directory "${base_output_directory}")
         string(GENEX_STRIP "${base_output_directory}" stripped_out_dir)
         if(NOT ("${stripped_out_dir}" STREQUAL "${base_output_directory}"))
             message(FATAL_ERROR "${output_dir_prop_target_name} for target ${output_dir_prop_target_name} "
