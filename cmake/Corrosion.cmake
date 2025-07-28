@@ -259,10 +259,15 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
         if(output_dir_curr_config)
             set(curr_out_dir "${output_dir_curr_config}")
         elseif(output_dir)
-            # Fallback to `output_dir` if specified
-            # Note: Multi-configuration generators append a per-configuration subdirectory to the
-            # specified directory unless a generator expression is used (from CMake documentation).
-            set(curr_out_dir "${output_dir}/${config_type}")
+            string(GENEX_STRIP "${output_dir}" output_dir_no_genex)
+            # Only add config dir if there is no genex in here. See
+            # https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
+            # Logic duplicated from _corrosion_set_imported_location_deferred
+            if(output_dir STREQUAL output_dir_no_genex)
+                set(curr_out_dir "${output_dir}/${config_type}")
+            else()
+                set(curr_out_dir "${output_dir}")
+            endif()
         else()
             # Fallback to the default directory. We do not append the configuration directory here
             # and instead let CMake do this, since otherwise the resolving of dynamic library
