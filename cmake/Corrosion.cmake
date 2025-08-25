@@ -708,6 +708,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     # The target may be a filepath to custom target json file. For host targets we assume that they are built-in targets.
     _corrosion_strip_target_triple(${_CORROSION_RUST_CARGO_TARGET} stripped_target_triple)
+    string(REPLACE "-" "_" stripped_target_triple_underscore "${stripped_target_triple}")
     set(target_artifact_dir "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${stripped_target_triple}>")
 
     set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
@@ -775,15 +776,15 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # This variable is read by cc-rs (often used in build scripts) to determine the c-compiler.
         # It can still be overridden if the user sets the non underscore variant via the environment variables
         # on the target.
-        list(APPEND corrosion_cc_rs_flags "CC_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_C_COMPILER}")
+        list(APPEND corrosion_cc_rs_flags "CC_${stripped_target_triple_underscore}=${CMAKE_C_COMPILER}")
     endif()
     if(CMAKE_CXX_COMPILER)
-        list(APPEND corrosion_cc_rs_flags "CXX_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_CXX_COMPILER}")
+        list(APPEND corrosion_cc_rs_flags "CXX_${stripped_target_triple_underscore}=${CMAKE_CXX_COMPILER}")
     endif()
     # cc-rs doesn't seem to support `llvm-ar` (commandline syntax), wo we might as well just use
     # the default AR.
     if(CMAKE_AR AND NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc"))
-        list(APPEND corrosion_cc_rs_flags "AR_${_CORROSION_RUST_CARGO_TARGET_UNDERSCORE}=${CMAKE_AR}")
+        list(APPEND corrosion_cc_rs_flags "AR_${stripped_target_triple_underscore}=${CMAKE_AR}")
     endif()
 
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
