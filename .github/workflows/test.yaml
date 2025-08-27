@@ -24,7 +24,6 @@ jobs:
     strategy:
       matrix:
         vs_version:
-          - "2019"
           - "2022"
         arch:
           - x86_64
