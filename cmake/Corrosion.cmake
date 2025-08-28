@@ -787,6 +787,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
         list(APPEND corrosion_cc_rs_flags "AR_${stripped_target_triple}=${CMAKE_AR}")
     endif()
 
+    # TODO: How to get a working host compiler properly? configure a dummy cmake project for the host?
+    list(APPEND corrosion_cc_rs_flags "CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER=/usr/bin/cc")
+
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
     # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
     # CMAKE_OSX_SYSROOT. Fortunately the compilers Apple ships also respect the SDKROOT environment
@@ -1234,8 +1237,25 @@ function(corrosion_link_libraries target_name)
         )
 
         if (TARGET "${library}")
+            unset(platform_name)
+            # FIXME: the if / elseif doesn't match. hardcoded below for now.
+            if(CMAKE_OSX_SYSROOT MATCHES "iPhoneOS")
+                set(platform_name "-iphoneos")
+            elseif(CMAKE_OSX_SYSROOT MATCHES "iPhoneSimulator")
+                set(platform_name "-iphonesimulator")
+            endif()
+            set(platform_name "-iphonesimulator")
+            # This works fine, except when compiling for ios. See https://cmake.org/pipermail/cmake/2016-March/063050.html
+            set(linker_dir "$<TARGET_LINKER_FILE_DIR:${library}>")
+            # Todo: the if above is broken, so we comment here.
+            # if(DEFINED platform_name)
+                # this is a horrible hack to "fix" ${EFFECTIVE_PLATFORM_NAME not expanding in TARGET_LINKER_FILE_DIR
+                # Todo: alternative solutions to get the location of the library, that work with ios targets?
+                # Todo: Debug is hardcoded for now, is probably the config profile.
+                set(linker_dir "$<PATH:REPLACE_FILENAME,${linker_dir},Debug${platform_name}>")
+            #endif()
             corrosion_add_target_local_rustflags(${target_name}
-                "-L$<TARGET_LINKER_FILE_DIR:${library}>"
+                "-L${linker_dir}"
                 "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>"
             )
             add_dependencies(_cargo-build_${target_name} ${library})
