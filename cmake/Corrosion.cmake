@@ -822,6 +822,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
+                "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},iOS>:PATH=/usr/bin>"
                 "${build_env_variable_genex}"
                 "${global_rustflags_genex}"
                 "${cargo_target_linker}"
@@ -1775,6 +1776,7 @@ function(corrosion_add_cxxbridge cxx_target)
                 ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                 COMMAND
                     ${CMAKE_COMMAND} -E env
+                        "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},iOS>:PATH=/usr/bin>"
                         "CARGO_BUILD_RUSTC=$CACHE{CORROSION_TOOLS_RUSTC}"
                     $CACHE{CORROSION_TOOLS_CARGO} install
                     cxxbridge-cmd
