@@ -1,0 +1,350 @@
+#!/bin/bash
+# Wrapper script for dynamic cross-compilation of rust crates and workspaces in Xcode via cargo rustc
+# Supports cross-compilation for Apple platforms, including multi-architecture builds
+
+set -e
+
+# Ensure key environment variables are set
+if [ -z "$SDKROOT" ] || [ -z "$SDK_NAME" ] || [ -z "$DEVELOPER_DIR" ] || [ -z "$ARCHS" ] || [ -z "$CONFIGURATION" ]; then
+    echo "Corrosion: ERROR - Missing required environment variables:"
+    [ -z "$SDKROOT" ] && echo "  SDKROOT is not set"
+    [ -z "$SDK_NAME" ] && echo "  SDK_NAME is not set"
+    [ -z "$DEVELOPER_DIR" ] && echo "  DEVELOPER_DIR is not set"
+    [ -z "$ARCHS" ] && echo "  ARCHS is not set"
+    [ -z "$CONFIGURATION" ] && echo "  CONFIGURATION is not set"
+    exit 1
+fi
+
+# Determine Rust target based on Xcode environment
+# Parse all architectures from ARCHS for potential multi-arch builds
+ALL_ARCHS=($ARCHS)  # Convert space-separated ARCHS to array
+ARCH="${ALL_ARCHS[0]}"  # Primary architecture (for single-arch or fallback)
+
+# Detect if this is a multi-architecture build
+MULTI_ARCH_BUILD=false
+if [ ${#ALL_ARCHS[@]} -gt 1 ]; then
+    MULTI_ARCH_BUILD=true
+    echo "Corrosion: Multi-architecture build detected: ${ALL_ARCHS[*]}"
+else
+    echo "Corrosion: Single-architecture build: $ARCH"
+fi
+
+echo "Corrosion: Building for SDK: $SDK_NAME, Architecture(s): $ARCHS"
+
+# Map build architecture to Rust target architecture names
+get_rust_arch() {
+    local arch="$1"
+
+    case "$arch" in
+        arm64) echo "aarch64" ;;
+        *) echo "$arch" ;;
+    esac
+}
+
+# Map SDK to Rust platform for officially supported Apple SDKs
+get_rust_platform() {
+    local sdk_name="$1"
+    local rust_arch="$2"
+    
+    case "$sdk_name" in
+        iphoneos*) echo "apple-ios" ;;
+        iphonesimulator*) 
+            # iOS simulator has different target names for different architectures
+            if [[ "$rust_arch" == "aarch64" ]]; then
+                echo "apple-ios-sim"  # aarch64-apple-ios-sim
+            else
+                echo "apple-ios"      # x86_64-apple-ios
+            fi ;;
+        macosx*) echo "apple-darwin" ;;
+        xros*) echo "apple-visionos" ;;
+        xrsimulator*) echo "apple-visionos-sim" ;;
+        *)
+            echo "Corrosion: WARNING - Unknown SDK '$sdk_name', defaulting to apple-darwin" >&2
+            echo "apple-darwin" ;;
+    esac
+}
+
+RUST_ARCH=$(get_rust_arch "$ARCH")
+RUST_PLATFORM=$(get_rust_platform "$SDK_NAME" "$RUST_ARCH")
+RUST_TARGET="$RUST_ARCH-$RUST_PLATFORM"
+
+echo "Corrosion: Building for Rust target: $RUST_TARGET (SDK: $SDK_NAME, Arch: $ARCH)"
+
+# Save original environment for use during cross-compilation
+ORIGINAL_SDKROOT="$SDKROOT"
+
+# Ensure build scripts can find the macOS SDK
+export SDKROOT="$(xcrun --show-sdk-path --sdk macosx)"
+
+# Get deployment target flag for officially supported platforms
+get_deployment_flag() {
+    local rust_platform="$1"
+    
+    case "$rust_platform" in
+        *"ios"*) 
+            [ -n "$IPHONEOS_DEPLOYMENT_TARGET" ] && echo "-mios-version-min=${IPHONEOS_DEPLOYMENT_TARGET}"
+            ;;
+        *"darwin"*)
+            [ -n "$MACOSX_DEPLOYMENT_TARGET" ] && echo "-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+            ;;
+        *"visionos"*)
+            [ -n "$XROS_DEPLOYMENT_TARGET" ] && echo "-mxros-version-min=${XROS_DEPLOYMENT_TARGET}"
+            ;;
+    esac
+}
+
+# Get profile directory based on configuration
+get_profile_dir() {
+    if [[ "$CONFIGURATION" == "Release"* ]]; then
+        echo "release"
+    else
+        echo "debug"
+    fi
+}
+
+# Get expected target directory
+get_target_dir() {
+    local modified_target_dir="$1"
+    local target="$2"
+    local profile_dir="$3"
+    
+    if [ -n "$modified_target_dir" ]; then
+        echo "$modified_target_dir/$target/$profile_dir"
+    else
+        echo "target/$target/$profile_dir"
+    fi
+}
+
+# Set up cross-compilation environment deployment target min version
+DEPLOYMENT_FLAG=$(get_deployment_flag "$RUST_PLATFORM")
+
+echo "Corrosion: Using dynamic target $RUST_TARGET with SDK: ${ORIGINAL_SDKROOT}"
+
+# Call cargo rustc with most of the original arguments, but with our dynamic target
+# and using a target-specific subdirectory to avoid conflicts
+CARGO_CMD="$1"
+shift  # Remove the cargo binary from arguments
+
+# Process arguments: extract target-dir, release flag, and rustc flags for build environment
+NEW_ARGS=()
+SKIP_NEXT=false
+TARGET_DIR=""
+FOUND_RELEASE=false
+LOCAL_RUSTFLAGS=""
+COLLECTING_RUSTFLAGS=false
+
+for arg in "$@"; do
+    if [ "$SKIP_NEXT" = true ]; then
+        TARGET_DIR="$arg"
+        NEW_ARGS+=("--target-dir" "$TARGET_DIR")
+        SKIP_NEXT=false
+        continue
+    fi
+    
+    # If we're collecting rustc flags after --, accumulate them for environment variables
+    if [ "$COLLECTING_RUSTFLAGS" = true ]; then
+        LOCAL_RUSTFLAGS="$LOCAL_RUSTFLAGS $arg"
+        continue
+    fi
+    
+    case "$arg" in
+        "--target-dir")
+            SKIP_NEXT=true  # Process the next argument (the directory path)
+            continue
+            ;;
+        --target-dir=*)
+            # Extract the directory and use it as-is
+            TARGET_DIR="${arg#--target-dir=}"
+            NEW_ARGS+=("--target-dir=$TARGET_DIR")
+            ;;
+        "--release")
+            FOUND_RELEASE=true
+            NEW_ARGS+=("$arg")
+            ;;
+        --target=*)
+            # Skip the original target - we'll replace it with our dynamic target
+            echo "Corrosion: Replacing original target ${arg} with dynamic target"
+            ;;
+        "--")
+            # We'll collect rustc flags and put them into the environment
+            COLLECTING_RUSTFLAGS=true
+            ;;
+        *)
+            # Append unmatched arguments as-is
+            NEW_ARGS+=("$arg")
+            ;;
+    esac
+done
+
+if [ -z "$TARGET_DIR" ]; then
+    echo "Corrosion: WARNING - No --target-dir specified in cargo arguments, using default 'target' directory"
+else
+    echo "Corrosion: Using target-dir: $TARGET_DIR"
+fi
+
+# Add release flag for Release builds if not already present
+if [[ "$CONFIGURATION" == "Release"* ]] && [[ "$FOUND_RELEASE" != true ]]; then
+    NEW_ARGS+=("--release")
+    echo "Corrosion: Adding --release flag for Release configuration"
+fi
+
+# Function to build for a single architecture
+build_for_architecture() {
+    local build_arch="$1"
+    local rust_arch="$2"
+    local rust_platform="$3"
+    local rust_target="$rust_arch-$rust_platform"
+    
+    echo "Corrosion: Building for architecture $build_arch -> Rust target $rust_target"
+    
+    # Set up cross-compilation environment for this specific target
+    local arch_target_env_var=$(echo "$rust_target" | tr '[:lower:]-' '[:upper:]_')
+    export CARGO_TARGET_${arch_target_env_var}_LINKER="${DEVELOPER_DIR}/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
+    
+    # Build rustflags for this specific architecture (dynamic values)
+    local arch_rustflags="-C link-arg=-isysroot -C link-arg=${ORIGINAL_SDKROOT}"
+    arch_rustflags="$arch_rustflags -C link-arg=-arch -C link-arg=${build_arch}"
+    
+    # Add deployment target flag if we have one
+    if [ -n "$DEPLOYMENT_FLAG" ]; then
+        arch_rustflags="$arch_rustflags -C link-arg=${DEPLOYMENT_FLAG}"
+    fi
+    
+    # Add any static rustflags from CMake (non-dynamic)
+    if [ -n "$LOCAL_RUSTFLAGS" ]; then
+        echo "Corrosion: Adding local rustflags: $LOCAL_RUSTFLAGS"
+        arch_rustflags="$arch_rustflags $LOCAL_RUSTFLAGS"
+    fi
+    
+    export CARGO_TARGET_${arch_target_env_var}_RUSTFLAGS="$arch_rustflags"
+    echo "Corrosion: Rustflags for $rust_target: $arch_rustflags"
+    
+    # Call cargo rustc with the target (rustflags come from environment)
+    "$CARGO_CMD" "${NEW_ARGS[@]}" "--target=$rust_target"
+    return $?
+}
+
+if [ "$MULTI_ARCH_BUILD" = true ]; then
+    echo "Corrosion: Starting multi-architecture build for: ${ALL_ARCHS[*]}"
+    echo "Corrosion: Target dir: $TARGET_DIR"
+    
+    # Determine the correct profile subdirectory based on configuration
+    PROFILE_DIR=$(get_profile_dir)
+    
+    # Build for each architecture separately
+    ARCH_LIBRARIES=()
+    OVERALL_EXIT_CODE=0
+    
+    for build_arch in "${ALL_ARCHS[@]}"; do
+        echo "Corrosion: Building for architecture: $build_arch"
+        
+        # Get Rust target architecture for this architecture
+        rust_arch=$(get_rust_arch "$build_arch")
+        rust_platform=$(get_rust_platform "$SDK_NAME" "$rust_arch")
+        
+        # Build for this specific architecture
+        if build_for_architecture "$build_arch" "$rust_arch" "$rust_platform"; then
+            arch_target="$rust_arch-$rust_platform"
+            # Use consistent directory path logic
+            arch_lib_path=$(get_target_dir "$TARGET_DIR" "$arch_target" "$PROFILE_DIR")
+            
+            # Find the library file for this architecture
+            if [ -d "$arch_lib_path" ]; then
+                # Look for .a files (static libraries) - only in the specific architecture/profile directory
+                arch_lib=$(find "$arch_lib_path" -maxdepth 1 -name "*.a" -not -path "*/deps/*" | head -1)
+                if [ -n "$arch_lib" ]; then
+                    ARCH_LIBRARIES+=("$arch_lib")
+                    echo "Corrosion: Found library for $build_arch: $arch_lib"
+                else
+                    echo "Corrosion: WARNING - No library found for architecture $build_arch in $arch_lib_path"
+                fi
+            else
+                echo "Corrosion: WARNING - Build directory not found for architecture $build_arch: $arch_lib_path"
+            fi
+        else
+            echo "Corrosion: ERROR - Build failed for architecture $build_arch"
+            OVERALL_EXIT_CODE=1
+        fi
+    done
+    
+    CARGO_EXIT_CODE=$OVERALL_EXIT_CODE
+    
+    # If all builds succeeded and we have multiple libraries, create a universal binary
+    if [ $CARGO_EXIT_CODE -eq 0 ] && [ ${#ARCH_LIBRARIES[@]} -gt 1 ]; then
+        echo "Corrosion: Creating universal binary from ${#ARCH_LIBRARIES[@]} architectures"
+        
+        # Create combined target name for universal binary (e.g., "arm64_x86_64-apple-ios")
+        COMBINED_ARCHS=$(printf "%s_" "${ALL_ARCHS[@]}")
+        COMBINED_ARCHS=${COMBINED_ARCHS%_}  # Remove trailing underscore
+        UNIVERSAL_TARGET="${COMBINED_ARCHS}-${RUST_PLATFORM}"
+        
+        # Create the output directory using consistent logic
+        UNIVERSAL_DIR=$(get_target_dir "$TARGET_DIR" "$UNIVERSAL_TARGET" "$PROFILE_DIR")
+        mkdir -p "$UNIVERSAL_DIR"
+
+        # Get the library name from the first architecture's library
+        LIB_NAME=$(basename "${ARCH_LIBRARIES[0]}")
+        UNIVERSAL_LIB="$UNIVERSAL_DIR/$LIB_NAME"
+
+        # Use lipo to create the universal binary
+        echo "Corrosion: Running lipo to create universal binary: $UNIVERSAL_LIB"
+        lipo -create "${ARCH_LIBRARIES[@]}" -output "$UNIVERSAL_LIB"
+        LIPO_EXIT_CODE=$?
+        
+        if [ $LIPO_EXIT_CODE -eq 0 ]; then
+            echo "Corrosion: Successfully created universal binary: $UNIVERSAL_LIB"
+            # echo details about the universal binary
+            lipo -info "$UNIVERSAL_LIB" || true
+            
+            # Copy the universal binary to where CMake expects it
+            EXPECTED_TARGET_DIR="$TARGET_DIR/current/$PROFILE_DIR"
+            echo "Corrosion: Copying universal binary to CMake expected location: $EXPECTED_TARGET_DIR"
+            mkdir -p "$EXPECTED_TARGET_DIR"
+            cp "$UNIVERSAL_LIB" "$EXPECTED_TARGET_DIR/"
+            echo "Corrosion: Universal binary available at $EXPECTED_TARGET_DIR"
+        else
+            echo "Corrosion: ERROR - Failed to create universal binary"
+            CARGO_EXIT_CODE=$LIPO_EXIT_CODE
+        fi
+    fi
+else
+    # Single architecture build
+    echo "Corrosion: Building workspace for target: $RUST_TARGET"
+    echo "Corrosion: Target dir: $TARGET_DIR"
+    
+    rust_arch=$(get_rust_arch "$ARCH")
+    rust_platform=$(get_rust_platform "$SDK_NAME" "$rust_arch")
+    
+    build_for_architecture "$ARCH" "$rust_arch" "$rust_platform"
+    CARGO_EXIT_CODE=$?
+fi
+
+# Always copy artifacts to expected location (whether cargo built or used cache)
+# Determine the correct profile subdirectory based on configuration
+PROFILE_DIR=$(get_profile_dir)
+RUST_ARTIFACT_DIR=$(get_target_dir "$TARGET_DIR" "$RUST_TARGET" "$PROFILE_DIR")
+
+echo "Corrosion: Copying artifacts from $RUST_ARTIFACT_DIR"
+
+if [ -n "$TARGET_DIR" ] && [ -d "$RUST_ARTIFACT_DIR" ]; then
+    # Skip artifact copying if we've done a multi-architecture build
+    if [ "$MULTI_ARCH_BUILD" = true ]; then
+        echo "Corrosion: Multi-architecture build completed, universal binary already in place"
+    else
+        EXPECTED_TARGET_DIR="$TARGET_DIR/current/$PROFILE_DIR"
+        echo "Corrosion: Copying artifacts from $RUST_ARTIFACT_DIR to $EXPECTED_TARGET_DIR"
+        mkdir -p "$EXPECTED_TARGET_DIR"
+        
+        # Copy the contents of the profile directory to match CMake's expectations
+        cp -R "$RUST_ARTIFACT_DIR"/* "$EXPECTED_TARGET_DIR/"
+        
+        echo "Corrosion: Artifacts available at $EXPECTED_TARGET_DIR"
+    fi
+    
+    # Create the symlink so CMake can find artifacts at the expected target path
+    ln -sfn "current" "$TARGET_DIR/$RUST_TARGET"
+else
+    echo "Corrosion: Artifact copying skipped"
+fi
+
+exit $CARGO_EXIT_CODE

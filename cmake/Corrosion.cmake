@@ -718,14 +718,25 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(if_not_host_build_condition "$<NOT:${hostbuild_override}>")
 
     set(corrosion_link_args "$<${if_not_host_build_condition}:${corrosion_link_args}>")
-    # We always set `--target`, so that cargo always places artifacts into a directory with the
-    # target triple.
-    set(cargo_target_option "--target=$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${_CORROSION_RUST_CARGO_TARGET}>")
 
-    # The target may be a filepath to custom target json file. For host targets we assume that they are built-in targets.
-    _corrosion_strip_target_triple("${_CORROSION_RUST_CARGO_TARGET}" stripped_target_triple)
-    _corrosion_strip_target_triple("${_CORROSION_RUST_CARGO_TARGET_UPPER}" stripped_target_triple_upper)
-    set(target_artifact_dir "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${stripped_target_triple}>")
+    if(CORROSION_XCODE_DYNAMIC_TARGET)
+        # Defer target selection to the build command / wrapper script
+        set(cargo_target_option "") # Will be set in the build command
+        set(CORROSION_XCODE_NEEDS_DYNAMIC_TARGET TRUE)
+
+        # For Xcode dynamic targets, we can't predict the exact directory at configure time
+        # We'll need to handle this in the post-build copy step
+        set(target_artifact_dir "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},current>")
+    else()
+        # We set `--target` so that cargo always places artifacts into a directory with the target triple
+        set(cargo_target_option "--target=$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${_CORROSION_RUST_CARGO_TARGET}>")
+        set(CORROSION_XCODE_NEEDS_DYNAMIC_TARGET FALSE)
+
+        # The target may be a filepath to custom target json file. For host targets we assume that they are built-in targets.
+        _corrosion_strip_target_triple("${_CORROSION_RUST_CARGO_TARGET}" stripped_target_triple)
+        _corrosion_strip_target_triple("${_CORROSION_RUST_CARGO_TARGET_UPPER}" stripped_target_triple_upper)
+        set(target_artifact_dir "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${stripped_target_triple}>")
+    endif()
 
     set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
 
@@ -871,9 +882,28 @@ function(_add_cargo_build out_cargo_build_out_dir)
     message(DEBUG "TARGET ${target_name} produces byproducts ${build_byproducts}")
     message(DEBUG "corrosion_cc_rs_flags: ${corrosion_cc_rs_flags}")
 
+    # Set up command and arguments based on whether we need dynamic target selection
+    if(CORROSION_XCODE_NEEDS_DYNAMIC_TARGET)
+        # Use the external wrapper script for Xcode builds
+        set(xcode_cargo_wrapper_template "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/xcode_cargo_wrapper.sh.in")
+        set(xcode_cargo_wrapper "${CMAKE_CURRENT_BINARY_DIR}/xcode_cargo_wrapper_${target_name}.sh")
+        
+        # Copy the template to the build directory and make it executable
+        configure_file("${xcode_cargo_wrapper_template}" "${xcode_cargo_wrapper}" COPYONLY)
+        execute_process(COMMAND chmod +x "${xcode_cargo_wrapper}")
+        
+        # Use cargo rustc with wrapper script for dynamic target selection
+        # Dynamic rustflags (arch, SDK) must be handled at build time via environment variables
+        set(cargo_command "${xcode_cargo_wrapper}" "${cargo_bin}")
+        set(cargo_target_arg "") # Handled dynamically by wrapper script
+    else()
+        # Use cargo rustc directly
+        set(cargo_command "${cargo_bin}")
+        set(cargo_target_arg ${cargo_target_option})
+    endif()
+
     add_custom_target(
         _cargo-build_${target_name}
-        # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
                 "${build_env_variable_genex}"
@@ -884,10 +914,10 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
                 "CARGO_BUILD_RUSTC=${rustc_bin}"
-            "${cargo_bin}"
-                rustc
+            ${cargo_command}
+                "rustc"
                 ${cargo_rustc_filter}
-                ${cargo_target_option}
+                ${cargo_target_arg}
                 ${_CORROSION_VERBOSE_OUTPUT_FLAG}
                 ${all_features_arg}
                 ${no_default_features_arg}
@@ -916,6 +946,16 @@ function(_add_cargo_build out_cargo_build_out_dir)
         COMMAND_EXPAND_LISTS
         VERBATIM
     )
+    
+    # Set Xcode-specific properties if using dynamic target selection
+    if(CORROSION_XCODE_NEEDS_DYNAMIC_TARGET)
+        set_target_properties(_cargo-build_${target_name} PROPERTIES
+            XCODE_ATTRIBUTE_ARCHS "$(ARCHS_STANDARD)"
+            XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH "YES"
+            XCODE_ATTRIBUTE_SDKROOT "auto"
+            XCODE_ATTRIBUTE_SUPPORTED_PLATFORMS "iphoneos iphonesimulator macosx xros xrsimulator"
+        )
+    endif()
 
     # User exposed custom target, that depends on the internal target.
     # Corrosion post build steps are added on the internal target, which
