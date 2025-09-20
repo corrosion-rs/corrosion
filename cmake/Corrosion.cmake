@@ -190,9 +190,9 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         set_property(
             TARGET ${target_name}
             PROPERTY "${base_property}_${config_type_upper}"
-                "${curr_out_dir}/${filename}"
+                "${sanitized_out_dir}/${filename}"
         )
-        set(base_output_directory "${curr_out_dir}")
+        set(base_output_directory "${sanitized_out_dir}")
     endforeach()
 
     if(NOT COR_IS_MULTI_CONFIG)
