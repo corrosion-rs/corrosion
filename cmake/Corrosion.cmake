@@ -114,6 +114,26 @@ function(_corrosion_bin_target_suffix target_name out_var_suffix)
     set(${out_var_suffix} "${_suffix}" PARENT_SCOPE)
 endfunction()
 
+function(_handle_output_directory_genex input_path config_type output_path)
+    if("${config_type}" STREQUAL "")
+        # Prevent new path from being `dir//file`, since that causes issues with the
+        # file dependency.
+        string(REPLACE "/\$<CONFIG>" "${config_type}" curr_out_dir "${input_path}")
+        string(REPLACE "\$<CONFIG>" "${config_type}" curr_out_dir "${curr_out_dir}")
+    else()
+        string(REPLACE "\$<CONFIG>" "${config_type}" curr_out_dir "${input_path}")
+    endif()
+    string(GENEX_STRIP "${curr_out_dir}" stripped_out_dir)
+    if("${stripped_out_dir}" STREQUAL "${curr_out_dir}")
+        set("${output_path}" "${curr_out_dir}" PARENT_SCOPE)
+    else()
+        unset("${output_path}" PARENT_SCOPE)
+        message(WARNING "Encountered output directory path with unsupported genex. "
+                "Output dir: `${curr_out_dir}`"
+                "Note: Corrosion only supports the `\$<CONFIG>` generator expression for output directories.")
+    endif()
+endfunction()
+
 # Do not call this function directly!
 #
 # This function should be called deferred to evaluate target properties late in the configure stage.
@@ -159,12 +179,8 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         else()
             set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
-        string(REPLACE "\$<CONFIG>" "${config_type}" curr_out_dir "${curr_out_dir}")
-        message(DEBUG "Setting ${base_property}_${config_type_upper} for target ${target_name}"
-                " to `${curr_out_dir}/${filename}`.")
-
-        string(GENEX_STRIP "${curr_out_dir}" stripped_out_dir)
-        if(NOT ("${stripped_out_dir}" STREQUAL "${curr_out_dir}"))
+        _handle_output_directory_genex("${curr_out_dir}" "${config_type}" sanitized_out_dir)
+        if(NOT DEFINED sanitized_out_dir)
             message(FATAL_ERROR "${output_directory_property} for target ${output_dir_prop_target_name} "
                     "contained an unexpected Generator expression. Output dir: `${curr_out_dir}`"
                 "Note: Corrosion only supports the `\$<CONFIG>` generator expression for output directories.")
@@ -174,9 +190,9 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         set_property(
             TARGET ${target_name}
             PROPERTY "${base_property}_${config_type_upper}"
-                "${curr_out_dir}/${filename}"
+                "${sanitized_out_dir}/${filename}"
         )
-        set(base_output_directory "${curr_out_dir}")
+        set(base_output_directory "${sanitized_out_dir}")
     endforeach()
 
     if(NOT COR_IS_MULTI_CONFIG)
@@ -185,13 +201,13 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
         else()
             set(base_output_directory "${CMAKE_CURRENT_BINARY_DIR}")
         endif()
-        string(REPLACE "\$<CONFIG>" "${CMAKE_BUILD_TYPE}" base_output_directory "${base_output_directory}")
-        string(GENEX_STRIP "${base_output_directory}" stripped_out_dir)
-        if(NOT ("${stripped_out_dir}" STREQUAL "${base_output_directory}"))
+        _handle_output_directory_genex("${base_output_directory}" "${CMAKE_BUILD_TYPE}" sanitized_output_directory)
+        if(NOT DEFINED sanitized_output_directory)
             message(FATAL_ERROR "${output_dir_prop_target_name} for target ${output_dir_prop_target_name} "
-                    "contained an unexpected Generator expression. Output dir: `${base_output_directory}`"
+                    "contained an unexpected Generator expression. Output dir: `${base_output_directory}`."
                     "Note: Corrosion only supports the `\$<CONFIG>` generator expression for output directories.")
         endif()
+        set(base_output_directory "${sanitized_output_directory}")
     endif()
 
     message(DEBUG "Setting ${base_property} for target ${target_name}"
@@ -259,10 +275,15 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
         if(output_dir_curr_config)
             set(curr_out_dir "${output_dir_curr_config}")
         elseif(output_dir)
-            # Fallback to `output_dir` if specified
-            # Note: Multi-configuration generators append a per-configuration subdirectory to the
-            # specified directory unless a generator expression is used (from CMake documentation).
-            set(curr_out_dir "${output_dir}/${config_type}")
+            string(GENEX_STRIP "${output_dir}" output_dir_no_genex)
+            # Only add config dir if there is no genex in here. See
+            # https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
+            # Logic duplicated from _corrosion_set_imported_location_deferred
+            if(output_dir STREQUAL output_dir_no_genex)
+                set(curr_out_dir "${output_dir}/${config_type}")
+            else()
+                set(curr_out_dir "${output_dir}")
+            endif()
         else()
             # Fallback to the default directory. We do not append the configuration directory here
             # and instead let CMake do this, since otherwise the resolving of dynamic library

@@ -32,7 +32,6 @@ add_test(NAME "output_directory_build"
         CARGO_TARGET "${Rust_CARGO_TARGET}"
         SYSTEM_NAME "${CMAKE_SYSTEM_NAME}"
         ${configure_cmake_args}
-
         COMMAND_EXPAND_LISTS
 )
 set_tests_properties("output_directory_build" PROPERTIES FIXTURES_SETUP "build_fixture_output_directory")
@@ -159,4 +158,14 @@ set_tests_properties("postbuild_custom_command" PROPERTIES FIXTURES_REQUIRED "bu
 add_test(NAME "output_directory_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build")
 set_tests_properties("output_directory_cleanup" PROPERTIES FIXTURES_CLEANUP "build_fixture_output_directory")
 
+####################################
+# output_directory_config
+####################################
+
+
+ corrosion_tests_add_test(output_directory_config "consumer")
+
+ set_tests_properties("output_directory_config_run_consumer" PROPERTIES PASS_REGULAR_EXPRESSION
+         "^Hello from output_directory_config_test_executable"
+    )
 
