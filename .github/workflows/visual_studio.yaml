@@ -37,6 +37,7 @@ jobs:
         with:
           toolchain: ${{inputs.rust}}
           targets: ${{inputs.target_arch}}-pc-windows-msvc
+          components: rust-src
       # The initial configure for MSVC is quite slow, so we cache the build directory
       # (including the build directories of the tests) since reconfiguring is
       # significantly faster.
