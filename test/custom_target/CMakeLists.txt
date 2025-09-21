@@ -14,6 +14,8 @@ execute_process(COMMAND
 )
 
 set(Rust_CARGO_TARGET "${target_spec_file}")
-corrosion_tests_add_test(custom_target "test-exe")
+corrosion_tests_add_test(custom_target "test-exe;rust-bin")
 
 set_tests_properties("custom_target_run_test-exe" PROPERTIES PASS_REGULAR_EXPRESSION [[Hello, Cxx! I am Rust!]])
+set_tests_properties("custom_target_run_rust-bin" PROPERTIES PASS_REGULAR_EXPRESSION [[The answer is 42]])
+

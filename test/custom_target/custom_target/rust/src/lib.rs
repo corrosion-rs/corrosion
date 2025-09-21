@@ -1,7 +1,7 @@
 use std::os::raw::c_char;
 
 extern "C" {
-    fn calculate_42() -> u32;
+    pub fn calculate_42() -> u32;
 }
 
 #[no_mangle]
