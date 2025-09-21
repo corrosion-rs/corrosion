@@ -707,7 +707,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(cargo_target_option "--target=$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${_CORROSION_RUST_CARGO_TARGET}>")
 
     # The target may be a filepath to custom target json file. For host targets we assume that they are built-in targets.
-    _corrosion_strip_target_triple(${_CORROSION_RUST_CARGO_TARGET} stripped_target_triple)
+    _corrosion_strip_target_triple("${_CORROSION_RUST_CARGO_TARGET}" stripped_target_triple)
+    _corrosion_strip_target_triple("${_CORROSION_RUST_CARGO_TARGET_UPPER}" stripped_target_triple_upper)
     set(target_artifact_dir "$<IF:${hostbuild_override},${_CORROSION_RUST_CARGO_HOST_TARGET},${stripped_target_triple}>")
 
     set(flags_genex "$<GENEX_EVAL:$<TARGET_PROPERTY:${target_name},INTERFACE_CORROSION_CARGO_FLAGS>>")
@@ -822,7 +823,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         set(default_linker "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER},${CMAKE_C_COMPILER}>")
     endif()
     # Used to set a linker for a specific target-triple.
-    set(cargo_target_linker_var "CARGO_TARGET_${_CORROSION_RUST_CARGO_TARGET_UPPER}_LINKER")
+    set(cargo_target_linker_var "CARGO_TARGET_${stripped_target_triple_upper}_LINKER")
     set(linker "$<IF:${explicit_linker_defined},${explicit_linker_property},${default_linker}>")
     set(cargo_target_linker $<$<BOOL:${linker}>:${cargo_target_linker_var}=${linker}>)
 
