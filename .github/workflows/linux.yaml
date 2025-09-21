@@ -43,6 +43,7 @@ jobs:
         with:
           toolchain: ${{inputs.rust}}
           targets: ${{inputs.target_arch}}-unknown-linux-gnu
+          components: rust-src
       - name: Install Cross Compiler
         shell: bash
         run: |
