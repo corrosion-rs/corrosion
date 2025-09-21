@@ -1,0 +1,10 @@
+[package]
+name = "rust-lib"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type=["staticlib"]
+
+[build-dependencies]
+cc = "1"
