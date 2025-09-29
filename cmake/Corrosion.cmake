@@ -1540,7 +1540,7 @@ function(corrosion_add_cxxbridge cxx_target)
     set(header_placement_dir "${generated_dir}/include/${cxx_target}")
     set(source_placement_dir "${generated_dir}/src")
 
-    add_library(${cxx_target} OBJECT)
+    add_library(${cxx_target} STATIC)
     target_include_directories(${cxx_target}
         PUBLIC
             $<BUILD_INTERFACE:${generated_dir}/include>
