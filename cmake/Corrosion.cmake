@@ -1540,15 +1540,17 @@ function(corrosion_add_cxxbridge cxx_target)
     set(header_placement_dir "${generated_dir}/include/${cxx_target}")
     set(source_placement_dir "${generated_dir}/src")
 
-    add_library(${cxx_target} STATIC)
-    target_include_directories(${cxx_target}
+    set(cxx_static_lib ${cxx_target}-static)
+
+    add_library(${cxx_static_lib} STATIC)
+    target_include_directories(${cxx_static_lib}
         PUBLIC
             $<BUILD_INTERFACE:${generated_dir}/include>
             $<INSTALL_INTERFACE:include>
     )
 
     # cxx generated code is using c++11 features in headers, so propagate c++11 as minimal requirement
-    target_compile_features(${cxx_target} PUBLIC cxx_std_11)
+    target_compile_features(${cxx_static_lib} PUBLIC cxx_std_11)
 
     # Todo: target_link_libraries is only necessary for rust2c projects.
     # It is possible that checking if the rust crate is an executable is a sufficient check,
@@ -1557,7 +1559,10 @@ function(corrosion_add_cxxbridge cxx_target)
     # corrosion_link_libraries() themselves.
     get_target_property(crate_target_type ${_arg_CRATE} TYPE)
     if (NOT crate_target_type STREQUAL "EXECUTABLE")
-        target_link_libraries(${cxx_target} PRIVATE ${_arg_CRATE})
+        if (NOT TARGET ${_arg_CRATE}-static)
+            message(FATAL_ERROR "${_arg_CRATE} does not produce a static library. This is required for cxx to link correctly")
+        endif()
+        target_link_libraries(${cxx_static_lib} PRIVATE ${_arg_CRATE}-static)
     endif()
 
     file(MAKE_DIRECTORY "${generated_dir}/include/rust")
@@ -1599,13 +1604,27 @@ function(corrosion_add_cxxbridge cxx_target)
             COMMENT "Generating cxx bindings for crate ${_arg_CRATE}"
         )
 
-        target_sources(${cxx_target}
+        target_sources(${cxx_static_lib}
             PRIVATE
                 "${header_placement_dir}/${cxx_header}"
                 "${generated_dir}/include/rust/cxx.h"
                 "${source_placement_dir}/${cxx_source}"
         )
     endforeach()
+
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+        # https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:LINK_GROUP appears in 3.24
+        # Produce an interface library target that hides the linking circularity we might need
+        add_library(${cxx_target} INTERFACE)
+        target_link_libraries(${cxx_target}
+            INTERFACE
+            $<LINK_GROUP:RESCAN,${cxx_static_lib},${_arg_CRATE}-static>
+        )
+    else()
+        # Else produce a static library alias - linking will be an exercise for the invoker
+        add_library(${cxx_target} ALIAS ${cxx_static_lib})
+    endif()
+
 endfunction()
 
 #[=======================================================================[.md:
