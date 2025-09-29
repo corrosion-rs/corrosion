@@ -1202,6 +1202,7 @@ function(corrosion_link_libraries target_name)
     endif()
     add_dependencies(_cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
+        get_target_property(library_target_type ${library} TYPE)
         set_property(
             TARGET _cargo-build_${target_name}
             APPEND
@@ -1209,8 +1210,14 @@ function(corrosion_link_libraries target_name)
             $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
         )
 
-        corrosion_add_target_local_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
-        corrosion_add_target_local_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>")
+        if (${library_target_type} MATCHES INTERFACE_LIBRARY AND TARGET ${library}-static)
+            # Potential candidate for a cxxbridge interface library. Delegate the link calls to the underlying static library
+            set(link_library_name ${library}-static)
+        else()
+            set(link_library_name ${library})
+        endif()
+        corrosion_add_target_local_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${link_library_name}>")
+        corrosion_add_target_local_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${link_library_name}>")
     endforeach()
 endfunction()
 

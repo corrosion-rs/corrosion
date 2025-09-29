@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED 1)
 
 corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
 corrosion_add_cxxbridge(cxxbridge-cpp CRATE rust_bin FILES lib.rs)
-target_include_directories(cxxbridge-cpp PRIVATE "include")
+target_include_directories(cxxbridge-cpp-static PUBLIC "include")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux"
     OR (CMAKE_SYSTEM_NAME STREQUAL "Windows"
@@ -22,8 +22,8 @@ endif()
 
 if(TEST_CXXBRIDGE_VARIANT1)
     # Variant 1: Merge the C++ User sources into the generated library target.
-    target_sources(cxxbridge-cpp PRIVATE cpplib.cpp)
-    corrosion_link_libraries(rust_bin cxxbridge-cpp)
+    target_sources(cxxbridge-cpp-static PRIVATE cpplib.cpp)
+    corrosion_link_libraries(rust_bin cxxbridge-cpp-static)
 elseif(TEST_CXXBRIDGE_VARIANT2)
     # Variant 2: Create a separate C++ library and link both the User library and
     # the generated library into rust
