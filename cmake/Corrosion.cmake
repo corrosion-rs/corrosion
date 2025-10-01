@@ -1202,7 +1202,6 @@ function(corrosion_link_libraries target_name)
     endif()
     add_dependencies(_cargo-build_${target_name} ${ARGN})
     foreach(library ${ARGN})
-        get_target_property(library_target_type ${library} TYPE)
         set_property(
             TARGET _cargo-build_${target_name}
             APPEND
@@ -1210,14 +1209,8 @@ function(corrosion_link_libraries target_name)
             $<TARGET_PROPERTY:${library},LINKER_LANGUAGE>
         )
 
-        if (${library_target_type} MATCHES INTERFACE_LIBRARY AND TARGET ${library}-static)
-            # Potential candidate for a cxxbridge interface library. Delegate the link calls to the underlying static library
-            set(link_library_name ${library}-static)
-        else()
-            set(link_library_name ${library})
-        endif()
-        corrosion_add_target_local_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${link_library_name}>")
-        corrosion_add_target_local_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${link_library_name}>")
+        corrosion_add_target_local_rustflags(${target_name} "-L$<TARGET_LINKER_FILE_DIR:${library}>")
+        corrosion_add_target_local_rustflags(${target_name} "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>")
     endforeach()
 endfunction()
 
@@ -1547,17 +1540,15 @@ function(corrosion_add_cxxbridge cxx_target)
     set(header_placement_dir "${generated_dir}/include/${cxx_target}")
     set(source_placement_dir "${generated_dir}/src")
 
-    set(cxx_static_lib ${cxx_target}-static)
-
-    add_library(${cxx_static_lib} STATIC)
-    target_include_directories(${cxx_static_lib}
+    add_library(${cxx_target} STATIC)
+    target_include_directories(${cxx_target}
         PUBLIC
             $<BUILD_INTERFACE:${generated_dir}/include>
             $<INSTALL_INTERFACE:include>
     )
 
     # cxx generated code is using c++11 features in headers, so propagate c++11 as minimal requirement
-    target_compile_features(${cxx_static_lib} PUBLIC cxx_std_11)
+    target_compile_features(${cxx_target} PUBLIC cxx_std_11)
 
     # Todo: target_link_libraries is only necessary for rust2c projects.
     # It is possible that checking if the rust crate is an executable is a sufficient check,
@@ -1569,7 +1560,7 @@ function(corrosion_add_cxxbridge cxx_target)
         if (NOT TARGET ${_arg_CRATE}-static)
             message(FATAL_ERROR "${_arg_CRATE} does not produce a static library. This is required for cxx to link correctly")
         endif()
-        target_link_libraries(${cxx_static_lib} PRIVATE ${_arg_CRATE}-static)
+        target_link_libraries(${cxx_target} PRIVATE ${_arg_CRATE}-static)
     endif()
 
     file(MAKE_DIRECTORY "${generated_dir}/include/rust")
@@ -1611,7 +1602,7 @@ function(corrosion_add_cxxbridge cxx_target)
             COMMENT "Generating cxx bindings for crate ${_arg_CRATE}"
         )
 
-        target_sources(${cxx_static_lib}
+        target_sources(${cxx_target}
             PRIVATE
                 "${header_placement_dir}/${cxx_header}"
                 "${generated_dir}/include/rust/cxx.h"
@@ -1619,17 +1610,27 @@ function(corrosion_add_cxxbridge cxx_target)
         )
     endforeach()
 
+    set(cxx_link_target ${cxx_target}-link)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
         # https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:LINK_GROUP appears in 3.24
         # Produce an interface library target that hides the linking circularity we might need
-        add_library(${cxx_target} INTERFACE)
-        target_link_libraries(${cxx_target}
+        add_library(${cxx_link_target} INTERFACE)
+        target_link_libraries(${cxx_link_target}
             INTERFACE
-            $<LINK_GROUP:RESCAN,${cxx_static_lib},${_arg_CRATE}-static>
+            $<LINK_GROUP:RESCAN,${cxx_target},${_arg_CRATE}-static>
         )
     else()
         # Else produce a static library alias - linking will be an exercise for the invoker
-        add_library(${cxx_target} ALIAS ${cxx_static_lib})
+
+        # Don't print the statement if we are using LLD. Potentially the other options in https://cmake.org/cmake/help/latest/variable/CMAKE_LINKER_TYPE.html
+        # will also recursively link without explicit instructions - but I've not tested that personally
+        if(NOT CMAKE_LINKER_TYPE STREQUAL LLD)
+            message(WARNING "CMake version does not support LINK_GROUP statements. "
+                "Linking ${cxx_link_target} will require manual intervention to resolve the circular linking nature. "
+                "See https://cxx.rs/build/other.html#linking-the-c-and-rust-together"
+            )
+        endif()
+        add_library(${cxx_link_target} ALIAS ${cxx_target})
     endif()
 
 endfunction()

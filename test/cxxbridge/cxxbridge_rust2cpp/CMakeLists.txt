@@ -8,7 +8,7 @@ corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
 corrosion_add_cxxbridge(cxxbridge-cpp CRATE cxxbridge_crate MANIFEST_PATH rust FILES lib.rs foo/mod.rs)
 
 add_executable(cxxbridge-exe main.cpp)
-target_link_libraries(cxxbridge-exe PUBLIC cxxbridge-cpp)
+target_link_libraries(cxxbridge-exe PUBLIC cxxbridge-cpp-link)
 
 if(MSVC)
     # Note: This is required because we use `cxx` which uses `cc` to compile and link C++ code.
