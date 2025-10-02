@@ -767,10 +767,24 @@ function(_add_cargo_build out_cargo_build_out_dir)
         endif()
     endif()
 
+    # Build a list of custom Debug configuration expressions
+    list(APPEND DEBUG_EXPRESSIONS "$<CONFIG:Debug>")
+    # Include an empty config name for backwards compatibility
+    list(APPEND DEBUG_EXPRESSIONS "$<CONFIG:>")
+    # Append any user specified debug configurations
+    foreach(cfg IN LISTS _CORROSION_DEBUG_CONFIGS)
+        list(APPEND DEBUG_EXPRESSIONS "$<CONFIG:${cfg}>")
+    endforeach()
+    list(REMOVE_DUPLICATES DEBUG_EXPRESSIONS)
+
+    # combine DEBUG_EXPRESSIONS into a single OR expression
+    string(JOIN "," DEBUG_OR ${DEBUG_EXPRESSIONS})
+    set(IS_DEBUG_EXPR "$<OR:${DEBUG_OR}>")
+
     set(cargo_profile_set "$<BOOL:${cargo_profile_target_property}>")
     # In the default case just specify --release or nothing to stay compatible with
     # older rust versions.
-    set(default_profile_option "$<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:>>>:--release>")
+    set(default_profile_option "$<$<NOT:${IS_DEBUG_EXPR}>:--release>")
     # evaluates to either `--profile=<custom_profile>`, `--release` or nothing (for debug).
     set(cargo_profile "$<IF:${cargo_profile_set},--profile=${cargo_profile_target_property},${default_profile_option}>")
 
@@ -780,7 +794,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(profile_dir_is_overridden "$<BOOL:${profile_dir_override}>")
     set(custom_profile_build_type_dir "$<IF:${profile_dir_is_overridden},${profile_dir_override},${cargo_profile_target_property}>")
 
-    set(default_build_type_dir "$<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:>>,debug,release>")
+    set(default_build_type_dir "$<IF:${IS_DEBUG_EXPR},debug,release>")
     set(build_type_dir "$<IF:${cargo_profile_set},${custom_profile_build_type_dir},${default_build_type_dir}>")
 
     # We set a target folder based on the manifest path so if you build multiple workspaces (or standalone projects
@@ -2363,6 +2377,11 @@ function(_corrosion_initialize_properties target_name)
             endif()
         endforeach()
     endforeach()
+endfunction()
+
+# Helper function to set the list of debug configurations for Corrosion. Must be called before the call to `corrosion_import_crate`.
+function(corrosion_set_debug_config_list configs)
+    set(_CORROSION_DEBUG_CONFIGS "${configs}" PARENT_SCOPE)
 endfunction()
 
 # Helper macro to pass through an optional `OPTION` argument parsed via `cmake_parse_arguments`
