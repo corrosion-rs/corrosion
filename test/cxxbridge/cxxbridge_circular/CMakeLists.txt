@@ -22,12 +22,12 @@ add_library(cpp_lib STATIC cpplib.cpp)
 target_include_directories(cpp_lib PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")
 
 # Make sure the cpp library can access the headers from the bridge and vice-versa
-target_link_libraries(cpp_lib PRIVATE cxxbridge)
-target_link_libraries(cxxbridge PRIVATE cpp_lib)
+target_link_libraries(cpp_lib PUBLIC cxxbridge)
+target_link_libraries(cxxbridge PUBLIC cpp_lib)
 
 # The 3 libraries (rust, cpp, cxx) have a circular dependency, set this up in the linker
 # so that the rust_lib target links to everything and circular references are resolved.
-if (CMAKE_CXX_LINK_GROUP_USING_RESCAN_SUPPORTED)
+if (CMAKE_LINK_GROUP_USING_RESCAN_SUPPORTED)
     target_link_libraries(rust_lib INTERFACE
         "$<LINK_GROUP:RESCAN,cxxbridge,rust_lib-static,cpp_lib>")
 else()
