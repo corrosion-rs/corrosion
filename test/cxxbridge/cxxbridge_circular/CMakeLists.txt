@@ -23,19 +23,22 @@ target_include_directories(cpp_lib PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")
 
 # Make sure the cpp library can access the headers from the bridge and vice-versa
 target_link_libraries(cpp_lib PUBLIC cxxbridge)
-target_link_libraries(cxxbridge PUBLIC cpp_lib)
+target_link_libraries(cxxbridge PRIVATE cpp_lib)
 
 # The 3 libraries (rust, cpp, cxx) have a circular dependency, set this up in the linker
 # so that the rust_lib target links to everything and circular references are resolved.
-if (CMAKE_LINK_GROUP_USING_RESCAN_SUPPORTED)
+if(TEST_CXXBRIDGE_VARIANT1)
+    if (NOT CMAKE_LINK_GROUP_USING_RESCAN_SUPPORTED)
+        message(FATAL_ERROR "Cannot run this test case without Cmake 3.24 or higher")
+    endif()
     target_link_libraries(rust_lib INTERFACE
         "$<LINK_GROUP:RESCAN,cxxbridge,rust_lib-static,cpp_lib>")
-else()
+elseif(TEST_CXXBRIDGE_VARIANT2)
     target_link_libraries(rust_lib INTERFACE cxxbridge cpp_lib)
 endif()
 
 add_executable(cpp_bin main.cpp)
-target_link_libraries(cpp_bin rust_lib)
+target_link_libraries(cpp_bin cpp_lib)
 
 if(MSVC)
     set_target_properties(cpp_lib PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
