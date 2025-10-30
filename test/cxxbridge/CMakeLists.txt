@@ -8,7 +8,7 @@ if(CORROSION_TESTS_CXXBRIDGE)
         PASS_THROUGH_ARGS -DTEST_CXXBRIDGE_VARIANT2=ON
     )
     corrosion_tests_add_test(cxxbridge_rust2cpp "cxxbridge-exe")
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0" AND CMAKE_LINK_GROUP_USING_RESCAN_SUPPORTED)
         corrosion_tests_add_test(cxxbridge_circular_link_group "cpp_bin"
             TEST_SRC_DIR cxxbridge_circular
             PASS_THROUGH_ARGS -DTEST_CXXBRIDGE_VARIANT1=ON
