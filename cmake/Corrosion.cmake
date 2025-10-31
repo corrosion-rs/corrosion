@@ -1851,9 +1851,11 @@ function(corrosion_add_cxxbridge cxx_target)
 
     if (TARGET "${_arg_CRATE}-static")
         target_link_libraries(${cxx_target} PRIVATE "${_arg_CRATE}-static")
+        target_link_libraries("${_arg_CRATE}-static" INTERFACE ${cxx_target})
     endif()
     if (TARGET "${_arg_CRATE}-shared")
         target_link_libraries(${cxx_target} PRIVATE "${_arg_CRATE}-shared")
+        target_link_libraries("${_arg_CRATE}-shared" INTERFACE ${cxx_target})
     endif()
 
     file(MAKE_DIRECTORY "${generated_dir}/include/rust")
