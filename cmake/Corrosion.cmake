@@ -1257,23 +1257,29 @@ function(corrosion_link_libraries target_name)
         )
 
         if (TARGET "${library}")
-            unset(platform_name)
-            # FIXME: the if / elseif doesn't match. hardcoded below for now.
-            if(CMAKE_OSX_SYSROOT MATCHES "iPhoneOS")
-                set(platform_name "-iphoneos")
-            elseif(CMAKE_OSX_SYSROOT MATCHES "iPhoneSimulator")
-                set(platform_name "-iphonesimulator")
-            endif()
-            set(platform_name "-iphonesimulator")
             # This works fine, except when compiling for ios. See https://cmake.org/pipermail/cmake/2016-March/063050.html
+            # XCODE_EMIT_EFFECTIVE_PLATFORM_NAME=OFF is supposed to prevent emitting EFFECTIVE_PLATFORM_NAME, but even
+            # with CMake 4.1 and the variable set to off EFFECTIVE_PLATFORM_NAME still leaks into generator expressions,
+            # and is not correctly replaced at build time
             set(linker_dir "$<TARGET_LINKER_FILE_DIR:${library}>")
-            # Todo: the if above is broken, so we comment here.
-            # if(DEFINED platform_name)
-                # this is a horrible hack to "fix" ${EFFECTIVE_PLATFORM_NAME not expanding in TARGET_LINKER_FILE_DIR
-                # Todo: alternative solutions to get the location of the library, that work with ios targets?
-                # Todo: Debug is hardcoded for now, is probably the config profile.
-                set(linker_dir "$<PATH:REPLACE_FILENAME,${linker_dir},Debug${platform_name}>")
-            #endif()
+            # Probably should also affect other apple OSs with a simulator
+            if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+                unset(platform_name)
+                message(CHECK_START "corrosion_link_libraries: Attempting to replace EFFECTIVE_PLATFORM_NAME")
+                if(CMAKE_OSX_SYSROOT MATCHES "iphoneos")
+                    set(platform_name "-iphoneos")
+                elseif(CMAKE_OSX_SYSROOT MATCHES "iphonesimulator")
+                    set(platform_name "-iphonesimulator")
+                else()
+                    # Todo: CMAKE_OSX_SYSROOT can be not set - how do we handle that?
+                    message(CHECK_FAIL "Failed to determine platform name for iOS target from sysroot ${CMAKE_OSX_SYSROOT}")
+                endif()
+                if(DEFINED platform_name)
+                    # This is a hack to fix $EFFECTIVE_PLATFORM_NAME not expanding in TARGET_LINKER_FILE_DIR
+                    set(linker_dir "$<PATH:REPLACE_FILENAME,${linker_dir},$<CONFIG>${platform_name}>")
+                    message(CHECK_PASS "done")
+                endif()
+            endif()
             corrosion_add_target_local_rustflags(${target_name}
                 "-L${linker_dir}"
                 "-l$<TARGET_LINKER_FILE_BASE_NAME:${library}>"
