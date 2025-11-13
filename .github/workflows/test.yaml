@@ -320,7 +320,7 @@ jobs:
         os:
           - windows-2022
           - ubuntu-latest
-          - macos-13
+          - macos-15
         include:
           # Should be in sync with the `cxx` version the Carg.lock of the cxxbridge tests,
           # otherwise the caching will not work and the cmd will be built from source.
@@ -396,7 +396,7 @@ jobs:
         os:
           - windows-2022
           - ubuntu-latest
-          - macos-13
+          - macos-15
         include:
           - rust: 1.54.0
 
