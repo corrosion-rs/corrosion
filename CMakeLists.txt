@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 project(Corrosion
-    # Official releases will be major.minor.patch. When the `tweak` field is
-    # set it indicates that we are on a commit, that is not a officially
-    # tagged release. Users don't need to care about this, it is mainly to
-    # clearly see in configure logs which version was used, without needing to
-    # rely on `git`, since Corrosion may be installed or otherwise packaged.
-    VERSION 0.99.99 # 1.0-pre-release
+    VERSION 0.6.0
     LANGUAGES NONE
     HOMEPAGE_URL "https://corrosion-rs.github.io/corrosion/"
 )
