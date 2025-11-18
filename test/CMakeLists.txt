@@ -163,6 +163,7 @@ function(corrosion_tests_add_test test_name bin_names)
 endfunction()
 
 # Please keep this in alphabetical order.
+add_subdirectory(cargo_clean)
 add_subdirectory(cargo_flags)
 add_subdirectory(cpp2rust)
 if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0")
