@@ -1,0 +1,12 @@
+[package]
+name = "cargo_config_discovery"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+# Uses registry alias `my-registry`. If `.cargo/config.toml` is not discovered, the test will
+# fail wit the error: "registry `my-registry` not found"
+serde = { version = "1.0", registry = "my-registry", features = ["derive"] }

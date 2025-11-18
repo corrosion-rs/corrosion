@@ -1,0 +1,1 @@
+corrosion_tests_add_test(cargo_config_discovery "cargo_config_discovery")

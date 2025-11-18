@@ -164,6 +164,7 @@ endfunction()
 
 # Please keep this in alphabetical order.
 add_subdirectory(cargo_clean)
+add_subdirectory(cargo_config_discovery)
 add_subdirectory(cargo_flags)
 add_subdirectory(cpp2rust)
 if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0")
