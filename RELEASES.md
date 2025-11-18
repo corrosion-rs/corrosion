@@ -1,8 +1,8 @@
-# Unreleased
+# v0.6.0 (2025-11-16)
 
 ### Breaking Changes
 
-- The master branch of corrosion now requires CMake 3.22. See also the 
+- Corrosion now requires CMake 3.22. See also the 
   [v0.4.0 Release notes](#040-lts-2023-06-01) for more details.
 - Removed native tooling and the corresponding option `CORROSION_NATIVE_TOOLING`.
   Corrosion now always uses pure CMake.
@@ -26,6 +26,7 @@
 - Add `CORROSION_TOOLS_RUST_TOOLCHAIN` cache variable which allows users to select a different
   rust toolchain for compiling build-tools used by corrosion (currently cbindgen and cxxbridge).
   This mainly allows using a newer toolchain for such build-tools then for the actual project.
+- Initial support for iOS targets [#636](https://github.com/corrosion-rs/corrosion/pull/636)
 
 [doc-cmake-rt-output-dir]: https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
 [#459]: https://github.com/corrosion-rs/corrosion/pull/459
