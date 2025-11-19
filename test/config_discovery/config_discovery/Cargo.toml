@@ -1,5 +1,5 @@
 [package]
-name = "cargo_config_discovery"
+name = "config_discovery"
 version = "0.1.0"
 edition = "2018"
 
