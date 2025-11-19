@@ -7,4 +7,7 @@ corrosion_tests_add_test(cargo_config_discovery "cargo_config_discovery")
 add_test(NAME "cargo_config_discovery_run_cargo_clean"
     COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}/build-cargo_config_discovery" --target cargo-clean
 )
-set_tests_properties("cargo_config_discovery_run_cargo_clean" PROPERTIES FIXTURES_REQUIRED "build_fixture_cargo_config_discovery")
+set_tests_properties("cargo_config_discovery_run_cargo_clean" PROPERTIES 
+    FIXTURES_REQUIRED "build_fixture_cargo_config_discovery"
+    DEPENDS "cargo_config_discovery_run_cargo_config_discovery"
+)
