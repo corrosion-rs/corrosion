@@ -27,7 +27,7 @@ include(FetchContent)
 FetchContent_Declare(
     Corrosion
     GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-    GIT_TAG v0.5 # Optionally specify a commit hash, version tag or branch here
+    GIT_TAG v0.6 # Optionally specify a commit hash, version tag or branch here
 )
 FetchContent_MakeAvailable(Corrosion)
 
@@ -40,11 +40,11 @@ target_link_libraries(your_cpp_bin PUBLIC rust-lib)
 
 ## Requirements
 
-### Stable v0.5 Release
+### v0.6 Release
+
+- CMake 3.22 or newer
+
+### v0.5 Release (Critical backports only)
 
 - CMake 3.15 or newer. Some features may only be available on more recent CMake versions
 - Rust 1.46 or newer. Some platforms / features may require more recent Rust versions
-
-### Development (master branch)
-
-- CMake 3.22 or newer
