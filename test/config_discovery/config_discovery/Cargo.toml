@@ -1,0 +1,9 @@
+[package]
+name = "config_discovery"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+# Uses registry alias `my-registry`. If `.cargo/config.toml` is not discovered, the test will
+# fail wit the error: "registry `my-registry` not found"
+bitflags = { version = "1.3", registry = "my-registry" }

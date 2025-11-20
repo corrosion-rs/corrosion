@@ -1,0 +1,4 @@
+# Defines registry alias `my-registry` pointing to crates.io.
+# If not discovered cargo errors: "registry `my-registry` not found"
+[registries.my-registry]
+index = "https://github.com/rust-lang/crates.io-index"
