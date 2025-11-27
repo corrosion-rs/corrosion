@@ -794,19 +794,14 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # assumes `cc` is a valid linker driver for the host platform (but in this case `cc` targets iOS).
     # To work around this we explicitly set the linker for the host platform, and use a dummy CMake project
     # to determine a suitable C compiler.
-    unset(cargo_host_target_linker)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        unset(cargo_host_target_linker)
+
         message(CHECK_START "Determining linker for host architecture (${Rust_CARGO_HOST_TARGET_CACHED})")
-        string(TOUPPER Rust_CARGO_HOST_TARGET_CACHED host_target_upper)
-        string(REPLACE "-" "_" host_target_upper host_target_upper_underscore)
-        unset(corrosion_host_c_compiler)
-        _corrosion_determine_host_compiler(corrosion_host_c_compiler cor_error_info)
-        if(DEFINED corrosion_host_c_compiler)
-            message(CHECK_PASS "${corrosion_host_c_compiler}")
-            set(cargo_host_target_linker "CARGO_TARGET_${host_target_upper_underscore}_LINKER=${corrosion_host_c_compiler}")
-        else()
-            message(CHECK_FAIL "Failed - ${cor_error_info}")
-        endif()
+        string(TOUPPER ${Rust_CARGO_HOST_TARGET_CACHED} host_target_upper)
+        string(REPLACE "-" "_" host_target_upper_underscore ${host_target_upper})
+
+        set(cargo_host_target_linker "CARGO_TARGET_${host_target_upper_underscore}_LINKER=/usr/bin/cc")
     endif()
 
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
@@ -898,7 +893,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # to determine the correct target directory, depending on if the hostbuild target property is
         # set or not.
         # BYPRODUCTS  "${cargo_build_dir}/${build_byproducts}"
-        
+
         # Set WORKING_DIRECTORY to the directory containing the manifest, so that configuration files
         # such as `.cargo/config.toml` or `toolchain.toml` are applied as expected. Cargo searches for
         # configuration files by walking upward from the current directory.
@@ -2297,48 +2292,6 @@ function(corrosion_parse_package_version package_manifest_path out_package_versi
             "NOTFOUND"
             PARENT_SCOPE
         )
-    endif()
-endfunction()
-
-function(_corrosion_determine_host_compiler host_c_compiler_out error_out)
-    # Create minimal CMakeLists.txt to be generated for the host.
-    set(package_dir "${CMAKE_BINARY_DIR}/corrosion/host_compiler")
-    file(REMOVE_RECURSE "${package_dir}")
-    file(MAKE_DIRECTORY "${package_dir}")
-    set(lists "cmake_minimum_required(VERSION 3.10)\n")
-    string(APPEND lists "project(CorrosionDetermineHostCompiler LANGUAGES C)\n")
-    # We add a `:` after the compiler so we can easily match the end, since `:` is
-    # invalid in filenames.
-    string(APPEND lists "message(STATUS \"HOST_C_COMPILER=\${CMAKE_C_COMPILER}:\")\n")
-    file(WRITE "${package_dir}/CMakeLists.txt" "${lists}")
-
-    # Generate the CMake project.
-    execute_process(
-            COMMAND ${CMAKE_COMMAND}
-            -DCMAKE_CROSSCOMPILING=OFF
-            "${package_dir}"
-            WORKING_DIRECTORY "${package_dir}"
-            OUTPUT_VARIABLE host_detection_output
-            ERROR_VARIABLE host_detection_error
-            RESULT_VARIABLE host_detection_result
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
-    )
-
-    # Check if configuring the dummy CMake project failed.
-    if(NOT host_detection_result EQUAL 0)
-        message(WARNING "Failed to detect host compiler. Result: ${host_detection_result}\n"
-                "Output: ${host_detection_output}\n"
-                "Error: ${host_detection_result}")
-        return()
-    endif()
-
-    # Extract C compiler from the output.
-    string(REGEX MATCH "HOST_C_COMPILER=([^:\r\n]*):" host_c_compiler_match "${host_detection_output}")
-    if(host_c_compiler_match)
-        set("${host_c_compiler_out}" "${CMAKE_MATCH_1}" PARENT_SCOPE)
-    else()
-        set("${error_out}" "Regex match failure: ${host_detection_output}")
     endif()
 endfunction()
 
