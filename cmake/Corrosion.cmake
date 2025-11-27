@@ -787,7 +787,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
         list(APPEND corrosion_cc_rs_flags "AR_${stripped_target_triple}=${CMAKE_AR}")
     endif()
 
-    # Todo: use a cache variable to avoid rechecking
     # When using XCode to target iOS / iOSSimulator, `cc` will be a compiler that targets iOS.
     # (Presumably this is because XCode modifies PATH).
     # This causes linker errors, because Rust compiles build-scripts and proc-macros for the host-platform, and
@@ -796,17 +795,27 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # to determine a suitable C compiler.
     unset(cargo_host_target_linker)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        message(CHECK_START "Determining linker for host architecture (${Rust_CARGO_HOST_TARGET_CACHED})")
-        string(TOUPPER Rust_CARGO_HOST_TARGET_CACHED host_target_upper)
-        string(REPLACE "-" "_" host_target_upper host_target_upper_underscore)
-        unset(corrosion_host_c_compiler)
-        _corrosion_determine_host_compiler(corrosion_host_c_compiler cor_error_info)
-        if(DEFINED corrosion_host_c_compiler)
-            message(CHECK_PASS "${corrosion_host_c_compiler}")
-            set(cargo_host_target_linker "CARGO_TARGET_${host_target_upper_underscore}_LINKER=${corrosion_host_c_compiler}")
-        else()
-            message(CHECK_FAIL "Failed - ${cor_error_info}")
+        string(TOUPPER "${Rust_CARGO_HOST_TARGET_CACHED}" host_target_upper)
+        string(REPLACE "-" "_" host_target_upper_underscore "${host_target_upper}")
+        if(NOT DEFINED CACHE{CORROSION_HOST_TARGET_LINKER})
+            message(CHECK_START "CORROSION_HOST_TARGET_LINKER not defined - Determining linker for host architecture (${Rust_CARGO_HOST_TARGET_CACHED})")
+            unset(corrosion_host_c_compiler)
+            _corrosion_determine_host_compiler(corrosion_host_c_compiler cor_error_info)
+            set(host_target_linker_description "The linker-driver corrosion will use to compile host-targets. Currently only used when compiling for iOS.")
+            if(DEFINED corrosion_host_c_compiler)
+                message(CHECK_PASS "${corrosion_host_c_compiler}")
+                set(CORROSION_HOST_TARGET_LINKER "${corrosion_host_c_compiler}" CACHE STRING "${host_target_linker_description}")
+            else()
+                set(fallback_linker "/usr/bin/cc")
+                message(CHECK_FAIL "Failed - ${cor_error_info}. Falling back to ${fallback_linker}")
+                set(CORROSION_HOST_TARGET_LINKER "${fallback_linker}" CACHE STRING "${host_target_linker_description}")
+            endif()
         endif()
+        _corrosion_determine_host_compiler(corrosion_host_c_compiler cor_error_info)
+        set(cargo_host_target_linker "CARGO_TARGET_${host_target_upper_underscore}_LINKER=$CACHE{CORROSION_HOST_TARGET_LINKER}")
+        message(DEBUG "Setting `${cargo_host_target_linker}` for target ${target_name} to workaround a hostbuild"
+            " issue when building targets for iOS."
+        )
     endif()
 
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
@@ -2314,8 +2323,12 @@ function(_corrosion_determine_host_compiler host_c_compiler_out error_out)
 
     # Generate the CMake project.
     execute_process(
-            COMMAND ${CMAKE_COMMAND}
+            COMMAND
+            ${CMAKE_COMMAND} -E env
+                --unset=SDKROOT
+            ${CMAKE_COMMAND}
             -DCMAKE_CROSSCOMPILING=OFF
+            -DCMAKE_SYSTEM_NAME=${CMAKE_HOST_SYSTEM_NAME}
             "${package_dir}"
             WORKING_DIRECTORY "${package_dir}"
             OUTPUT_VARIABLE host_detection_output
@@ -2329,7 +2342,7 @@ function(_corrosion_determine_host_compiler host_c_compiler_out error_out)
     if(NOT host_detection_result EQUAL 0)
         message(WARNING "Failed to detect host compiler. Result: ${host_detection_result}\n"
                 "Output: ${host_detection_output}\n"
-                "Error: ${host_detection_result}")
+                "Error: ${host_detection_error}")
         return()
     endif()
 
