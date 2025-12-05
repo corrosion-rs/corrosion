@@ -310,6 +310,43 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
 
+  iOS:
+    name: Test iOS (simulator)
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        generator:
+          - "Ninja"
+          - "Xcode"
+        include:
+          - os: macos-latest
+          - cmake: 3.22.6
+          - rust: stable
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CMake
+        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        with:
+          cmakeVersion: "${{ matrix.cmake }}"
+          ninjaVersion: "~1.11.0"
+      # Install cbindgen before Rust to use recent default Rust version.
+      - name: Install cbindgen
+        run: cargo install cbindgen
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.rust}}
+          targets: aarch64-apple-ios-sim
+          components: rust-src
+      - name: Configure
+        run: cmake -S. -Bbuild --log-level=DEBUG -G "${{ matrix.generator }}" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_OSX_ARCHITECTURES=arm64 -DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}} -DRust_CARGO_TARGET=aarch64-apple-ios-sim
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3
+
 
   test_cxxbridge:
     name: Test cxxbridge integration
@@ -444,6 +481,7 @@ jobs:
       - windows_gnullvm_msys2
       - linux_stage2
       - darwin
+      - iOS
       - test_cxxbridge
       - autoinstall_cargo_target
       - install
