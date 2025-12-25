@@ -29,6 +29,22 @@ the headers.
 This is not available on a stable released version yet, and the details are subject to change.
 {{#include ../../cmake/Corrosion.cmake:corrosion_cbindgen}}
 
+Additionally, it is possible to enable and configure cbindgen invocation by putting configuration
+for Corrosion into the package metadata of `Cargo.toml` rather than CMake files.
+
+Example:
+```toml
+[package.metadata.corrosion]
+cbindgen = [
+	 { header = "header-file-name.h",
+	   target = "lib-target-name",
+	   flags = "--config cbindgen.toml ..."
+	 },
+	 ...
+]
+```
+Such specifications are automatically picked up by Corrosion and require no explicit configuration.
+
 ## cxx integration
 
 ⚠️⚠️⚠️ **EXPERIMENTAL** ⚠️⚠️⚠️

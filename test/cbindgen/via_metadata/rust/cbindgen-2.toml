@@ -1,0 +1,7 @@
+language = "C++"
+include_version = true
+include_guard = "__RUST_LIB_CUSTOM_GUARD_H__"
+
+[export]
+prefix = "EXTRA_PREFIX_"
+exclude = ["add_point"]

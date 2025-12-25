@@ -47,6 +47,37 @@ function(_cargo_metadata out manifest)
     set(${out} "${json}" PARENT_SCOPE)
 endfunction()
 
+# Invoke cbindgen on targets:
+function(_generator_add_cbindgen_targets)
+    set(ONE_VALUE_KEYWORDS
+      CBINDGEN_JSON)
+    cmake_parse_arguments(PARSE_ARGV 0 GACT "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "")
+    if(DEFINED GACT_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "Internal error - unexpected arguments: ${GACT_UNPARSED_ARGUMENTS}")
+    elseif(DEFINED GACT_KEYWORDS_MISSING_VALUES)
+        message(FATAL_ERROR "Internal error - the following keywords had no associated value(s):"
+                    "${GACT_KEYWORDS_MISSING_VALUES}")
+    endif()
+
+    set(cbindgen_json "${GACT_CBINDGEN_JSON}")
+    string(JSON headers_len LENGTH "${cbindgen_json}")
+    math(EXPR headers_len-1 "${headers_len} - 1")
+    foreach(ix RANGE ${headers_len-1})
+        string(JSON header GET "${cbindgen_json}" ${ix})
+        string(JSON header_name GET "${header}" "header")
+        string(JSON header_target GET "${header}" "target")
+        string(JSON header_flags GET "${header}" "flags")
+        separate_arguments(header_flags)
+        message(DEBUG "Auto-calling corrosion_experimental_cbindgen with header ${header_name} "
+            "and flags ${header_flags} for ${header_target}")
+        corrosion_experimental_cbindgen(
+            TARGET ${header_target}
+            HEADER_NAME ${header_name}
+            FLAGS ${header_flags}
+        )
+    endforeach()
+endfunction()
+
 # Add targets (crates) of one package
 function(_generator_add_package_targets)
     set(OPTIONS NO_LINKER_OVERRIDE)
@@ -316,6 +347,15 @@ function(_generator_add_cargo_targets)
             ${crate_types}
             ${override_crate_types}
         )
+        set(json_key_error "")
+        string(JSON pkg_cbindgen_metadata
+                ERROR_VARIABLE json_key_error
+                GET "${pkg}" "metadata" "corrosion" "cbindgen")
+        # Error variable will be set to NOTFOUND if operation successfull
+        if("${json_key_error}" STREQUAL "NOTFOUND")
+            _generator_add_cbindgen_targets(
+                CBINDGEN_JSON "${pkg_cbindgen_metadata}")
+        endif()
         list(APPEND created_targets "${curr_created_targets}")
     endforeach()
 
