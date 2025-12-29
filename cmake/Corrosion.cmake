@@ -862,8 +862,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(cargo_target_linker $<$<BOOL:${linker}>:${cargo_target_linker_var}=${linker}>)
 
     if(Rust_CROSSCOMPILING AND (CMAKE_C_COMPILER_TARGET OR CMAKE_CXX_COMPILER_TARGET))
+        string(REPLACE "," "\$<COMMA>" c_opts_target "${CMAKE_C_COMPILE_OPTIONS_TARGET}")
+        string(REPLACE "," "\$<COMMA>" cxx_opts_target "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}")
+        set(compile_opts_target "$<IF:$<BOOL:${target_uses_cxx}>,${cxx_opts_target},${c_opts_target}>")
         set(linker_target_triple "$<IF:$<BOOL:${target_uses_cxx}>,${CMAKE_CXX_COMPILER_TARGET},${CMAKE_C_COMPILER_TARGET}>")
-        set(rustflag_linker_arg "-Clink-args=--target=${linker_target_triple}")
+        set(rustflag_linker_arg "-Clink-args=$<IF:$<BOOL:${compile_opts_target}>,${compile_opts_target},--target=>${linker_target_triple}")
         set(rustflag_linker_arg "$<${if_not_host_build_condition}:${rustflag_linker_arg}>")
         # Skip adding the linker argument, if the linker is explicitly set, since the
         # explicit_linker_property will not be set when this function runs.
