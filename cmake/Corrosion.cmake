@@ -177,7 +177,7 @@ function(_corrosion_set_imported_location_deferred target_name base_property out
                 set(curr_out_dir "${output_directory}")
             endif()
         else()
-            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
+            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>")
         endif()
         _handle_output_directory_genex("${curr_out_dir}" "${config_type}" sanitized_out_dir)
         if(NOT DEFINED sanitized_out_dir)
@@ -288,7 +288,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
             # Fallback to the default directory. We do not append the configuration directory here
             # and instead let CMake do this, since otherwise the resolving of dynamic library
             # imported paths may fail.
-            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
+            set(curr_out_dir "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>")
         endif()
         set(multiconfig_out_dir_genex "${multiconfig_out_dir_genex}$<$<CONFIG:${config_type}>:${curr_out_dir}>")
     endforeach()

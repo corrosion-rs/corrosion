@@ -24,6 +24,8 @@ set(oneValueArgs
     OSX_ARCHITECTURES
     OSX_SYSROOT
     TOOLCHAIN_FILE
+    CMAKE_CROSS_CONFIGS
+    CMAKE_DEFAULT_CONFIGS
 )
 set(multiValueArgs "PASS_THROUGH_ARGS")
 cmake_parse_arguments(TEST "${options}" "${oneValueArgs}"
@@ -62,6 +64,12 @@ if(TEST_OSX_SYSROOT)
 endif()
 if(TEST_TOOLCHAIN_FILE)
     list(APPEND configure_args "-DCMAKE_TOOLCHAIN_FILE=${TEST_TOOLCHAIN_FILE}")
+endif()
+if(TEST_CMAKE_CROSS_CONFIGS)
+    list(APPEND configure_args "-DCMAKE_CROSS_CONFIGS=${TEST_CMAKE_CROSS_CONFIGS}")
+endif()
+if(TEST_CMAKE_DEFAULT_CONFIGS)
+    list(APPEND configure_args "-DCMAKE_DEFAULT_CONFIGS=${TEST_CMAKE_DEFAULT_CONFIGS}")
 endif()
 if(TEST_CARGO_PROFILE)
     list(APPEND configure_args "-DCARGO_PROFILE=${TEST_CARGO_PROFILE}")
