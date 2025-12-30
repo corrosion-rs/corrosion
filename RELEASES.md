@@ -1,3 +1,11 @@
+# v0.6.1 (2025-12-30)
+
+## Fixes
+
+- Fix building shared libraries for iOS.
+- Fix host linker detection for iOS and add the `CORROSION_HOST_TARGET_LINKER` cache variable,
+  to allow users to override the linker used for the host build (required for build-scripts and proc-macros).
+
 # v0.6.0 (2025-11-23)
 
 ### Breaking Changes
