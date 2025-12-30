@@ -31,6 +31,19 @@ option(
     OFF
 )
 
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if(DEFINED CORROSION_HOST_TARGET_LINKER)
+        set(_corrosion_host_linker "${CORROSION_HOST_TARGET_LINKER}")
+        message(DEBUG "Using user provided CORROSION_HOST_TARGET_LINKER: ${CORROSION_HOST_TARGET_LINKER}")
+    else()
+        set(_corrosion_host_linker "/usr/bin/cc")
+    endif()
+    set(CORROSION_HOST_TARGET_LINKER "${_corrosion_host_linker}"
+        CACHE STRING
+        "The linker-driver corrosion will use to compile host-targets. Currently only used when cross-compiling for iOS."
+        FORCE)
+endif()
+
 find_package(Rust REQUIRED)
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio"
@@ -794,27 +807,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # (Presumably this is because XCode modifies PATH).
     # This causes linker errors, because Rust compiles build-scripts and proc-macros for the host-platform, and
     # assumes `cc` is a valid linker driver for the host platform (but in this case `cc` targets iOS).
-    # To work around this we explicitly set the linker for the host platform, and use a dummy CMake project
-    # to determine a suitable C compiler.
+    # To work around this we explicitly set the linker for the host platform.
     unset(cargo_host_target_linker)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
         string(TOUPPER "${Rust_CARGO_HOST_TARGET_CACHED}" host_target_upper)
         string(REPLACE "-" "_" host_target_upper_underscore "${host_target_upper}")
-        if(NOT DEFINED CACHE{CORROSION_HOST_TARGET_LINKER})
-            message(CHECK_START "CORROSION_HOST_TARGET_LINKER not defined - Determining linker for host architecture (${Rust_CARGO_HOST_TARGET_CACHED})")
-            unset(corrosion_host_c_compiler)
-            _corrosion_determine_host_compiler(corrosion_host_c_compiler cor_error_info)
-            set(host_target_linker_description "The linker-driver corrosion will use to compile host-targets. Currently only used when compiling for iOS.")
-            if(DEFINED corrosion_host_c_compiler)
-                message(CHECK_PASS "${corrosion_host_c_compiler}")
-                set(CORROSION_HOST_TARGET_LINKER "${corrosion_host_c_compiler}" CACHE STRING "${host_target_linker_description}")
-            else()
-                set(fallback_linker "/usr/bin/cc")
-                message(CHECK_FAIL "Failed - ${cor_error_info}. Falling back to ${fallback_linker}")
-                set(CORROSION_HOST_TARGET_LINKER "${fallback_linker}" CACHE STRING "${host_target_linker_description}")
-            endif()
-        endif()
-        _corrosion_determine_host_compiler(corrosion_host_c_compiler cor_error_info)
         set(cargo_host_target_linker "CARGO_TARGET_${host_target_upper_underscore}_LINKER=$CACHE{CORROSION_HOST_TARGET_LINKER}")
         message(DEBUG "Setting `${cargo_host_target_linker}` for target ${target_name} to workaround a hostbuild"
             " issue when building targets for iOS."
@@ -2309,52 +2306,6 @@ function(corrosion_parse_package_version package_manifest_path out_package_versi
             "NOTFOUND"
             PARENT_SCOPE
         )
-    endif()
-endfunction()
-
-function(_corrosion_determine_host_compiler host_c_compiler_out error_out)
-    # Create minimal CMakeLists.txt to be generated for the host.
-    set(package_dir "${CMAKE_BINARY_DIR}/corrosion/host_compiler")
-    file(REMOVE_RECURSE "${package_dir}")
-    file(MAKE_DIRECTORY "${package_dir}")
-    set(lists "cmake_minimum_required(VERSION 3.10)\n")
-    string(APPEND lists "project(CorrosionDetermineHostCompiler LANGUAGES C)\n")
-    # We add a `:` after the compiler so we can easily match the end, since `:` is
-    # invalid in filenames.
-    string(APPEND lists "message(STATUS \"HOST_C_COMPILER=\${CMAKE_C_COMPILER}:\")\n")
-    file(WRITE "${package_dir}/CMakeLists.txt" "${lists}")
-
-    # Generate the CMake project.
-    execute_process(
-            COMMAND
-            ${CMAKE_COMMAND} -E env
-                --unset=SDKROOT
-            ${CMAKE_COMMAND}
-            -DCMAKE_CROSSCOMPILING=OFF
-            -DCMAKE_SYSTEM_NAME=${CMAKE_HOST_SYSTEM_NAME}
-            "${package_dir}"
-            WORKING_DIRECTORY "${package_dir}"
-            OUTPUT_VARIABLE host_detection_output
-            ERROR_VARIABLE host_detection_error
-            RESULT_VARIABLE host_detection_result
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
-    )
-
-    # Check if configuring the dummy CMake project failed.
-    if(NOT host_detection_result EQUAL 0)
-        message(WARNING "Failed to detect host compiler. Result: ${host_detection_result}\n"
-                "Output: ${host_detection_output}\n"
-                "Error: ${host_detection_error}")
-        return()
-    endif()
-
-    # Extract C compiler from the output.
-    string(REGEX MATCH "HOST_C_COMPILER=([^:\r\n]*):" host_c_compiler_match "${host_detection_output}")
-    if(host_c_compiler_match)
-        set("${host_c_compiler_out}" "${CMAKE_MATCH_1}" PARENT_SCOPE)
-    else()
-        set("${error_out}" "Regex match failure: ${host_detection_output}")
     endif()
 endfunction()
 
