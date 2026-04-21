@@ -224,7 +224,7 @@ set(Rust_RESOLVE_RUSTUP_TOOLCHAINS ON CACHE BOOL ${_RESOLVE_RUSTUP_TOOLCHAINS_DE
 # This block checks to see if we're prioritizing a rustup-managed toolchain.
 if (DEFINED Rust_TOOLCHAIN)
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
-    find_program(Rust_RUSTUP rustup PATHS "$ENV{HOME}/.cargo/bin")
+    find_program(Rust_RUSTUP rustup PATHS "$ENV{CARGO_HOME}/bin" "$ENV{HOME}/.cargo/bin")
     if(NOT Rust_RUSTUP)
         if(NOT "${Rust_FIND_QUIETLY}")
             message(
@@ -253,10 +253,10 @@ else()
             return()
         endif()
     else()
-        find_program(_Rust_COMPILER_TEST rustc PATHS "$ENV{HOME}/.cargo/bin")
+        find_program(_Rust_COMPILER_TEST rustc PATHS "$ENV{CARGO_HOME}/bin" "$ENV{HOME}/.cargo/bin")
         if(NOT EXISTS "${_Rust_COMPILER_TEST}")
             cmake_path(CONVERT "$ENV{HOME}/.cargo/bin" TO_CMAKE_PATH_LIST _cargo_bin_dir)
-            set(_ERROR_MESSAGE "`rustc` not found in PATH or `${_cargo_bin_dir}`.\n"
+            set(_ERROR_MESSAGE "`rustc` not found in PATH, `$CARGO_HOME/bin` or `${_cargo_bin_dir}`.\n"
                     "Hint: Check if `rustc` is in PATH or manually specify the location "
                     "by setting `Rust_COMPILER` to the path to `rustc`.")
             _findrust_failed(${_ERROR_MESSAGE})
