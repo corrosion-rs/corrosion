@@ -1447,6 +1447,78 @@ function(corrosion_install)
         # Default permissions for all files
         set(DEFAULT_PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ)
 
+        if (DEFINED COR_INSTALL_ARCHIVE_DESTINATION)
+            set(ARCHIVE_DESTINATION ${COR_INSTALL_ARCHIVE_DESTINATION})
+        elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+            set(ARCHIVE_DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+        else()
+            set(ARCHIVE_DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        endif()
+
+        if (DEFINED COR_INSTALL_ARCHIVE_PERMISSIONS)
+            set(PERMISSIONS ${COR_INSTALL_ARCHIVE_PERMISSIONS})
+        elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+            set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+        else()
+            set(PERMISSIONS ${DEFAULT_PERMISSIONS})
+        endif()
+
+        if (DEFINED COR_INSTALL_ARCHIVE_CONFIGURATIONS)
+            set(ARCHIVE_CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_ARCHIVE_CONFIGURATIONS})
+        elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+            set(ARCHIVE_CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+        else()
+            set(ARCHIVE_CONFIGURATIONS)
+        endif()
+
+        if (DEFINED COR_INSTALL_RUNTIME_DESTINATION)
+            set(RUNTIME_DESTINATION ${COR_INSTALL_RUNTIME_DESTINATION})
+        elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+            set(RUNTIME_DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+        else()
+            set(RUNTIME_DESTINATION ${CMAKE_INSTALL_BINDIR})
+        endif()
+
+        if (DEFINED COR_INSTALL_RUNTIME_PERMISSIONS)
+            set(RUNTIME_PERMISSIONS ${COR_INSTALL_RUNTIME_PERMISSIONS})
+        elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+            set(RUNTIME_PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+        else()
+            set(RUNTIME_PERMISSIONS ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
+        endif()
+
+        if (DEFINED COR_INSTALL_RUNTIME_CONFIGURATIONS)
+            set(RUNTIME_CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_RUNTIME_CONFIGURATIONS})
+        elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+            set(RUNTIME_CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+        else()
+            set(RUNTIME_CONFIGURATIONS)
+        endif()
+
+        if (DEFINED COR_INSTALL_LIBRARY_DESTINATION)
+            set(LIBRARY_DESTINATION ${COR_INSTALL_LIBRARY_DESTINATION})
+        elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
+            set(LIBRARY_DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+        else()
+            set(LIBRARY_DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        endif()
+
+        if (DEFINED COR_INSTALL_LIBRARY_PERMISSIONS)
+            set(LIBRARY_PERMISSIONS ${COR_INSTALL_LIBRARY_PERMISSIONS})
+        elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
+            set(LIBRARY_PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
+        else()
+            set(LIBRARY_PERMISSIONS ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
+        endif()
+
+        if (DEFINED COR_INSTALL_LIBRARY_CONFIGURATIONS)
+            set(LIBRARY_CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_LIBRARY_CONFIGURATIONS})
+        elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
+            set(LIBRARY_CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
+        else()
+            set(LIBRARY_CONFIGURATIONS)
+        endif()
+
         # Loop through each install target and register file installations
         foreach(INSTALL_TARGET ${INSTALL_TARGETS})
             if(NOT TARGET ${INSTALL_TARGET})
@@ -1461,69 +1533,19 @@ function(corrosion_install)
 
             # Install executable files first
             if (TARGET_TYPE STREQUAL "EXECUTABLE")
-                if (DEFINED COR_INSTALL_RUNTIME_DESTINATION)
-                    set(DESTINATION ${COR_INSTALL_RUNTIME_DESTINATION})
-                elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
-                    set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
-                else()
-                    set(DESTINATION ${CMAKE_INSTALL_BINDIR})
-                endif()
-
-                if (DEFINED COR_INSTALL_RUNTIME_PERMISSIONS)
-                    set(PERMISSIONS ${COR_INSTALL_RUNTIME_PERMISSIONS})
-                elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
-                    set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
-                else()
-                    set(
-                        PERMISSIONS
-                        ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
-                endif()
-
-                if (DEFINED COR_INSTALL_RUNTIME_CONFIGURATIONS)
-                    set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_RUNTIME_CONFIGURATIONS})
-                elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
-                    set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
-                else()
-                    set(CONFIGURATIONS)
-                endif()
-
                 install(
                     FILES $<TARGET_FILE:${INSTALL_TARGET}>
-                    DESTINATION ${DESTINATION}
-                    PERMISSIONS ${PERMISSIONS}
-                    ${CONFIGURATIONS}
+                    DESTINATION ${RUNTIME_DESTINATION}
+                    PERMISSIONS ${RUNTIME_PERMISSIONS}
+                    ${RUNTIME_CONFIGURATIONS}
                 )
             elseif(TARGET_TYPE STREQUAL "INTERFACE_LIBRARY")
                 if(TARGET ${INSTALL_TARGET}-static)
-                    if (DEFINED COR_INSTALL_ARCHIVE_DESTINATION)
-                        set(DESTINATION ${COR_INSTALL_ARCHIVE_DESTINATION})
-                    elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
-                        set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
-                    else()
-                        set(DESTINATION ${CMAKE_INSTALL_LIBDIR})
-                    endif()
-
-                    if (DEFINED COR_INSTALL_ARCHIVE_PERMISSIONS)
-                        set(PERMISSIONS ${COR_INSTALL_ARCHIVE_PERMISSIONS})
-                    elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
-                        set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
-                    else()
-                        set(PERMISSIONS ${DEFAULT_PERMISSIONS})
-                    endif()
-
-                    if (DEFINED COR_INSTALL_ARCHIVE_CONFIGURATIONS)
-                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_ARCHIVE_CONFIGURATIONS})
-                    elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
-                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
-                    else()
-                        set(CONFIGURATIONS)
-                    endif()
-
                     install(
                             FILES $<TARGET_PROPERTY:${INSTALL_TARGET}-static,IMPORTED_LOCATION>
-                            DESTINATION ${DESTINATION}
-                            PERMISSIONS ${PERMISSIONS}
-                            ${CONFIGURATIONS}
+                            DESTINATION ${ARCHIVE_DESTINATION}
+                            PERMISSIONS ${ARCHIVE_PERMISSIONS}
+                            ${ARCHIVE_CONFIGURATIONS}
                     )
 
                     if(EXPORT_NAME)
@@ -1533,7 +1555,7 @@ function(corrosion_install)
 add_library(${INSTALL_TARGET}-static STATIC IMPORTED)
 set_target_properties(${INSTALL_TARGET}-static
     PROPERTIES
-    IMPORTED_LOCATION \"\${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}\"
+    IMPORTED_LOCATION \"\${PACKAGE_PREFIX_DIR}/${ARCHIVE_DESTINATION}/${COR_FILE_NAME}\"
 )
 "
                         )
@@ -1541,38 +1563,25 @@ set_target_properties(${INSTALL_TARGET}-static
                 endif()
 
                 if(TARGET ${INSTALL_TARGET}-shared)
-                    if (DEFINED COR_INSTALL_LIBRARY_DESTINATION)
-                        set(DESTINATION ${COR_INSTALL_LIBRARY_DESTINATION})
-                    elseif (DEFINED COR_INSTALL_DEFAULT_DESTINATION)
-                        set(DESTINATION ${COR_INSTALL_DEFAULT_DESTINATION})
+                    # Shared libraries on Windows have two primary artifacts:
+                    #  - the runtime DLL (.dll) (RUNTIME destination)
+                    #  - the import library (.lib) / implib (ARCHIVE destination)
+                    # For non-Windows platforms, IMPORTED_RUNTIME_ARTIFACTS behaves like installing the
+                    # shared library itself (LIBRARY destination).
+                    # Selectively adapt install destinations for -shared targets on Windows.
+                    if(WIN32)
+                        set(shared_type "RUNTIME")
+                        set(implib_type "ARCHIVE")
                     else()
-                        set(DESTINATION ${CMAKE_INSTALL_LIBDIR})
-                    endif()
-
-                    if (DEFINED COR_INSTALL_LIBRARY_PERMISSIONS)
-                        set(PERMISSIONS ${COR_INSTALL_LIBRARY_PERMISSIONS})
-                    elseif (DEFINED COR_INSTALL_DEFAULT_PERMISSIONS)
-                        set(PERMISSIONS ${COR_INSTALL_DEFAULT_PERMISSIONS})
-                    else()
-                        set(
-                            PERMISSIONS
-                            ${DEFAULT_PERMISSIONS} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
-                        )
-                    endif()
-
-                    if (DEFINED COR_INSTALL_LIBRARY_CONFIGURATIONS)
-                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_LIBRARY_CONFIGURATIONS})
-                    elseif (DEFINED COR_INSTALL_DEFAULT_CONFIGURATIONS)
-                        set(CONFIGURATIONS CONFIGURATIONS ${COR_INSTALL_DEFAULT_CONFIGURATIONS})
-                    else()
-                        set(CONFIGURATIONS)
+                        set(shared_type "LIBRARY")
+                        set(implib_type "LIBRARY")
                     endif()
 
                     install(
                             IMPORTED_RUNTIME_ARTIFACTS ${INSTALL_TARGET}-shared
-                            PERMISSIONS ${PERMISSIONS}
-                            DESTINATION ${DESTINATION}
-                            ${CONFIGURATIONS}
+                            PERMISSIONS ${${shared_type}_PERMISSIONS}
+                            DESTINATION ${${shared_type}_DESTINATION}
+                            ${${shared_type}_CONFIGURATIONS}
                     )
 
                     if(EXPORT_NAME)
@@ -1582,21 +1591,28 @@ set_target_properties(${INSTALL_TARGET}-static
 add_library(${INSTALL_TARGET}-shared SHARED IMPORTED)
 set_target_properties(${INSTALL_TARGET}-shared
     PROPERTIES
-    IMPORTED_LOCATION \"\${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_FILE_NAME}\"
+    IMPORTED_LOCATION \"\${PACKAGE_PREFIX_DIR}/${${shared_type}_DESTINATION}/${COR_FILE_NAME}\"
 )
 "
+                        )
+
+                        get_target_property(COR_IMPLIB_FILE_NAME ${INSTALL_TARGET}-shared COR_IMPLIB_FILE_NAME)
+                        if (NOT COR_IMPLIB_FILE_NAME MATCHES .*-NOTFOUND)
+                            # install the .lib files, important for windows
+                            install(
+                                FILES $<TARGET_PROPERTY:${INSTALL_TARGET}-shared,IMPORTED_IMPLIB>
+                                DESTINATION ${${implib_type}_DESTINATION}
+                                PERMISSIONS ${${implib_type}_PERMISSIONS}
                             )
 
-                            get_target_property(COR_IMPLIB_FILE_NAME ${INSTALL_TARGET}-shared COR_IMPLIB_FILE_NAME)
-                            if (NOT COR_IMPLIB_FILE_NAME MATCHES .*-NOTFOUND)
-                                file(APPEND "${EXPORT_FILE_PATH}"
+                            file(APPEND "${EXPORT_FILE_PATH}"
 "
 set_target_properties(${INSTALL_TARGET}-shared
     PROPERTIES
-    IMPORTED_IMPLIB \"\${PACKAGE_PREFIX_DIR}/${DESTINATION}/${COR_IMPLIB_FILE_NAME}\"
+    IMPORTED_IMPLIB \"\${PACKAGE_PREFIX_DIR}/${${implib_type}_DESTINATION}/${COR_IMPLIB_FILE_NAME}\"
 )"
-                                )
-                            endif()
+                            )
+                        endif()
                     endif()
                 endif()
             else()
