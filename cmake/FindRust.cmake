@@ -764,6 +764,18 @@ if (NOT Rust_CARGO_TARGET_CACHED)
         if(_RUST_OHOS_TARGET)
             set(Rust_CARGO_TARGET_CACHED "${_RUST_OHOS_TARGET}" CACHE STRING "Target triple")
         endif()
+    elseif(CMAKE_GENERATOR STREQUAL "Xcode")
+        # For Xcode, we need to defer target selection to build time since SDK and architecture
+        # are determined dynamically by the build system.
+        
+        # Set a default target that will be overridden by the dynamic selection logic
+        # This ensures we have a valid target for configure-time operations
+        set(Rust_CARGO_TARGET_CACHED "aarch64-apple-darwin" CACHE STRING "Target triple (may be dynamically adjusted by Xcode)")
+        
+        # Mark this as an Xcode build that needs dynamic target selection
+        set(CORROSION_XCODE_DYNAMIC_TARGET TRUE CACHE INTERNAL "Enable dynamic target selection for Xcode")
+        
+        message(STATUS "Xcode generator detected - Rust target will be dynamically selected based on SDK and architecture at build time")
     endif()
     # Fallback to the default host target
     if(NOT Rust_CARGO_TARGET_CACHED)
