@@ -884,17 +884,10 @@ function(_add_cargo_build out_cargo_build_out_dir)
         corrosion_add_target_local_rustflags("${target_name}" "-Cdefault-linker-libraries=yes")
     endif()
 
-    if(is_crubit_lib)
-        set(crubit_combined_rustflags "$<JOIN:${global_rustflags_target_property}, > $<JOIN:${local_rustflags_target_property}, >")
-        set(global_rustflags_genex "$<$<BOOL:${crubit_combined_rustflags}>:RUSTFLAGS=${crubit_combined_rustflags}>")
-        set(local_rustflags_delimiter "")
-        set(local_rustflags_genex "")
-    else()
-        set(global_joined_rustflags "$<JOIN:${global_rustflags_target_property}, >")
-        set(global_rustflags_genex "$<$<BOOL:${global_rustflags_target_property}>:RUSTFLAGS=${global_joined_rustflags}>")
-        set(local_rustflags_delimiter "$<$<BOOL:${local_rustflags_target_property}>:-->")
-        set(local_rustflags_genex "$<$<BOOL:${local_rustflags_target_property}>:${local_rustflags_target_property}>")
-    endif()
+    set(global_joined_rustflags "$<JOIN:${global_rustflags_target_property}, >")
+    set(global_rustflags_genex "$<$<BOOL:${global_rustflags_target_property}>:RUSTFLAGS=${global_joined_rustflags}>")
+    set(local_rustflags_delimiter "$<$<BOOL:${local_rustflags_target_property}>:-->")
+    set(local_rustflags_genex "$<$<BOOL:${local_rustflags_target_property}>:${local_rustflags_target_property}>")
 
     set(deps_link_languages_prop "$<TARGET_PROPERTY:_cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>")
     set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
@@ -957,6 +950,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
             --package ${package_name}
             ${cargo_profile}
             ${flags_genex}
+            # Any arguments to cargo must be placed before this line
+            ${local_rustflags_delimiter}
+            ${local_rustflags_genex}
         )
     else()
         set(rustc_lib_dir_env "")
