@@ -1862,7 +1862,6 @@ function(corrosion_add_cxxbridge cxx_target)
                     $CACHE{CORROSION_TOOLS_CARGO} install
                     cxxbridge-cmd
                     --version "${cxx_required_version}"
-                    --locked
                     --root "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                     --quiet
                     # todo: use --target-dir to potentially reuse artifacts
