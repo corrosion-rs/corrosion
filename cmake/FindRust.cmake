@@ -221,10 +221,23 @@ endif()
 set(_RESOLVE_RUSTUP_TOOLCHAINS_DESC "Indicates whether to descend into the toolchain pointed to by rustup")
 set(Rust_RESOLVE_RUSTUP_TOOLCHAINS ON CACHE BOOL ${_RESOLVE_RUSTUP_TOOLCHAINS_DESC})
 
+function(_corrosion_find_rust_paths out_paths)
+    set(paths)
+    if(DEFINED ENV{CARGO_HOME} AND NOT "$ENV{CARGO_HOME}" STREQUAL "")
+        list(APPEND paths "$ENV{CARGO_HOME}/bin")
+    endif()
+    if(DEFINED ENV{HOME} AND NOT "$ENV{HOME}" STREQUAL "")
+        list(APPEND paths "$ENV{HOME}/.cargo/bin")
+    endif()
+    set("${out_paths}" "${paths}" PARENT_SCOPE)
+endfunction()
+
+_corrosion_find_rust_paths(_corrosion_rust_paths)
+
 # This block checks to see if we're prioritizing a rustup-managed toolchain.
 if (DEFINED Rust_TOOLCHAIN)
     # If the user specifies `Rust_TOOLCHAIN`, then look for `rustup` first, rather than `rustc`.
-    find_program(Rust_RUSTUP rustup PATHS "$ENV{CARGO_HOME}/bin" "$ENV{HOME}/.cargo/bin")
+    find_program(Rust_RUSTUP rustup PATHS ${_corrosion_rust_paths})
     if(NOT Rust_RUSTUP)
         if(NOT "${Rust_FIND_QUIETLY}")
             message(
@@ -253,7 +266,7 @@ else()
             return()
         endif()
     else()
-        find_program(_Rust_COMPILER_TEST rustc PATHS "$ENV{CARGO_HOME}/bin" "$ENV{HOME}/.cargo/bin")
+        find_program(_Rust_COMPILER_TEST rustc PATHS ${_corrosion_rust_paths})
         if(NOT EXISTS "${_Rust_COMPILER_TEST}")
             cmake_path(CONVERT "$ENV{HOME}/.cargo/bin" TO_CMAKE_PATH_LIST _cargo_bin_dir)
             set(_ERROR_MESSAGE "`rustc` not found in PATH, `$CARGO_HOME/bin` or `${_cargo_bin_dir}`.\n"
