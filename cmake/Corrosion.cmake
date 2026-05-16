@@ -1822,7 +1822,8 @@ function(corrosion_add_cxxbridge cxx_target)
     endif()
 
     # First check if a suitable version of cxxbridge is installed
-    find_program(INSTALLED_CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
+    _corrosion_find_rust_paths(_cxxbridge_rust_paths)
+    find_program(INSTALLED_CXXBRIDGE cxxbridge PATHS ${_cxxbridge_rust_paths})
     mark_as_advanced(INSTALLED_CXXBRIDGE)
     if(INSTALLED_CXXBRIDGE)
         execute_process(COMMAND ${INSTALLED_CXXBRIDGE} --version OUTPUT_VARIABLE cxxbridge_version_output)
