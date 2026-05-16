@@ -907,7 +907,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # to determine the correct target directory, depending on if the hostbuild target property is
         # set or not.
         # BYPRODUCTS  "${cargo_build_dir}/${build_byproducts}"
-        
+
         # Set WORKING_DIRECTORY to the directory containing the manifest, so that configuration files
         # such as `.cargo/config.toml` or `toolchain.toml` are applied as expected. Cargo searches for
         # configuration files by walking upward from the current directory.
@@ -2150,7 +2150,8 @@ function(corrosion_experimental_cbindgen)
 
     set(output_header_name "${CCN_HEADER_NAME}")
 
-    find_program(installed_cbindgen cbindgen)
+    _corrosion_find_rust_paths(_cbindgen_rust_paths)
+    find_program(installed_cbindgen cbindgen PATHS ${_cbindgen_rust_paths})
 
     # Install the newest cbindgen version into our build tree.
     if(installed_cbindgen)
