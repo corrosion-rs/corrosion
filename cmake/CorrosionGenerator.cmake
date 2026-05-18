@@ -47,6 +47,57 @@ function(_cargo_metadata out manifest)
     set(${out} "${json}" PARENT_SCOPE)
 endfunction()
 
+function(_corrosion_setup_crubit out_cargo_crubit out_crubit_depends)
+    if(NOT CORROSION_EXPERIMENTAL_CRUBIT)
+        return()
+    endif()
+    include(FetchContent)
+    FetchContent_Declare(
+        Crubit
+        GIT_REPOSITORY https://github.com/google/crubit.git
+        GIT_TAG main
+    )
+    FetchContent_MakeAvailable(Crubit)
+
+    find_program(installed_cargo_crubit cargo-cpp_api_from_rust)
+
+    if(installed_cargo_crubit)
+        set(cargo_crubit "${installed_cargo_crubit}")
+        set(crubit_depends "")
+    else()
+        set(local_crubit_install_dir "${CMAKE_BINARY_DIR}/corrosion/cargo-cpp_api_from_rust")
+        unset(executable_postfix)
+        if(Rust_CARGO_HOST_OS STREQUAL "windows")
+            set(executable_postfix ".exe")
+        endif()
+        set(cargo_crubit "${local_crubit_install_dir}/bin/cargo-cpp_api_from_rust${executable_postfix}")
+        set(crubit_depends "_corrosion_cargo_crubit")
+
+        if(NOT TARGET "_corrosion_cargo_crubit")
+            file(MAKE_DIRECTORY "${local_crubit_install_dir}")
+
+            message(STATUS "Building cargo-cpp_api_from_rust from Crubit")
+            add_custom_command(OUTPUT "${cargo_crubit}"
+                COMMAND ${CMAKE_COMMAND}
+                -E env
+                "CARGO_BUILD_RUSTC=${_CORROSION_RUSTC}"
+                ${_CORROSION_CARGO} install
+                    --path "${crubit_SOURCE_DIR}/cargo/cc_bindings_from_rs/cargo-cpp_api_from_rust"
+                    --locked
+                    --root "${local_crubit_install_dir}"
+                    ${_CORROSION_QUIET_OUTPUT_FLAG}
+                COMMENT "Building cargo-cpp_api_from_rust from Crubit"
+                VERBATIM
+                )
+            add_custom_target("_corrosion_cargo_crubit"
+                DEPENDS "${cargo_crubit}"
+                )
+        endif()
+    endif()
+    set(${out_cargo_crubit} "${cargo_crubit}" PARENT_SCOPE)
+    set(${out_crubit_depends} "${crubit_depends}" PARENT_SCOPE)
+endfunction()
+
 # Add targets (crates) of one package
 function(_generator_add_package_targets)
     set(OPTIONS NO_LINKER_OVERRIDE)
@@ -133,7 +184,26 @@ function(_generator_add_package_targets)
             continue()
         endif()
 
-        if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds)
+        set(cargo_crubit "")
+        set(crubit_depends "")
+        get_property(crubit_enabled GLOBAL PROPERTY CORROSION_CRUBIT_${target_name})
+        if(crubit_enabled)
+            if(CORROSION_EXPERIMENTAL_CRUBIT)
+                _corrosion_setup_crubit(cargo_crubit crubit_depends)
+            else()
+                message(FATAL_ERROR
+                    "Crubit support is experimental and must be enabled by setting the "
+                    "CORROSION_EXPERIMENTAL_CRUBIT CMake cache variable to ON."
+                )
+            endif()
+        endif()
+        if(crubit_enabled AND ("lib" IN_LIST kinds OR "rlib" IN_LIST kinds))
+          set(is_crubit_lib ON)
+        else()
+          set(is_crubit_lib OFF)
+        endif()
+
+        if("staticlib" IN_LIST kinds OR "cdylib" IN_LIST kinds OR is_crubit_lib)
             # Explicitly set library names have always been forbidden from using dashes (by cargo).
             # Starting with Rust 1.79, names inherited from the package name will have dashes replaced
             # by underscores too. Corrosion will thus replace dashes with underscores, to make the target
@@ -168,6 +238,8 @@ function(_generator_add_package_targets)
                 WORKSPACE_MANIFEST_PATH "${workspace_manifest_path}"
                 TARGET_KINDS "${kinds}"
                 BYPRODUCTS "${byproducts}"
+                CARGO_CRUBIT_BIN "${cargo_crubit}"
+                CRUBIT_DEPENDS "${crubit_depends}"
                 # Optional
                 ${no_linker_override}
             )
