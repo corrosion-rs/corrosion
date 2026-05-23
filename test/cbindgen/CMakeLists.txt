@@ -1,5 +1,6 @@
 corrosion_tests_add_test(cbindgen_rust2cpp_auto "cpp-exe" TEST_SRC_DIR auto)
 corrosion_tests_add_test(cbindgen_manual "cpp-exe" TEST_SRC_DIR manual)
+corrosion_tests_add_test(cbindgen_via_metadata "cpp-exe" TEST_SRC_DIR via_metadata)
 
 set_tests_properties(cbindgen_rust2cpp_auto_run_cpp-exe cbindgen_manual_run_cpp-exe
          PROPERTIES PASS_REGULAR_EXPRESSION
