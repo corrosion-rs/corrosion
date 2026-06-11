@@ -55,7 +55,7 @@ function(_corrosion_setup_crubit out_cargo_crubit out_crubit_depends)
     FetchContent_Declare(
         Crubit
         GIT_REPOSITORY https://github.com/google/crubit.git
-        GIT_TAG main
+        GIT_TAG latest
     )
     FetchContent_MakeAvailable(Crubit)
 
