@@ -339,15 +339,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
     list(TRANSFORM src_file_names PREPEND "${cargo_build_dir}/")
     list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
-    get_property(crubit_enabled GLOBAL PROPERTY CORROSION_CRUBIT_${target_name})
-    # Crubit produces an `include/` directory of generated headers that needs to be copied (rather than a single file).
-    if (crubit_enabled AND (output_prop_name STREQUAL "LIBRARY_OUTPUT_DIRECTORY"))
-      set(cli_command "copy_directory_if_different")
-      # We need to add our directory name to the output for copy_directory_if_different.
-      set(output_dir "${output_dir}/${file_names}")
-    else()
-      set(cli_command "copy_if_different")
-    endif()
+    set(cli_command "copy_if_different")
     add_custom_command(TARGET _cargo-build_${target_name}
                         POST_BUILD
                         # output_dir may contain a Generator expression.
@@ -486,10 +478,6 @@ function(_corrosion_add_library_target)
         list(APPEND archive_output_byproducts ${static_lib_name})
     endif()
   
-    if (is_crubit_lib)
-        set(header_name "include")
-        set("${CALT_OUT_SHARED_LIB_BYPRODUCTS}" "${header_name}" PARENT_SCOPE)
-    endif()
 
     if(has_cdylib)
         set("${CALT_OUT_SHARED_LIB_BYPRODUCTS}" "${dynamic_lib_name}" PARENT_SCOPE)
@@ -571,7 +559,7 @@ function(_corrosion_add_library_target)
     endif()
 
     if(is_crubit_lib)
-        set(_crubit_inc_dir "$<IF:$<BOOL:$<TARGET_PROPERTY:${target_name},LIBRARY_OUTPUT_DIRECTORY>>,$<TARGET_PROPERTY:${target_name},LIBRARY_OUTPUT_DIRECTORY>,${CMAKE_CURRENT_BINARY_DIR}>")
+        set(_crubit_inc_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated/crubit/${target_name}")
         target_include_directories(${target_name} INTERFACE
             "$<BUILD_INTERFACE:${_crubit_inc_dir}/include>"
         )
@@ -934,11 +922,13 @@ function(_add_cargo_build out_cargo_build_out_dir)
         cmake_path(GET ACB_CARGO_CRUBIT_BIN PARENT_PATH cargo_cmd_dir)
         set(path_var "PATH=${cargo_cmd_dir}${path_sep}$ENV{PATH}")
 
+        set(crubit_out_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated/crubit/${target_name}")
         # Since cargo cpp_api_from_rust uses cargo build internally, we pass cargo build args after `--`
         set(cargo_args
             cpp_api_from_rust
             --manifest-path "${path_to_toml}"
             --target-dir "${cargo_target_dir}"
+            --out-dir "${crubit_out_dir}"
             ${all_features_arg}
             ${no_default_features_arg}
             ${features_genex}
