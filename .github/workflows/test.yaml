@@ -400,6 +400,38 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3 -R "^cxxbridge"
 
+  test_crubit:
+    name: Test Crubit integration
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CMake
+        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        with:
+          cmakeVersion: "~3.24.0"
+          ninjaVersion: "~1.10.0"
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src, rustc-dev, llvm-tools-preview
+      - name: Configure
+        run: >
+          cmake
+          -S.
+          -Bbuild
+          -GNinja
+          -DCORROSION_VERBOSE_OUTPUT=ON
+          -DCORROSION_TESTS_CRUBIT=ON
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3 -R "^crubit"
+
+
   autoinstall_cargo_target:
     name: Test Auto-installing Cargo target via rustup
     runs-on: ubuntu-22.04
