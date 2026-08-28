@@ -268,6 +268,7 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
 
     foreach(output_dir_prop_name ${output_dir_prop_names})
         get_target_property(output_dir ${target_name} "${output_dir_prop_name}")
+        set(output_prop_name "${output_dir_prop_name}")
         if(output_dir)
             break()
         endif()
@@ -338,12 +339,13 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
     list(TRANSFORM src_file_names PREPEND "${cargo_build_dir}/")
     list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
+    set(cli_command "copy_if_different")
     add_custom_command(TARGET _cargo-build_${target_name}
                         POST_BUILD
                         # output_dir may contain a Generator expression.
                         COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
                         COMMAND
-                        ${CMAKE_COMMAND} -E copy_if_different
+                        ${CMAKE_COMMAND} -E ${cli_command}
                             # tested to work with both multiple files and paths with spaces
                             ${src_file_names}
                             "${output_dir}"
@@ -404,7 +406,15 @@ function(_corrosion_add_library_target)
             )
         endif()
     endforeach()
-    if("staticlib" IN_LIST CALT_LIB_KINDS)
+
+    get_property(crubit_enabled GLOBAL PROPERTY CORROSION_CRUBIT_${CALT_TARGET_NAME})
+    if(crubit_enabled AND ("lib" IN_LIST CALT_LIB_KINDS OR "rlib" IN_LIST CALT_LIB_KINDS))
+        set(is_crubit_lib ON)
+    else()
+        set(is_crubit_lib OFF)
+    endif()
+
+    if("staticlib" IN_LIST CALT_LIB_KINDS OR is_crubit_lib)
         set(has_staticlib TRUE)
     endif()
     if("cdylib" IN_LIST CALT_LIB_KINDS)
@@ -467,6 +477,7 @@ function(_corrosion_add_library_target)
     if(has_staticlib)
         list(APPEND archive_output_byproducts ${static_lib_name})
     endif()
+  
 
     if(has_cdylib)
         set("${CALT_OUT_SHARED_LIB_BYPRODUCTS}" "${dynamic_lib_name}" PARENT_SCOPE)
@@ -546,6 +557,15 @@ function(_corrosion_add_library_target)
     else()
         target_link_libraries(${target_name} INTERFACE ${target_name}-static)
     endif()
+
+    if(is_crubit_lib)
+        set(_crubit_inc_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated/crubit/${target_name}")
+        target_include_directories(${target_name} INTERFACE
+            "$<BUILD_INTERFACE:${_crubit_inc_dir}/include>"
+        )
+        target_link_libraries(${target_name} INTERFACE crubit_support)
+        add_dependencies(${target_name} crubit_support)
+    endif()
 endfunction()
 
 function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_byproduct out_pdb_byproduct)
@@ -580,6 +600,8 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
 
 endfunction()
 
+
+option(CORROSION_EXPERIMENTAL_CRUBIT "Enable experimental Crubit support" OFF)
 
 include(CorrosionGenerator)
 
@@ -623,14 +645,14 @@ set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
 # A target may be either a specific bin
 function(_add_cargo_build out_cargo_build_out_dir)
     set(options NO_LINKER_OVERRIDE)
-    set(one_value_args PACKAGE TARGET MANIFEST_PATH WORKSPACE_MANIFEST_PATH)
+    set(one_value_args PACKAGE TARGET MANIFEST_PATH WORKSPACE_MANIFEST_PATH CARGO_CRUBIT_BIN CRUBIT_DEPENDS)
     set(multi_value_args BYPRODUCTS TARGET_KINDS)
     cmake_parse_arguments(
+        PARSE_ARGV 1
         ACB
         "${options}"
         "${one_value_args}"
         "${multi_value_args}"
-        ${ARGN}
     )
 
     if(DEFINED ACB_UNPARSED_ARGUMENTS)
@@ -648,12 +670,19 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
     set(build_byproducts "${ACB_BYPRODUCTS}")
 
-    unset(cargo_rustc_crate_types)
+    unset(cargo_rustc_crate_types)    
+    get_property(crubit_enabled GLOBAL PROPERTY CORROSION_CRUBIT_${target_name})
+    if(crubit_enabled AND ("lib" IN_LIST target_kinds OR "rlib" IN_LIST target_kinds))
+        set(is_crubit_lib ON)
+    else()
+        set(is_crubit_lib OFF)
+    endif()
+
     if(NOT target_kinds)
         message(FATAL_ERROR "TARGET_KINDS not specified")
-    elseif("staticlib" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
+    elseif("staticlib" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds OR is_crubit_lib)
         set(cargo_rustc_filter "--lib")
-        if("${Rust_VERSION}" VERSION_GREATER_EQUAL "1.64")
+        if("${Rust_VERSION}" VERSION_GREATER_EQUAL "1.64" AND NOT is_crubit_lib)
             # https://doc.rust-lang.org/1.64.0/cargo/commands/cargo-rustc.html
             # `--crate-type` is documented since Rust 1.64 for `cargo rustc`.
             # We just unconditionally set it when available, to support overriding the crate type.
@@ -871,11 +900,78 @@ function(_add_cargo_build out_cargo_build_out_dir)
     message(DEBUG "TARGET ${target_name} produces byproducts ${build_byproducts}")
     message(DEBUG "corrosion_cc_rs_flags: ${corrosion_cc_rs_flags}")
 
+    if(is_crubit_lib)
+        if(CMAKE_HOST_WIN32)
+            set(lib_path_env_var "PATH")
+            set(path_sep ";")
+            # On Windows, DLLs are typically in the bin directory
+            get_filename_component(rustc_lib_dir "${_CORROSION_RUSTC}" DIRECTORY)
+        else()
+            if (CMAKE_HOST_APPLE)
+              set(lib_path_env_var "DYLD_LIBRARY_PATH")
+            else()
+              set(lib_path_env_var "LD_LIBRARY_PATH")
+            endif()
+            set(path_sep ":")
+            # On Linux, shared objects are typically in the lib directory
+            get_filename_component(rustc_bin_dir "${_CORROSION_RUSTC}" DIRECTORY)
+            get_filename_component(rustc_root_dir "${rustc_bin_dir}" DIRECTORY)
+            set(rustc_lib_dir "${rustc_root_dir}/lib")
+        endif()
+        set(rustc_lib_dir_env "${lib_path_env_var}=${rustc_lib_dir}")
+        cmake_path(GET ACB_CARGO_CRUBIT_BIN PARENT_PATH cargo_cmd_dir)
+        set(path_var "PATH=${cargo_cmd_dir}${path_sep}$ENV{PATH}")
+
+        set(crubit_out_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated/crubit/${target_name}")
+        # Since cargo cpp_api_from_rust uses cargo build internally, we pass cargo build args after `--`
+        set(cargo_args
+            cpp_api_from_rust
+            --manifest-path "${path_to_toml}"
+            --target-dir "${cargo_target_dir}"
+            --out-dir "${crubit_out_dir}"
+            ${all_features_arg}
+            ${no_default_features_arg}
+            ${features_genex}
+            --
+            ${cargo_rustc_filter}
+            ${cargo_target_option}
+            ${_CORROSION_VERBOSE_OUTPUT_FLAG}
+            --package ${package_name}
+            ${cargo_profile}
+            ${flags_genex}
+            # Any arguments to cargo must be placed before this line
+            ${local_rustflags_delimiter}
+            ${local_rustflags_genex}
+        )
+    else()
+        set(rustc_lib_dir_env "")
+        set(path_var "")
+        set(cargo_args
+            rustc
+            ${cargo_rustc_filter}
+            ${cargo_target_option}
+            ${_CORROSION_VERBOSE_OUTPUT_FLAG}
+            ${all_features_arg}
+            ${no_default_features_arg}
+            ${features_genex}
+            --package ${package_name}
+            ${cargo_rustc_crate_types}
+            --manifest-path "${path_to_toml}"
+            --target-dir "${cargo_target_dir}"
+            ${cargo_profile}
+            ${flags_genex}
+            # Any arguments to cargo must be placed before this line
+            ${local_rustflags_delimiter}
+            ${local_rustflags_genex}
+        )
+    endif()
+
     add_custom_target(
         _cargo-build_${target_name}
         # Build crate
         COMMAND
             ${CMAKE_COMMAND} -E env
+                "${rustc_lib_dir_env}"
                 "${build_env_variable_genex}"
                 "${global_rustflags_genex}"
                 "${cargo_target_linker}"
@@ -884,23 +980,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
                 "CARGO_BUILD_RUSTC=${rustc_bin}"
-            "${cargo_bin}"
-                rustc
-                ${cargo_rustc_filter}
-                ${cargo_target_option}
-                ${_CORROSION_VERBOSE_OUTPUT_FLAG}
-                ${all_features_arg}
-                ${no_default_features_arg}
-                ${features_genex}
-                --package ${package_name}
-                ${cargo_rustc_crate_types}
-                --manifest-path "${path_to_toml}"
-                --target-dir "${cargo_target_dir}"
-                ${cargo_profile}
-                ${flags_genex}
-                # Any arguments to cargo must be placed before this line
-                ${local_rustflags_delimiter}
-                ${local_rustflags_genex}
+                "${path_var}"
+            ${cargo_bin}
+                ${cargo_args}
 
         # Note: `BYPRODUCTS` may not contain **target specific** generator expressions.
         # This means we cannot use `${cargo_build_dir}`, since it currently uses `$<TARGET_PROPERTY>`
@@ -912,6 +994,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # such as `.cargo/config.toml` or `toolchain.toml` are applied as expected. Cargo searches for
         # configuration files by walking upward from the current directory.
         WORKING_DIRECTORY "${workspace_toml_dir}"
+        DEPENDS ${ACB_CRUBIT_DEPENDS}
         ${cor_uses_terminal}
         COMMAND_EXPAND_LISTS
         VERBATIM
@@ -1139,6 +1222,27 @@ function(corrosion_import_crate)
     if(DEFINED COR_IMPORTED_CRATES)
         set(${COR_IMPORTED_CRATES} ${imported_crates} PARENT_SCOPE)
     endif()
+endfunction()
+
+#[=======================================================================[.md:
+ANCHOR: corrosion-experimental-crubit
+** EXPERIMENTAL **: This function is currently still considered experimental
+  and is not officially released yet. Feedback and Suggestions are welcome.
+
+  Crubit generates bindings to allow calling between C++ and Rust. It enables fine grained automated binding generation. Given a Rust crate,
+  Crubit will generate a C++ API allowing calling the public items of that crate (functions, structs, enums, traits, etc). Find more details at https://crubit.rs.
+
+You can enable crubit by adding the following to your CMakeLists.txt:
+
+```cmake
+corrosion_experimental_crubit(<target_name>)
+```
+* **target_name**: The name of the rust target to enable crubit for, must match the name of the crate package.
+ANCHOR_END: corrosion-experimental-crubit
+#]=======================================================================]
+function(corrosion_experimental_crubit target_name)
+    set(CORROSION_EXPERIMENTAL_CRUBIT ON CACHE BOOL "Enable experimental Crubit support" FORCE)
+    set_property(GLOBAL PROPERTY CORROSION_CRUBIT_${target_name} ON)
 endfunction()
 
 function(corrosion_set_linker target_name linker)
