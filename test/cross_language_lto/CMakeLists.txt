@@ -32,3 +32,21 @@ corrosion_tests_add_test(cross_language_lto_hostbuild "" TEST_SRC_DIR gating IS_
         -DUSE_HOSTBUILD=ON
         -DEXPECT_LTO=0
 )
+
+# An explicit `CROSS_LANGUAGE_LTO OFF` must beat a global ON.
+corrosion_tests_add_test(cross_language_lto_import_off "" TEST_SRC_DIR gating
+    PASS_THROUGH_ARGS
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+        -DCORROSION_CROSS_LANGUAGE_LTO=ON
+        -DIMPORT_CROSS_LANGUAGE_LTO=OFF
+        -DEXPECT_LTO=0
+)
+
+# An explicit `CROSS_LANGUAGE_LTO ON` must beat a global OFF.
+corrosion_tests_add_test(cross_language_lto_import_on "" TEST_SRC_DIR gating
+    PASS_THROUGH_ARGS
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+        -DCORROSION_CROSS_LANGUAGE_LTO=OFF
+        -DIMPORT_CROSS_LANGUAGE_LTO=ON
+        -DEXPECT_LTO=1
+)

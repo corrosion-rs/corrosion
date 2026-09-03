@@ -1076,7 +1076,7 @@ function(corrosion_import_crate)
         NO_USES_TERMINAL
         LOCKED
         FROZEN)
-    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES CROSS_LANGUAGE_LTO)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS OVERRIDE_CRATE_TYPE)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
     list(APPEND CMAKE_MESSAGE_CONTEXT "corrosion_import_crate")
@@ -1197,6 +1197,15 @@ function(corrosion_import_crate)
                 INTERFACE_CORROSION_CARGO_PROFILE "${COR_PROFILE}"
                 INTERFACE_CORROSION_CARGO_FLAGS "${additional_cargo_flags}"
     )
+
+    # Only overwrite the value seeded by `_corrosion_initialize_properties` if the caller
+    # explicitly asked for something. A user calling `set_property` afterwards wins over both,
+    # since that runs after this function returns.
+    if(DEFINED COR_CROSS_LANGUAGE_LTO)
+        set_target_properties(${imported_crates} PROPERTIES
+            "${_CORR_PROP_CROSS_LANGUAGE_LTO}" "${COR_CROSS_LANGUAGE_LTO}"
+        )
+    endif()
 
     # _CORR_PROP_ENV_VARS
     if(DEFINED COR_IMPORTED_CRATES)

@@ -8,13 +8,24 @@ if(NOT DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
     message(FATAL_ERROR "This test must be configured with -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=<ON|OFF>")
 endif()
 
-corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
+if(DEFINED IMPORT_CROSS_LANGUAGE_LTO)
+    corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml
+        CROSS_LANGUAGE_LTO "${IMPORT_CROSS_LANGUAGE_LTO}")
+else()
+    corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
+endif()
 
-# Corrosion must seed the permission property from the global option.
+# Corrosion must seed the permission property from the global option, unless
+# `corrosion_import_crate` was given an explicit override.
 get_target_property(actual_permission cross_lang_lto_lib CORROSION_CROSS_LANGUAGE_LTO)
-if(NOT "${actual_permission}" STREQUAL "${CORROSION_CROSS_LANGUAGE_LTO}")
-    message(FATAL_ERROR "Expected target property CORROSION_CROSS_LANGUAGE_LTO to be seeded to "
-        "`${CORROSION_CROSS_LANGUAGE_LTO}`, but it is `${actual_permission}`")
+if(DEFINED IMPORT_CROSS_LANGUAGE_LTO)
+    set(expected_permission "${IMPORT_CROSS_LANGUAGE_LTO}")
+else()
+    set(expected_permission "${CORROSION_CROSS_LANGUAGE_LTO}")
+endif()
+if(NOT "${actual_permission}" STREQUAL "${expected_permission}")
+    message(FATAL_ERROR "Expected target property CORROSION_CROSS_LANGUAGE_LTO to be "
+        "`${expected_permission}`, but it is `${actual_permission}`")
 endif()
 
 # `INTERPROCEDURAL_OPTIMIZATION` is not inherited by IMPORTED or INTERFACE targets,
