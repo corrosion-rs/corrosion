@@ -414,11 +414,17 @@ jobs:
             llvm_version: "19"
     steps:
       - uses: actions/checkout@v4
-      - name: Install Clang and lld
+      - name: Install Clang, lld and the LLVM LTO linker plugin
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          codename=$(lsb_release -cs)
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm_version }} main" \
+            | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt update
-          sudo apt install -y clang-${{ matrix.llvm_version }} lld-${{ matrix.llvm_version }}
+          sudo apt install -y \
+            clang-${{ matrix.llvm_version }} \
+            lld-${{ matrix.llvm_version }} \
+            llvm-${{ matrix.llvm_version }}-linker-tools
       - name: Install CMake
         uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
         with:

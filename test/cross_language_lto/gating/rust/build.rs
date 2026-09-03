@@ -34,6 +34,15 @@ fn main() {
         let expected_value = std::env::var(expect_var)
             .unwrap_or_else(|_| panic!("the test harness must set {}", expect_var));
         let expected_flags: Vec<&str> = expected_value.split_whitespace().collect();
+        if expected_flags.is_empty() {
+            panic!(
+                "{} was set but parsed to zero tokens; the `all()`/`any()` checks below would \
+                 be vacuously true/false and would not actually verify anything. This means the \
+                 test harness could not determine the compiler's IPO flags (CMAKE_{}_COMPILE_OPTIONS_IPO \
+                 was empty) - fix the test setup rather than let this pass silently.",
+                expect_var, var_base
+            );
+        }
 
         let key = format!("{}_{}", var_base, target);
         let actual = std::env::var(&key).unwrap_or_default();

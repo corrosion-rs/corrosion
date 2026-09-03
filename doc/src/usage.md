@@ -159,7 +159,8 @@ Cross-language LTO can be turned on or off for individual crates. Three levels a
 applied in this order, with the last write winning:
 
 ```cmake
-# 1. The global option seeds every imported crate.
+# 1. The global option seeds every imported crate. Like other global Corrosion options, it must
+#    be set before `find_package(Corrosion)` / the `add_subdirectory` that pulls Corrosion in.
 set(CORROSION_CROSS_LANGUAGE_LTO ON)
 
 # 2. Per `corrosion_import_crate` call. Takes `ON` or `OFF`; overrides the global default for
@@ -214,14 +215,6 @@ The following options are off by default, but may increase convenience:
 - `Rust_RUSTUP_INSTALL_MISSING_TARGET:BOOL`: Automatically install a missing target via `rustup` instead of failing.
 
 
-#### Developer/Maintainer Options
-These options are not used in the course of normal Corrosion usage, but are used to configure how
-Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.
-
-- `CORROSION_BUILD_TESTS:BOOL` - Build the Corrosion tests. Default: `Off` if Corrosion is a
-  subdirectory, `ON` if it is the top-level project
-
-
 #### Cross-language LTO
 
 `CORROSION_CROSS_LANGUAGE_LTO` requests that rustc emit LLVM bitcode
@@ -269,6 +262,14 @@ natively; GNU `ld` and `gold` need the LLVM plugin installed in their `bfd-plugi
   your own `CFLAGS` are preserved and Corrosion's IPO flags are appended after them.
 - Targets marked with `corrosion_set_hostbuild` are excluded, because their linker is the host
   `cc` rather than the compiler CMake selected.
+
+
+#### Developer/Maintainer Options
+These options are not used in the course of normal Corrosion usage, but are used to configure how
+Corrosion is built and installed. Only applies to Corrosion builds and subdirectory uses.
+
+- `CORROSION_BUILD_TESTS:BOOL` - Build the Corrosion tests. Default: `Off` if Corrosion is a
+  subdirectory, `ON` if it is the top-level project
 
 
 ### Information provided by Corrosion

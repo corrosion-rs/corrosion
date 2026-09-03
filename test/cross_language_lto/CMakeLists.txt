@@ -51,6 +51,26 @@ corrosion_tests_add_test(cross_language_lto_import_on "" TEST_SRC_DIR gating
         -DEXPECT_LTO=1
 )
 
+# Per-config IPO must be honoured: `_RELEASE=ON` alone must enable LTO in Release.
+corrosion_tests_add_test(cross_language_lto_per_config_on "" TEST_SRC_DIR gating
+    PASS_THROUGH_ARGS
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE=ON
+        -DCORROSION_CROSS_LANGUAGE_LTO=ON
+        -DEXPECT_LTO=1
+)
+
+# A per-config OFF must beat a plain ON, or Rust would emit bitcode against non-LTO C++.
+corrosion_tests_add_test(cross_language_lto_per_config_off "" TEST_SRC_DIR gating
+    PASS_THROUGH_ARGS
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE=OFF
+        -DCORROSION_CROSS_LANGUAGE_LTO=ON
+        -DEXPECT_LTO=0
+)
+
 if(CORROSION_TESTS_CROSS_LANGUAGE_LTO)
     # C++ executable linking a Rust staticlib whose members are LLVM bitcode. CMake drives
     # this link, so it exercises the direction where Corrosion adds no link flags at all.
