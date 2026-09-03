@@ -1,0 +1,8 @@
+[package]
+name = "lto-rust2cpp"
+version = "0.1.0"
+edition = "2018"
+
+[[bin]]
+name = "lto-rust-exe"
+path = "src/main.rs"

@@ -940,6 +940,25 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(deps_link_languages_prop "$<TARGET_PROPERTY:_cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>")
     set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
     set(target_uses_cxx  "$<IN_LIST:CXX,${deps_link_languages}>")
+
+    # For artifacts rustc links itself (`bin` and `cdylib`), rustc invokes the C/C++ compiler as
+    # the linker driver but never passes `-flto` to it, so the driver would not enable its LTO
+    # pipeline and the bitcode inputs would be rejected.
+    #
+    # The flags are derived from CMake's own IPO variables rather than hardcoded, so thin-vs-fat
+    # matches what the C side compiled with, CMake's Android NDK < 22 `-fuse-ld=gold` workaround
+    # is inherited for free, and AppleClang/ld64 is not handed a wrong `-fuse-ld=lld`.
+    if("bin" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
+        string(JOIN " " c_ipo_flags   ${CMAKE_C_COMPILE_OPTIONS_IPO}   ${CMAKE_C_LINK_OPTIONS_IPO})
+        string(JOIN " " cxx_ipo_flags ${CMAKE_CXX_COMPILE_OPTIONS_IPO} ${CMAKE_CXX_LINK_OPTIONS_IPO})
+        # The language is only known as a genex, so the selection happens inside the genex too.
+        # The inner `$<BOOL:...>` guard matters: a project that enables only one language leaves
+        # the other variable empty, which would otherwise emit a bare `-Clink-args=`.
+        set(ipo_link_flags "$<IF:${target_uses_cxx},${cxx_ipo_flags},${c_ipo_flags}>")
+        corrosion_add_target_local_rustflags("${target_name}"
+            "$<${cross_lang_lto_cond}:$<$<BOOL:${ipo_link_flags}>:-Clink-args=${ipo_link_flags}>>")
+    endif()
+
     unset(default_linker)
     # With the MSVC ABI rustc only supports directly invoking the linker - Invoking cl as the linker driver is not supported.
     if(NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))

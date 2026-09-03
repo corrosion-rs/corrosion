@@ -57,4 +57,10 @@ if(CORROSION_TESTS_CROSS_LANGUAGE_LTO)
     corrosion_tests_add_test(cross_language_lto_cpp2rust "lto-cpp-exe" TEST_SRC_DIR cpp2rust)
     set_tests_properties("cross_language_lto_cpp2rust_run_lto-cpp-exe" PROPERTIES
         PASS_REGULAR_EXPRESSION "Ok")
+
+    # Rust executable linking a C++ static library of bitcode objects. rustc drives this link,
+    # so it exercises the `-Clink-args` path.
+    corrosion_tests_add_test(cross_language_lto_rust2cpp "lto-rust-exe" TEST_SRC_DIR rust2cpp)
+    set_tests_properties("cross_language_lto_rust2cpp_run_lto-rust-exe" PROPERTIES
+        PASS_REGULAR_EXPRESSION "Ok")
 endif()
