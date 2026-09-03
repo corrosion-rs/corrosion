@@ -20,4 +20,22 @@ fn main() {
         ("0", false) | ("1", true) => {}
         (other, _) => panic!("EXPECT_LINKER_PLUGIN_LTO must be 0 or 1, got `{}`", other),
     }
+
+    // C/C++ compiled by cc-rs inside build scripts must join the LTO unit, which means
+    // Corrosion has to forward the IPO compile flags as CFLAGS_<triple>/CXXFLAGS_<triple>.
+    println!("cargo:rerun-if-env-changed=EXPECT_IPO_C_FLAG");
+    let target = std::env::var("TARGET").expect("cargo always sets TARGET for build scripts");
+    let expected_flag = std::env::var("EXPECT_IPO_C_FLAG")
+        .expect("the test harness must set EXPECT_IPO_C_FLAG");
+
+    for var_base in ["CFLAGS", "CXXFLAGS"].iter() {
+        let key = format!("{}_{}", var_base, target);
+        let actual = std::env::var(&key).unwrap_or_default();
+        let has_flag = actual.split_whitespace().any(|f| f == expected_flag);
+        match (expect.as_str(), has_flag) {
+            ("1", false) => panic!("expected `{}` in `{}`, got `{}`", expected_flag, key, actual),
+            ("0", true) => panic!("did not expect `{}` in `{}`, got `{}`", expected_flag, key, actual),
+            _ => {}
+        }
+    }
 }

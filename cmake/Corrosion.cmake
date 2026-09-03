@@ -832,6 +832,14 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 
+    # Cross-language LTO. Both gates must be generator expressions: the permission property may
+    # still be overwritten by `corrosion_import_crate` after this function has run, and
+    # `INTERPROCEDURAL_OPTIMIZATION` may be set per-config.
+    set(cross_lang_lto_prop "$<TARGET_PROPERTY:${target_name},${_CORR_PROP_CROSS_LANGUAGE_LTO}>")
+    set(ipo_prop "$<TARGET_PROPERTY:${target_name},INTERPROCEDURAL_OPTIMIZATION>")
+    set(cross_lang_lto_cond
+        "$<AND:$<BOOL:${cross_lang_lto_prop}>,$<BOOL:${ipo_prop}>,${if_not_host_build_condition}>")
+
     set(corrosion_cc_rs_flags)
 
     if(CMAKE_C_COMPILER)
@@ -847,6 +855,35 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # the default AR.
     if(CMAKE_AR AND NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc"))
         list(APPEND corrosion_cc_rs_flags "AR_${stripped_target_triple}=${CMAKE_AR}")
+    endif()
+
+    # When cross-language LTO is active, C/C++ compiled by cc-rs inside build scripts must also
+    # emit bitcode, or it drops out of the LTO unit. The flags are derived from CMake's own IPO
+    # variables so thin-vs-fat matches whatever the C side compiled with.
+    #
+    # Caveat, documented in usage.md: unlike CC/CXX/AR (which cc-rs resolves by taking the first
+    # match of `<VAR>_<target>`, `TARGET_<VAR>`/`HOST_<VAR>`, then bare `<VAR>` without merging),
+    # cc-rs's CFLAGS/CXXFLAGS resolution (`envflags`) merges all of them, appending in increasing
+    # specificity so `CFLAGS_<target>` is applied last. So the flags set here are combined with,
+    # not shadowing, a user's own CFLAGS/CXXFLAGS while LTO is enabled - but still take effective
+    # precedence over conflicting single-value flags (e.g. LTO mode) because they come last.
+    #
+    # No archiver change is needed: both GNU ar (via the bfd-plugins LLVM plugin) and llvm-ar
+    # index bitcode archive members, so the `AR_<triple>` line above stays as is.
+    #
+    # CMAKE_<LANG>_COMPILE_OPTIONS_IPO is itself a CMake list (e.g. GCC emits two elements,
+    # `-flto=auto;-fno-fat-lto-objects`); it must be joined with spaces rather than interpolated
+    # directly, since a literal `;` inside a generator expression string would later be
+    # re-split as if it were a list separator.
+    if(CMAKE_C_COMPILE_OPTIONS_IPO)
+        list(JOIN CMAKE_C_COMPILE_OPTIONS_IPO " " cross_lang_lto_c_ipo_flags)
+        list(APPEND corrosion_cc_rs_flags
+            "$<${cross_lang_lto_cond}:CFLAGS_${stripped_target_triple}=${cross_lang_lto_c_ipo_flags}>")
+    endif()
+    if(CMAKE_CXX_COMPILE_OPTIONS_IPO)
+        list(JOIN CMAKE_CXX_COMPILE_OPTIONS_IPO " " cross_lang_lto_cxx_ipo_flags)
+        list(APPEND corrosion_cc_rs_flags
+            "$<${cross_lang_lto_cond}:CXXFLAGS_${stripped_target_triple}=${cross_lang_lto_cxx_ipo_flags}>")
     endif()
 
     # When using XCode to target iOS / iOSSimulator, `cc` will be a compiler that targets iOS.
@@ -879,19 +916,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
 
-    # Cross-language LTO. Both gates must be generator expressions: the permission property may
-    # still be overwritten by `corrosion_import_crate` after this function has run, and
-    # `INTERPROCEDURAL_OPTIMIZATION` may be set per-config.
-    #
     # This uses global RUSTFLAGS rather than local ones on purpose. Local rustflags would only
     # make the leaf crate emit bitcode and leave every Rust dependency as opaque objects, losing
     # most of the benefit. Global RUSTFLAGS is safe here because Corrosion always passes
     # `--target`, and cargo does not apply RUSTFLAGS to build scripts and proc-macros in that
     # case - so host tooling is not built with `-Clinker-plugin-lto`.
-    set(cross_lang_lto_prop "$<TARGET_PROPERTY:${target_name},${_CORR_PROP_CROSS_LANGUAGE_LTO}>")
-    set(ipo_prop "$<TARGET_PROPERTY:${target_name},INTERPROCEDURAL_OPTIMIZATION>")
-    set(cross_lang_lto_cond
-        "$<AND:$<BOOL:${cross_lang_lto_prop}>,$<BOOL:${ipo_prop}>,${if_not_host_build_condition}>")
     corrosion_add_target_rustflags("${target_name}" "$<${cross_lang_lto_cond}:-Clinker-plugin-lto>")
     message(DEBUG "Target ${target_name} requests cross-language LTO when "
         "INTERPROCEDURAL_OPTIMIZATION is set: ${cross_lang_lto_cond}")

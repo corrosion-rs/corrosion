@@ -43,6 +43,15 @@ if(NOT DEFINED EXPECT_LTO)
 endif()
 corrosion_set_env_vars(cross_lang_lto_lib "EXPECT_LINKER_PLUGIN_LTO=${EXPECT_LTO}")
 
+# Both languages are enabled by this test project, so both variables are defined.
+# CMAKE_C_COMPILE_OPTIONS_IPO may itself be a list (e.g. GCC emits two elements,
+# `-flto=auto;-fno-fat-lto-objects`); interpolating it directly would embed a literal `;` in
+# the env var value, which CMake would later re-split as a list separator. Use the first
+# element as a canary instead - it identifies the LTO mode and is always present.
+list(GET CMAKE_C_COMPILE_OPTIONS_IPO 0 expect_ipo_c_flag)
+corrosion_set_env_vars(cross_lang_lto_lib
+    "EXPECT_IPO_C_FLAG=${expect_ipo_c_flag}")
+
 if(USE_HOSTBUILD)
     corrosion_set_hostbuild(cross_lang_lto_lib)
 endif()
