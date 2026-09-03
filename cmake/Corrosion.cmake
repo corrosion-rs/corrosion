@@ -46,6 +46,51 @@ endif()
 
 find_package(Rust REQUIRED)
 
+# Cross-language LTO needs rustc and the C/C++ compiler to emit LLVM bitcode that the
+# linker plugin can combine, so only LLVM based compilers are candidates.
+#
+# We deliberately do not compare LLVM versions. The rustc compatibility table maps some
+# Rust version ranges to more than one clang major, LLVM bitcode is forward-readable, and
+# a copy of that table here would need updating on every Rust release. A mismatch that is
+# too large surfaces as a linker error (`Invalid bitcode signature`), which is why the
+# documentation points at the upstream table:
+# https://doc.rust-lang.org/rustc/linker-plugin-lto.html#toolchain-compatibility
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(_corrosion_cross_language_lto_default ON)
+else()
+    set(_corrosion_cross_language_lto_default OFF)
+endif()
+
+option(CORROSION_CROSS_LANGUAGE_LTO
+    "Request cross-language LTO (`-Clinker-plugin-lto`) for Rust targets that also have \
+INTERPROCEDURAL_OPTIMIZATION enabled. Defaults to ON for Clang based compilers."
+    "${_corrosion_cross_language_lto_default}"
+)
+
+if(CORROSION_CROSS_LANGUAGE_LTO)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(_corrosion_lto_peer "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+    elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        set(_corrosion_lto_peer "${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
+    else()
+        set(_corrosion_lto_peer "a non-LLVM compiler")
+        message(AUTHOR_WARNING "CORROSION_CROSS_LANGUAGE_LTO is enabled, but neither the C nor the "
+            "C++ compiler is Clang based. `-Clinker-plugin-lto` will still be passed to rustc, but "
+            "the resulting bitcode is unlikely to be usable by your linker."
+        )
+    endif()
+    message(STATUS
+        "Corrosion: attempting cross-language LTO between Rust (LLVM ${Rust_LLVM_VERSION}) and "
+        "${_corrosion_lto_peer} for targets with INTERPROCEDURAL_OPTIMIZATION. Version "
+        "compatibility: https://doc.rust-lang.org/rustc/linker-plugin-lto.html#toolchain-compatibility"
+    )
+    message(DEBUG
+        "Corrosion: disable cross-language LTO globally with `-DCORROSION_CROSS_LANGUAGE_LTO=OFF`, "
+        "per import with `corrosion_import_crate(... CROSS_LANGUAGE_LTO OFF)`, or per target with "
+        "`set_property(TARGET <tgt> PROPERTY INTERPROCEDURAL_OPTIMIZATION OFF)`."
+    )
+endif()
+
 if(CMAKE_GENERATOR MATCHES "Visual Studio"
         AND (NOT CMAKE_VS_PLATFORM_NAME STREQUAL CMAKE_VS_PLATFORM_NAME_DEFAULT)
         AND Rust_VERSION VERSION_LESS "1.54")
@@ -617,6 +662,7 @@ set(_CORR_PROP_ALL_FEATURES CORROSION_ALL_FEATURES CACHE INTERNAL "")
 set(_CORR_PROP_NO_DEFAULT_FEATURES CORROSION_NO_DEFAULT_FEATURES CACHE INTERNAL "")
 set(_CORR_PROP_ENV_VARS CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
 set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
+set(_CORR_PROP_CROSS_LANGUAGE_LTO CORROSION_CROSS_LANGUAGE_LTO CACHE INTERNAL "")
 
 # Add custom command to build one target in a package (crate)
 #
@@ -2311,19 +2357,32 @@ function(corrosion_parse_package_version package_manifest_path out_package_versi
 endfunction()
 
 function(_corrosion_initialize_properties target_name)
-    # Initialize the `<XYZ>_OUTPUT_DIRECTORY` properties based on `CMAKE_<XYZ>_OUTPUT_DIRECTORY`.
-    foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
-        if (DEFINED "CMAKE_${output_var}")
-            set_property(TARGET ${target_name} PROPERTY "${output_var}" "${CMAKE_${output_var}}")
+    # Initialize the `<XYZ>_OUTPUT_DIRECTORY` properties based on `CMAKE_<XYZ>_OUTPUT_DIRECTORY`,
+    # and `INTERPROCEDURAL_OPTIMIZATION` based on `CMAKE_INTERPROCEDURAL_OPTIMIZATION`.
+    #
+    # CMake does not initialize `INTERPROCEDURAL_OPTIMIZATION` from the `CMAKE_` variable for
+    # IMPORTED or INTERFACE targets, which is what Corrosion creates, so we have to do it
+    # ourselves. Corrosion reads the property (per config) to decide whether to request
+    # cross-language LTO from rustc.
+    foreach(initialized_property RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY
+            LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY INTERPROCEDURAL_OPTIMIZATION)
+        if (DEFINED "CMAKE_${initialized_property}")
+            set_property(TARGET ${target_name} PROPERTY "${initialized_property}" "${CMAKE_${initialized_property}}")
         endif()
 
         foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
             string(TOUPPER "${config_type}" config_type_upper)
-            if (DEFINED "CMAKE_${output_var}_${config_type_upper}")
-                set_property(TARGET ${target_name} PROPERTY "${output_var}_${config_type_upper}" "${CMAKE_${output_var}_${config_type_upper}}")
+            if (DEFINED "CMAKE_${initialized_property}_${config_type_upper}")
+                set_property(TARGET ${target_name} PROPERTY "${initialized_property}_${config_type_upper}" "${CMAKE_${initialized_property}_${config_type_upper}}")
             endif()
         endforeach()
     endforeach()
+
+    # The permission gate for cross-language LTO. May be overridden afterwards by
+    # `corrosion_import_crate(... CROSS_LANGUAGE_LTO ...)` or directly by the user.
+    set_property(TARGET ${target_name}
+        PROPERTY "${_CORR_PROP_CROSS_LANGUAGE_LTO}" "${CORROSION_CROSS_LANGUAGE_LTO}"
+    )
 endfunction()
 
 # Helper macro to pass through an optional `OPTION` argument parsed via `cmake_parse_arguments`
