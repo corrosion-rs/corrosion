@@ -155,6 +155,24 @@ Some configuration options can be specified individually for each target. You ca
   responsible for also adding a rustflag which adds the necessary `--target=` argument for the
   linker.
 
+Cross-language LTO can be turned on or off for individual crates. Three levels are available,
+applied in this order, with the last write winning:
+
+```cmake
+# 1. The global option seeds every imported crate.
+set(CORROSION_CROSS_LANGUAGE_LTO ON)
+
+# 2. Per `corrosion_import_crate` call. Takes `ON` or `OFF`; overrides the global default for
+#    every crate imported by this call.
+corrosion_import_crate(MANIFEST_PATH Cargo.toml CROSS_LANGUAGE_LTO OFF)
+
+# 3. Per target, after importing. This runs last, so it wins over both of the above.
+set_property(TARGET my_rust_lib PROPERTY CORROSION_CROSS_LANGUAGE_LTO OFF)
+
+# Disabling IPO for the target has the same effect, since both gates are required.
+set_property(TARGET my_rust_lib PROPERTY INTERPROCEDURAL_OPTIMIZATION OFF)
+```
+
 
 ### Global Corrosion Options
 
@@ -202,6 +220,55 @@ Corrosion is built and installed. Only applies to Corrosion builds and subdirect
 
 - `CORROSION_BUILD_TESTS:BOOL` - Build the Corrosion tests. Default: `Off` if Corrosion is a
   subdirectory, `ON` if it is the top-level project
+
+
+#### Cross-language LTO
+
+`CORROSION_CROSS_LANGUAGE_LTO` requests that rustc emit LLVM bitcode
+(`-Clinker-plugin-lto`) so that link-time optimization can span the Rust/C++ boundary. It
+defaults to `ON` when the C or C++ compiler is Clang based and `OFF` otherwise.
+
+Cross-language LTO is only requested for a target when **both** of these hold:
+
+- `CORROSION_CROSS_LANGUAGE_LTO` is enabled for that target, and
+- the target's `INTERPROCEDURAL_OPTIMIZATION` property is set (usually via
+  `CMAKE_INTERPROCEDURAL_OPTIMIZATION`, which Corrosion propagates to imported Rust targets,
+  including the per-config `INTERPROCEDURAL_OPTIMIZATION_<CONFIG>` spellings).
+
+Both conditions are required because the C/C++ side's `-flto` comes exclusively from CMake's
+IPO support. Without it there is no bitcode on the other side of the boundary and
+`-Clinker-plugin-lto` achieves nothing.
+
+```cmake
+# Typical usage: enable IPO project-wide and let Corrosion follow.
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+```
+
+**Toolchain requirements.** Corrosion only checks that the compiler is Clang based; it does not
+compare LLVM versions, because the compatibility window spans several releases and shifts with
+each Rust release. Consult
+[the rustc compatibility table](https://doc.rust-lang.org/rustc/linker-plugin-lto.html#toolchain-compatibility)
+and note that clang's LLVM version generally needs to be at least as new as the one rustc was
+built with (`rustc -vV`). An incompatible pair is not detectable at configure time and fails at
+link time, typically with `Invalid bitcode signature` or unresolved symbols.
+
+The linker must also be able to consume LLVM bitcode. `lld` and Apple's `ld64` can do this
+natively; GNU `ld` and `gold` need the LLVM plugin installed in their `bfd-plugins` directory.
+
+**Known limitations.**
+
+- Rust's prebuilt `std` ships as object code, not bitcode, so it does not participate. In a
+  minimal staticlib built with a dev profile, only the crate's own codegen units came out as
+  bitcode; the several hundred archive members contributed by prebuilt `std` and
+  `compiler_builtins` remained object code. (The exact split shifts with the cargo profile and
+  codegen-unit count.) Including `std` would require `-Zbuild-std`, which is nightly-only and
+  out of scope.
+- While cross-language LTO is enabled, Corrosion sets `CFLAGS_<triple>` and `CXXFLAGS_<triple>`
+  so that C/C++ compiled by `cc-rs` in build scripts also emits bitcode. cc-rs merges the flag
+  variables across `CFLAGS_<triple>`, `TARGET_CFLAGS` and `CFLAGS` rather than picking one, so
+  your own `CFLAGS` are preserved and Corrosion's IPO flags are appended after them.
+- Targets marked with `corrosion_set_hostbuild` are excluded, because their linker is the host
+  `cc` rather than the compiler CMake selected.
 
 
 ### Information provided by Corrosion
