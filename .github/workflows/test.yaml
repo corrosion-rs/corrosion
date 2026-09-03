@@ -407,9 +407,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # These two MUST be kept in sync: clang's LLVM major must be >= the LLVM version
-          # rustc was built against, or rustc's bitcode is too new for clang to read and the
-          # link fails with `Invalid bitcode signature`. Check with `rustc -vV`.
           - rust_toolchain: "1.82"
             llvm_version: "19"
     steps:

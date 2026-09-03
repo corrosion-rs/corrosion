@@ -49,12 +49,7 @@ find_package(Rust REQUIRED)
 # Cross-language LTO needs rustc and the C/C++ compiler to emit LLVM bitcode that the
 # linker plugin can combine, so only LLVM based compilers are candidates.
 #
-# We deliberately do not compare LLVM versions. The rustc compatibility table maps some
-# Rust version ranges to more than one clang major, LLVM bitcode is forward-readable, and
-# a copy of that table here would need updating on every Rust release. A mismatch that is
-# too large surfaces as a linker error (`Invalid bitcode signature`), which is why the
-# documentation points at the upstream table:
-# https://doc.rust-lang.org/rustc/linker-plugin-lto.html#toolchain-compatibility
+# For more information, see the compatibility table: https://doc.rust-lang.org/rustc/linker-plugin-lto.html#toolchain-compatibility
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(_corrosion_cross_language_lto_default ON)
 else()
@@ -834,15 +829,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 
-    # Cross-language LTO. Both gates must be generator expressions: the permission property may
-    # still be overwritten by `corrosion_import_crate` after this function has run, and
-    # `INTERPROCEDURAL_OPTIMIZATION` may be set per-config.
     set(cross_lang_lto_prop "$<TARGET_PROPERTY:${target_name},${_CORR_PROP_CROSS_LANGUAGE_LTO}>")
     set(ipo_prop "$<TARGET_PROPERTY:${target_name},INTERPROCEDURAL_OPTIMIZATION>")
     set(ipo_config_prop "$<TARGET_PROPERTY:${target_name},INTERPROCEDURAL_OPTIMIZATION_$<UPPER_CASE:$<CONFIG>>>")
-    # CMake resolves `INTERPROCEDURAL_OPTIMIZATION_<CONFIG>` ahead of the plain property, but
-    # `$<TARGET_PROPERTY>` performs no such fallback, so do it explicitly. An unset per-config
-    # property reads as the empty string, which is how we distinguish "unset" from "set to OFF".
     set(ipo_effective "$<IF:$<STREQUAL:${ipo_config_prop},>,${ipo_prop},${ipo_config_prop}>")
     set(cross_lang_lto_cond
         "$<AND:$<BOOL:${cross_lang_lto_prop}>,$<BOOL:${ipo_effective}>,${if_not_host_build_condition}>")
@@ -864,23 +853,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
         list(APPEND corrosion_cc_rs_flags "AR_${stripped_target_triple}=${CMAKE_AR}")
     endif()
 
-    # When cross-language LTO is active, C/C++ compiled by cc-rs inside build scripts must also
-    # emit bitcode, or it drops out of the LTO unit. The flags are derived from CMake's own IPO
-    # variables so thin-vs-fat matches whatever the C side compiled with.
-    #
-    # Caveat, documented in usage.md: unlike CC/CXX/AR (which cc-rs resolves by taking the first
-    # match of `<VAR>_<target>`, `TARGET_<VAR>`/`HOST_<VAR>`, then bare `<VAR>` without merging),
-    # cc-rs's CFLAGS/CXXFLAGS resolution (`envflags`) merges all of them, appending in increasing
-    # specificity so `CFLAGS_<target>` is applied last. So the flags set here are combined with,
-    # not shadowing, a user's own CFLAGS/CXXFLAGS while LTO is enabled.
-    #
-    # No archiver change is needed: both GNU ar (via the bfd-plugins LLVM plugin) and llvm-ar
-    # index bitcode archive members, so the `AR_<triple>` line above stays as is.
-    #
-    # CMAKE_<LANG>_COMPILE_OPTIONS_IPO is itself a CMake list (e.g. GCC emits two elements,
-    # `-flto=auto;-fno-fat-lto-objects`); it must be joined with spaces rather than interpolated
-    # directly, since a literal `;` inside a generator expression string would later be
-    # re-split as if it were a list separator.
     if(CMAKE_C_COMPILE_OPTIONS_IPO)
         list(JOIN CMAKE_C_COMPILE_OPTIONS_IPO " " cross_lang_lto_c_ipo_flags)
         list(APPEND corrosion_cc_rs_flags
@@ -921,12 +893,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
     endif()
 
     corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
-
-    # This uses global RUSTFLAGS rather than local ones on purpose. Local rustflags would only
-    # make the leaf crate emit bitcode and leave every Rust dependency as opaque objects, losing
-    # most of the benefit. Global RUSTFLAGS is safe here because Corrosion always passes
-    # `--target`, and cargo does not apply RUSTFLAGS to build scripts and proc-macros in that
-    # case - so host tooling is not built with `-Clinker-plugin-lto`.
     corrosion_add_target_rustflags("${target_name}" "$<${cross_lang_lto_cond}:-Clinker-plugin-lto>")
     message(DEBUG "Target ${target_name} requests cross-language LTO when "
         "INTERPROCEDURAL_OPTIMIZATION is set: ${cross_lang_lto_cond}")
@@ -947,19 +913,6 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
     set(target_uses_cxx  "$<IN_LIST:CXX,${deps_link_languages}>")
 
-    # For artifacts rustc links itself (`bin` and `cdylib`), rustc invokes the C/C++ compiler as
-    # the linker driver but never passes `-flto` to it, so the driver would not enable its LTO
-    # pipeline and the bitcode inputs would be rejected.
-    #
-    # The flags are derived from CMake's own IPO variables rather than hardcoded, so thin-vs-fat
-    # matches what the C side compiled with, CMake's Android NDK < 22 `-fuse-ld=gold` workaround
-    # is inherited for free, and AppleClang/ld64 is not handed a wrong `-fuse-ld=lld`.
-    #
-    # These flags are only meaningful when rustc actually invokes a C/C++ compiler driver as the
-    # linker, so they are skipped for MSVC-ABI targets (rustc invokes `link.exe` directly there),
-    # when `NO_LINKER_OVERRIDE` is set, and when the user configured an explicit linker via
-    # `corrosion_set_linker()` - in all of those cases the flags would reach a raw linker instead
-    # of a compiler driver and be rejected.
     if(("bin" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
             AND NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
         string(JOIN " " c_ipo_flags   ${CMAKE_C_COMPILE_OPTIONS_IPO}   ${CMAKE_C_LINK_OPTIONS_IPO})
@@ -1259,9 +1212,6 @@ function(corrosion_import_crate)
                 INTERFACE_CORROSION_CARGO_FLAGS "${additional_cargo_flags}"
     )
 
-    # Only overwrite the value seeded by `_corrosion_initialize_properties` if the caller
-    # explicitly asked for something. A user calling `set_property` afterwards wins over both,
-    # since that runs after this function returns.
     if(DEFINED COR_CROSS_LANGUAGE_LTO)
         string(TOUPPER "${COR_CROSS_LANGUAGE_LTO}" cross_language_lto_upper)
         if(NOT cross_language_lto_upper MATCHES "^(1|0|ON|OFF|YES|NO|TRUE|FALSE|Y|N|IGNORE|NOTFOUND|)$"
@@ -2453,20 +2403,12 @@ endfunction()
 function(_corrosion_initialize_properties target_name)
     # Initialize the `<XYZ>_OUTPUT_DIRECTORY` properties based on `CMAKE_<XYZ>_OUTPUT_DIRECTORY`,
     # and `INTERPROCEDURAL_OPTIMIZATION` based on `CMAKE_INTERPROCEDURAL_OPTIMIZATION`.
-    #
-    # CMake does not initialize `INTERPROCEDURAL_OPTIMIZATION` from the `CMAKE_` variable for
-    # IMPORTED or INTERFACE targets, which is what Corrosion creates, so we have to do it
-    # ourselves. Corrosion reads the property (per config) to decide whether to request
-    # cross-language LTO from rustc.
     foreach(initialized_property RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY
             LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY INTERPROCEDURAL_OPTIMIZATION)
         if (DEFINED "CMAKE_${initialized_property}")
             set_property(TARGET ${target_name} PROPERTY "${initialized_property}" "${CMAKE_${initialized_property}}")
         endif()
 
-        # Single-config generators don't set CMAKE_CONFIGURATION_TYPES, but
-        # CMAKE_INTERPROCEDURAL_OPTIMIZATION_<CONFIG> variables are still honoured by CMake for
-        # the active CMAKE_BUILD_TYPE, so seed from there too for that one property.
         set(config_types_to_seed ${CMAKE_CONFIGURATION_TYPES})
         if(initialized_property STREQUAL "INTERPROCEDURAL_OPTIMIZATION"
                 AND CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE IN_LIST CMAKE_CONFIGURATION_TYPES)
@@ -2481,8 +2423,6 @@ function(_corrosion_initialize_properties target_name)
         endforeach()
     endforeach()
 
-    # The permission gate for cross-language LTO. May be overridden afterwards by
-    # `corrosion_import_crate(... CROSS_LANGUAGE_LTO ...)` or directly by the user.
     set_property(TARGET ${target_name}
         PROPERTY "${_CORR_PROP_CROSS_LANGUAGE_LTO}" "${CORROSION_CROSS_LANGUAGE_LTO}"
     )
