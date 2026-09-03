@@ -23,18 +23,36 @@ fn main() {
 
     // C/C++ compiled by cc-rs inside build scripts must join the LTO unit, which means
     // Corrosion has to forward the IPO compile flags as CFLAGS_<triple>/CXXFLAGS_<triple>.
-    println!("cargo:rerun-if-env-changed=EXPECT_IPO_C_FLAG");
+    // The expected value is space-joined and may contain multiple flags (e.g. GCC's
+    // `-flto=auto -fno-fat-lto-objects`); every expected token must be present, not just one,
+    // or a regression that drops flags after the first would go undetected.
+    println!("cargo:rerun-if-env-changed=EXPECT_IPO_C_FLAGS");
+    println!("cargo:rerun-if-env-changed=EXPECT_IPO_CXX_FLAGS");
     let target = std::env::var("TARGET").expect("cargo always sets TARGET for build scripts");
-    let expected_flag = std::env::var("EXPECT_IPO_C_FLAG")
-        .expect("the test harness must set EXPECT_IPO_C_FLAG");
 
-    for var_base in ["CFLAGS", "CXXFLAGS"].iter() {
+    for (var_base, expect_var) in [("CFLAGS", "EXPECT_IPO_C_FLAGS"), ("CXXFLAGS", "EXPECT_IPO_CXX_FLAGS")] {
+        let expected_value = std::env::var(expect_var)
+            .unwrap_or_else(|_| panic!("the test harness must set {}", expect_var));
+        let expected_flags: Vec<&str> = expected_value.split_whitespace().collect();
+
         let key = format!("{}_{}", var_base, target);
         let actual = std::env::var(&key).unwrap_or_default();
-        let has_flag = actual.split_whitespace().any(|f| f == expected_flag);
-        match (expect.as_str(), has_flag) {
-            ("1", false) => panic!("expected `{}` in `{}`, got `{}`", expected_flag, key, actual),
-            ("0", true) => panic!("did not expect `{}` in `{}`, got `{}`", expected_flag, key, actual),
+        let actual_flags: Vec<&str> = actual.split_whitespace().collect();
+
+        // Positive direction: every expected flag must be present.
+        let all_present = expected_flags.iter().all(|f| actual_flags.contains(f));
+        // Negative direction: none of the expected flags may be present.
+        let any_present = expected_flags.iter().any(|f| actual_flags.contains(f));
+
+        match (expect.as_str(), all_present, any_present) {
+            ("1", false, _) => panic!(
+                "expected all of `{:?}` in `{}`, got `{}`",
+                expected_flags, key, actual
+            ),
+            ("0", _, true) => panic!(
+                "did not expect any of `{:?}` in `{}`, got `{}`",
+                expected_flags, key, actual
+            ),
             _ => {}
         }
     }

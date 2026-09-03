@@ -44,13 +44,16 @@ endif()
 corrosion_set_env_vars(cross_lang_lto_lib "EXPECT_LINKER_PLUGIN_LTO=${EXPECT_LTO}")
 
 # Both languages are enabled by this test project, so both variables are defined.
-# CMAKE_C_COMPILE_OPTIONS_IPO may itself be a list (e.g. GCC emits two elements,
+# CMAKE_<LANG>_COMPILE_OPTIONS_IPO may itself be a list (e.g. GCC emits two elements,
 # `-flto=auto;-fno-fat-lto-objects`); interpolating it directly would embed a literal `;` in
-# the env var value, which CMake would later re-split as a list separator. Use the first
-# element as a canary instead - it identifies the LTO mode and is always present.
-list(GET CMAKE_C_COMPILE_OPTIONS_IPO 0 expect_ipo_c_flag)
+# the env var value, which CMake would later re-split as a list separator. Join it with spaces
+# instead - same as the production code at cmake/Corrosion.cmake does - and pass every element
+# through, so the test proves all IPO flags survive the forwarding, not just the first.
+list(JOIN CMAKE_C_COMPILE_OPTIONS_IPO " " expect_ipo_c_flags)
+list(JOIN CMAKE_CXX_COMPILE_OPTIONS_IPO " " expect_ipo_cxx_flags)
 corrosion_set_env_vars(cross_lang_lto_lib
-    "EXPECT_IPO_C_FLAG=${expect_ipo_c_flag}")
+    "EXPECT_IPO_C_FLAGS=${expect_ipo_c_flags}"
+    "EXPECT_IPO_CXX_FLAGS=${expect_ipo_cxx_flags}")
 
 if(USE_HOSTBUILD)
     corrosion_set_hostbuild(cross_lang_lto_lib)
