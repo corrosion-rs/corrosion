@@ -529,6 +529,7 @@ jobs:
       - darwin
       - iOS
       - test_cxxbridge
+      - test_cross_language_lto
       - autoinstall_cargo_target
       - install
     runs-on: ubuntu-latest
