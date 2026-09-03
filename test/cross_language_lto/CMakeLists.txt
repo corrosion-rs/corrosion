@@ -50,3 +50,11 @@ corrosion_tests_add_test(cross_language_lto_import_on "" TEST_SRC_DIR gating
         -DIMPORT_CROSS_LANGUAGE_LTO=ON
         -DEXPECT_LTO=1
 )
+
+if(CORROSION_TESTS_CROSS_LANGUAGE_LTO)
+    # C++ executable linking a Rust staticlib whose members are LLVM bitcode. CMake drives
+    # this link, so it exercises the direction where Corrosion adds no link flags at all.
+    corrosion_tests_add_test(cross_language_lto_cpp2rust "lto-cpp-exe" TEST_SRC_DIR cpp2rust)
+    set_tests_properties("cross_language_lto_cpp2rust_run_lto-cpp-exe" PROPERTIES
+        PASS_REGULAR_EXPRESSION "Ok")
+endif()
