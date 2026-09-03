@@ -24,3 +24,14 @@ if(NOT "${actual_ipo}" STREQUAL "${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
     message(FATAL_ERROR "Expected target property INTERPROCEDURAL_OPTIMIZATION to be seeded to "
         "`${CMAKE_INTERPROCEDURAL_OPTIMIZATION}`, but it is `${actual_ipo}`")
 endif()
+
+# `EXPECT_LTO` is passed by the test harness and tells the build script whether
+# `-Clinker-plugin-lto` must be present.
+if(NOT DEFINED EXPECT_LTO)
+    message(FATAL_ERROR "This test must be configured with -DEXPECT_LTO=<0|1>")
+endif()
+corrosion_set_env_vars(cross_lang_lto_lib "EXPECT_LINKER_PLUGIN_LTO=${EXPECT_LTO}")
+
+if(USE_HOSTBUILD)
+    corrosion_set_hostbuild(cross_lang_lto_lib)
+endif()

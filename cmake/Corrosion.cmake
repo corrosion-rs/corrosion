@@ -879,6 +879,23 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
 
+    # Cross-language LTO. Both gates must be generator expressions: the permission property may
+    # still be overwritten by `corrosion_import_crate` after this function has run, and
+    # `INTERPROCEDURAL_OPTIMIZATION` may be set per-config.
+    #
+    # This uses global RUSTFLAGS rather than local ones on purpose. Local rustflags would only
+    # make the leaf crate emit bitcode and leave every Rust dependency as opaque objects, losing
+    # most of the benefit. Global RUSTFLAGS is safe here because Corrosion always passes
+    # `--target`, and cargo does not apply RUSTFLAGS to build scripts and proc-macros in that
+    # case - so host tooling is not built with `-Clinker-plugin-lto`.
+    set(cross_lang_lto_prop "$<TARGET_PROPERTY:${target_name},${_CORR_PROP_CROSS_LANGUAGE_LTO}>")
+    set(ipo_prop "$<TARGET_PROPERTY:${target_name},INTERPROCEDURAL_OPTIMIZATION>")
+    set(cross_lang_lto_cond
+        "$<AND:$<BOOL:${cross_lang_lto_prop}>,$<BOOL:${ipo_prop}>,${if_not_host_build_condition}>")
+    corrosion_add_target_rustflags("${target_name}" "$<${cross_lang_lto_cond}:-Clinker-plugin-lto>")
+    message(DEBUG "Target ${target_name} requests cross-language LTO when "
+        "INTERPROCEDURAL_OPTIMIZATION is set: ${cross_lang_lto_cond}")
+
     # todo: this should probably also be guarded by if_not_host_build_condition.
     if(COR_NO_STD)
         corrosion_add_target_local_rustflags("${target_name}" "-Cdefault-linker-libraries=no")
