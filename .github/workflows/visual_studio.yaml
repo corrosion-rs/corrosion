@@ -25,9 +25,9 @@ jobs:
     name: Test Visual Studio ${{ inputs.vs_version }}
     runs-on: "windows-${{ inputs.vs_version }}"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ inputs.cmake }}"
           ninjaVersion: "~1.10.0"
@@ -43,7 +43,7 @@ jobs:
       # significantly faster.
       # - name: Cache MSVC build directory
       #   id: cache-msvc-builddir
-      #   uses: actions/cache@v4
+      #   uses: actions/cache@v6
       #   with:
       #     path: build
       #     key: ${{ inputs.os }}-${{ inputs.target_arch }}-${{ inputs.rust }}-msvc-${{ inputs.vs_version}}-build

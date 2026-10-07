@@ -85,9 +85,9 @@ jobs:
             arch: aarch64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ matrix.cmake }}"
           ninjaVersion: "~1.10.0"
@@ -130,9 +130,9 @@ jobs:
           - rust: 1.54.0
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ matrix.cmake }}"
           ninjaVersion: "~1.10.0"
@@ -175,7 +175,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Rust
         id: install_rust
         uses: dtolnay/rust-toolchain@master
@@ -206,9 +206,9 @@ jobs:
     name: Test Windows Cross
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "~3.22.0"
           ninjaVersion: "~1.10.0"
@@ -288,9 +288,9 @@ jobs:
           - rust: 1.54.0
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ matrix.cmake }}"
           ninjaVersion: "~1.10.0"
@@ -325,9 +325,9 @@ jobs:
           - rust: stable
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ matrix.cmake }}"
           ninjaVersion: "~1.11.0"
@@ -363,8 +363,8 @@ jobs:
           # otherwise the caching will not work and the cmd will be built from source.
           - cxxbridge_version: "1.0.86"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
         id: cache_cxxbridge
         with:
           path: "~/.cargo/bin/cxxbridge*"
@@ -379,7 +379,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "~3.24.0"
           ninjaVersion: "~1.10.0"
@@ -404,9 +404,9 @@ jobs:
     name: Test Auto-installing Cargo target via rustup
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
       - name: Install Rust
         id: install_rust
         uses: dtolnay/rust-toolchain@stable
@@ -438,12 +438,12 @@ jobs:
           - rust: 1.54.0
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup MSVC Development Environment
         uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "~3.22.0"
           ninjaVersion: "~1.10.0"
