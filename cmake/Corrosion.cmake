@@ -821,6 +821,15 @@ function(_add_cargo_build out_cargo_build_out_dir)
         )
     endif()
 
+    # When using XCode to target visionOS, XCode exports `XROS_DEPLOYMENT_TARGET` into the environment of
+    # the build. Older versions of cc-rs (e.g. 1.0.73) pass an unversioned `--target=arm64-apple-darwin`
+    # when compiling for macOS, so clang falls back to the deployment target environment variables and
+    # silently compiles for visionOS instead.
+    unset(cargo_host_unset_env)
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "visionOS")
+        set(cargo_host_unset_env "$<${hostbuild_override}:--unset=XROS_DEPLOYMENT_TARGET>")
+    endif()
+
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
     # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
     # CMAKE_OSX_SYSROOT. Fortunately the compilers Apple ships also respect the SDKROOT environment
@@ -883,6 +892,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 "${global_rustflags_genex}"
                 "${cargo_target_linker}"
                 "${cargo_host_target_linker}"
+                "${cargo_host_unset_env}"
                 "${corrosion_cc_rs_flags}"
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
