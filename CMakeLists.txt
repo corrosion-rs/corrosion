@@ -51,7 +51,7 @@ include(CMakePackageConfigHelpers)
 configure_package_config_file(
     cmake/CorrosionConfig.cmake.in CorrosionConfig.cmake
     INSTALL_DESTINATION
-        "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/Corrosion"
+        "${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion"
 )
 
 write_basic_package_version_file(
@@ -67,7 +67,7 @@ install(
         "${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfig.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/CorrosionConfigVersion.cmake"
     DESTINATION
-        "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/Corrosion"
+        "${CMAKE_INSTALL_LIBDIR}/cmake/Corrosion"
 )
 
 # These CMake scripts are needed both for the install and as a subdirectory
@@ -77,5 +77,5 @@ install(
         cmake/CorrosionGenerator.cmake
         cmake/FindRust.cmake
     DESTINATION
-        "${CMAKE_INSTALL_FULL_DATADIR}/cmake"
+        "${CMAKE_INSTALL_DATADIR}/cmake"
 )
