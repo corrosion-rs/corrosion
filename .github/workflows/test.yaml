@@ -436,6 +436,55 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3 -R "^cxxbridge"
 
+  test_cross_language_lto:
+    name: Test cross-language LTO
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rust_toolchain: "1.82"
+            llvm_version: "19"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Clang, lld and the LLVM LTO linker plugin
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          codename=$(lsb_release -cs)
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm_version }} main" \
+            | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt update
+          sudo apt install -y \
+            clang-${{ matrix.llvm_version }} \
+            lld-${{ matrix.llvm_version }} \
+            llvm-${{ matrix.llvm_version }}-linker-tools
+      - name: Install CMake
+        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        with:
+          cmakeVersion: "~3.24.0"
+          ninjaVersion: "~1.10.0"
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust_toolchain }}
+      - name: Verify LLVM versions are compatible
+        run: |
+          rustc -vV
+          clang-${{ matrix.llvm_version }} --version
+      - name: Configure
+        run: >
+          cmake
+          -S.
+          -Bbuild
+          -GNinja
+          -DCORROSION_VERBOSE_OUTPUT=ON
+          -DCORROSION_TESTS_CROSS_LANGUAGE_LTO=ON
+          -DCMAKE_C_COMPILER=clang-${{ matrix.llvm_version }}
+          -DCMAKE_CXX_COMPILER=clang++-${{ matrix.llvm_version }}
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3 -R "^cross_language_lto"
+
   autoinstall_cargo_target:
     name: Test Auto-installing Cargo target via rustup
     runs-on: ubuntu-22.04
@@ -520,6 +569,7 @@ jobs:
       - iOS
       - visionOS
       - test_cxxbridge
+      - test_cross_language_lto
       - autoinstall_cargo_target
       - install
     runs-on: ubuntu-latest

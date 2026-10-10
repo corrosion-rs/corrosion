@@ -1,0 +1,8 @@
+[package]
+name = "cross-lang-lto-test"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "cross_lang_lto_lib"
+crate-type = ["staticlib"]

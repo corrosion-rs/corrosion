@@ -1,0 +1,8 @@
+[package]
+name = "lto-cpp2rust"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "lto_cpp2rust_lib"
+crate-type = ["staticlib"]

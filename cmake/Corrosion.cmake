@@ -46,6 +46,48 @@ endif()
 
 find_package(Rust REQUIRED)
 
+# Cross-language LTO needs rustc and the C/C++ compiler to emit LLVM bitcode that the
+# linker plugin can combine, so only LLVM based compilers are candidates.
+#
+# For more information, see the compatibility table: https://doc.rust-lang.org/rustc/linker-plugin-lto.html#toolchain-compatibility
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(_corrosion_cross_language_lto_default ON)
+else()
+    set(_corrosion_cross_language_lto_default OFF)
+endif()
+
+option(CORROSION_CROSS_LANGUAGE_LTO
+    "Request cross-language LTO (`-Clinker-plugin-lto`) for Rust targets that also have \
+INTERPROCEDURAL_OPTIMIZATION enabled. Defaults to ON for Clang based compilers."
+    "${_corrosion_cross_language_lto_default}"
+)
+
+if(CORROSION_CROSS_LANGUAGE_LTO)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(_corrosion_lto_peer "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+    elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        set(_corrosion_lto_peer "${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
+    else()
+        set(_corrosion_lto_peer "a non-LLVM compiler")
+        message(AUTHOR_WARNING "CORROSION_CROSS_LANGUAGE_LTO is enabled, but neither the C nor the "
+            "C++ compiler is Clang based. `-Clinker-plugin-lto` will still be passed to rustc, but "
+            "the resulting bitcode is unlikely to be usable by your linker."
+        )
+    endif()
+    if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+        message(STATUS
+            "Corrosion: attempting cross-language LTO between Rust (LLVM ${Rust_LLVM_VERSION}) and "
+            "${_corrosion_lto_peer} for targets with INTERPROCEDURAL_OPTIMIZATION. Version "
+            "compatibility: https://doc.rust-lang.org/rustc/linker-plugin-lto.html#toolchain-compatibility"
+        )
+    endif()
+    message(DEBUG
+        "Corrosion: disable cross-language LTO globally with `-DCORROSION_CROSS_LANGUAGE_LTO=OFF`, "
+        "per import with `corrosion_import_crate(... CROSS_LANGUAGE_LTO OFF)`, or per target with "
+        "`set_property(TARGET <tgt> PROPERTY INTERPROCEDURAL_OPTIMIZATION OFF)`."
+    )
+endif()
+
 if(CMAKE_GENERATOR MATCHES "Visual Studio"
         AND (NOT CMAKE_VS_PLATFORM_NAME STREQUAL CMAKE_VS_PLATFORM_NAME_DEFAULT)
         AND Rust_VERSION VERSION_LESS "1.54")
@@ -620,6 +662,7 @@ set(_CORR_PROP_ALL_FEATURES CORROSION_ALL_FEATURES CACHE INTERNAL "")
 set(_CORR_PROP_NO_DEFAULT_FEATURES CORROSION_NO_DEFAULT_FEATURES CACHE INTERNAL "")
 set(_CORR_PROP_ENV_VARS CORROSION_ENVIRONMENT_VARIABLES CACHE INTERNAL "")
 set(_CORR_PROP_HOST_BUILD CORROSION_USE_HOST_BUILD CACHE INTERNAL "")
+set(_CORR_PROP_CROSS_LANGUAGE_LTO CORROSION_CROSS_LANGUAGE_LTO CACHE INTERNAL "")
 
 # Add custom command to build one target in a package (crate)
 #
@@ -789,6 +832,13 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 
+    set(cross_lang_lto_prop "$<TARGET_PROPERTY:${target_name},${_CORR_PROP_CROSS_LANGUAGE_LTO}>")
+    set(ipo_prop "$<TARGET_PROPERTY:${target_name},INTERPROCEDURAL_OPTIMIZATION>")
+    set(ipo_config_prop "$<TARGET_PROPERTY:${target_name},INTERPROCEDURAL_OPTIMIZATION_$<UPPER_CASE:$<CONFIG>>>")
+    set(ipo_effective "$<IF:$<STREQUAL:${ipo_config_prop},>,${ipo_prop},${ipo_config_prop}>")
+    set(cross_lang_lto_cond
+        "$<AND:$<BOOL:${cross_lang_lto_prop}>,$<BOOL:${ipo_effective}>,${if_not_host_build_condition}>")
+
     set(corrosion_cc_rs_flags)
 
     if(CMAKE_C_COMPILER)
@@ -804,6 +854,17 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # the default AR.
     if(CMAKE_AR AND NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc"))
         list(APPEND corrosion_cc_rs_flags "AR_${stripped_target_triple}=${CMAKE_AR}")
+    endif()
+
+    if(CMAKE_C_COMPILE_OPTIONS_IPO)
+        list(JOIN CMAKE_C_COMPILE_OPTIONS_IPO " " cross_lang_lto_c_ipo_flags)
+        list(APPEND corrosion_cc_rs_flags
+            "$<${cross_lang_lto_cond}:CFLAGS_${stripped_target_triple}=${cross_lang_lto_c_ipo_flags}>")
+    endif()
+    if(CMAKE_CXX_COMPILE_OPTIONS_IPO)
+        list(JOIN CMAKE_CXX_COMPILE_OPTIONS_IPO " " cross_lang_lto_cxx_ipo_flags)
+        list(APPEND corrosion_cc_rs_flags
+            "$<${cross_lang_lto_cond}:CXXFLAGS_${stripped_target_triple}=${cross_lang_lto_cxx_ipo_flags}>")
     endif()
 
     # When using XCode to target iOS / iOSSimulator, `cc` will be a compiler that targets iOS.
@@ -844,6 +905,9 @@ function(_add_cargo_build out_cargo_build_out_dir)
     endif()
 
     corrosion_add_target_local_rustflags("${target_name}" "$<$<BOOL:${corrosion_link_args}>:-Clink-args=${corrosion_link_args}>")
+    corrosion_add_target_rustflags("${target_name}" "$<${cross_lang_lto_cond}:-Clinker-plugin-lto>")
+    message(DEBUG "Target ${target_name} requests cross-language LTO when "
+        "INTERPROCEDURAL_OPTIMIZATION is set: ${cross_lang_lto_cond}")
 
     # todo: this should probably also be guarded by if_not_host_build_condition.
     if(COR_NO_STD)
@@ -860,6 +924,19 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(deps_link_languages_prop "$<TARGET_PROPERTY:_cargo-build_${target_name},CARGO_DEPS_LINKER_LANGUAGES>")
     set(deps_link_languages "$<TARGET_GENEX_EVAL:_cargo-build_${target_name},${deps_link_languages_prop}>")
     set(target_uses_cxx  "$<IN_LIST:CXX,${deps_link_languages}>")
+
+    if(("bin" IN_LIST target_kinds OR "cdylib" IN_LIST target_kinds)
+            AND NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
+        string(JOIN " " c_ipo_flags   ${CMAKE_C_COMPILE_OPTIONS_IPO}   ${CMAKE_C_LINK_OPTIONS_IPO})
+        string(JOIN " " cxx_ipo_flags ${CMAKE_CXX_COMPILE_OPTIONS_IPO} ${CMAKE_CXX_LINK_OPTIONS_IPO})
+        # The language is only known as a genex, so the selection happens inside the genex too.
+        # The inner `$<BOOL:...>` guard matters: a project that enables only one language leaves
+        # the other variable empty, which would otherwise emit a bare `-Clink-args=`.
+        set(ipo_link_flags "$<IF:${target_uses_cxx},${cxx_ipo_flags},${c_ipo_flags}>")
+        corrosion_add_target_local_rustflags("${target_name}"
+            "$<$<AND:${cross_lang_lto_cond},$<NOT:${explicit_linker_defined}>>:$<$<BOOL:${ipo_link_flags}>:-Clink-args=${ipo_link_flags}>>")
+    endif()
+
     unset(default_linker)
     # With the MSVC ABI rustc only supports directly invoking the linker - Invoking cl as the linker driver is not supported.
     if(NOT (Rust_CARGO_TARGET_ENV STREQUAL "msvc" OR COR_NO_LINKER_OVERRIDE))
@@ -1027,7 +1104,7 @@ function(corrosion_import_crate)
         NO_USES_TERMINAL
         LOCKED
         FROZEN)
-    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES)
+    set(ONE_VALUE_KEYWORDS MANIFEST_PATH PROFILE IMPORTED_CRATES CROSS_LANGUAGE_LTO)
     set(MULTI_VALUE_KEYWORDS CRATE_TYPES CRATES FEATURES FLAGS OVERRIDE_CRATE_TYPE)
     cmake_parse_arguments(COR "${OPTIONS}" "${ONE_VALUE_KEYWORDS}" "${MULTI_VALUE_KEYWORDS}" ${ARGN})
     list(APPEND CMAKE_MESSAGE_CONTEXT "corrosion_import_crate")
@@ -1148,6 +1225,19 @@ function(corrosion_import_crate)
                 INTERFACE_CORROSION_CARGO_PROFILE "${COR_PROFILE}"
                 INTERFACE_CORROSION_CARGO_FLAGS "${additional_cargo_flags}"
     )
+
+    if(DEFINED COR_CROSS_LANGUAGE_LTO)
+        string(TOUPPER "${COR_CROSS_LANGUAGE_LTO}" cross_language_lto_upper)
+        if(NOT cross_language_lto_upper MATCHES "^(1|0|ON|OFF|YES|NO|TRUE|FALSE|Y|N|IGNORE|NOTFOUND|)$"
+                AND NOT cross_language_lto_upper MATCHES "-NOTFOUND$")
+            message(FATAL_ERROR "Invalid argument: `${COR_CROSS_LANGUAGE_LTO}` for parameter CROSS_LANGUAGE_LTO!\n"
+                "CROSS_LANGUAGE_LTO must be a valid CMake boolean value, e.g. `ON`, `OFF`, `TRUE` or `FALSE`."
+            )
+        endif()
+        set_target_properties(${imported_crates} PROPERTIES
+            "${_CORR_PROP_CROSS_LANGUAGE_LTO}" "${COR_CROSS_LANGUAGE_LTO}"
+        )
+    endif()
 
     # _CORR_PROP_ENV_VARS
     if(DEFINED COR_IMPORTED_CRATES)
@@ -2329,19 +2419,31 @@ function(corrosion_parse_package_version package_manifest_path out_package_versi
 endfunction()
 
 function(_corrosion_initialize_properties target_name)
-    # Initialize the `<XYZ>_OUTPUT_DIRECTORY` properties based on `CMAKE_<XYZ>_OUTPUT_DIRECTORY`.
-    foreach(output_var RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY)
-        if (DEFINED "CMAKE_${output_var}")
-            set_property(TARGET ${target_name} PROPERTY "${output_var}" "${CMAKE_${output_var}}")
+    # Initialize the `<XYZ>_OUTPUT_DIRECTORY` properties based on `CMAKE_<XYZ>_OUTPUT_DIRECTORY`,
+    # and `INTERPROCEDURAL_OPTIMIZATION` based on `CMAKE_INTERPROCEDURAL_OPTIMIZATION`.
+    foreach(initialized_property RUNTIME_OUTPUT_DIRECTORY ARCHIVE_OUTPUT_DIRECTORY
+            LIBRARY_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY INTERPROCEDURAL_OPTIMIZATION)
+        if (DEFINED "CMAKE_${initialized_property}")
+            set_property(TARGET ${target_name} PROPERTY "${initialized_property}" "${CMAKE_${initialized_property}}")
         endif()
 
-        foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+        set(config_types_to_seed ${CMAKE_CONFIGURATION_TYPES})
+        if(initialized_property STREQUAL "INTERPROCEDURAL_OPTIMIZATION"
+                AND CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE IN_LIST CMAKE_CONFIGURATION_TYPES)
+            list(APPEND config_types_to_seed "${CMAKE_BUILD_TYPE}")
+        endif()
+
+        foreach(config_type ${config_types_to_seed})
             string(TOUPPER "${config_type}" config_type_upper)
-            if (DEFINED "CMAKE_${output_var}_${config_type_upper}")
-                set_property(TARGET ${target_name} PROPERTY "${output_var}_${config_type_upper}" "${CMAKE_${output_var}_${config_type_upper}}")
+            if (DEFINED "CMAKE_${initialized_property}_${config_type_upper}")
+                set_property(TARGET ${target_name} PROPERTY "${initialized_property}_${config_type_upper}" "${CMAKE_${initialized_property}_${config_type_upper}}")
             endif()
         endforeach()
     endforeach()
+
+    set_property(TARGET ${target_name}
+        PROPERTY "${_CORR_PROP_CROSS_LANGUAGE_LTO}" "${CORROSION_CROSS_LANGUAGE_LTO}"
+    )
 endfunction()
 
 # Helper macro to pass through an optional `OPTION` argument parsed via `cmake_parse_arguments`
