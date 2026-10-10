@@ -31,7 +31,7 @@ option(
     OFF
 )
 
-if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND (CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "visionOS"))
     if(DEFINED CORROSION_HOST_TARGET_LINKER)
         set(_corrosion_host_linker "${CORROSION_HOST_TARGET_LINKER}")
         message(DEBUG "Using user provided CORROSION_HOST_TARGET_LINKER: ${CORROSION_HOST_TARGET_LINKER}")
@@ -422,6 +422,7 @@ function(_corrosion_add_library_target)
     set(is_windows_msvc "")
     set(is_macos "")
     set(is_ios "")
+    set(is_xros "")
     if(Rust_CARGO_TARGET_OS STREQUAL "windows")
         set(is_windows TRUE)
         if(Rust_CARGO_TARGET_ENV STREQUAL "msvc")
@@ -433,6 +434,8 @@ function(_corrosion_add_library_target)
         set(is_macos TRUE)
     elseif(Rust_CARGO_TARGET_OS STREQUAL "ios")
         set(is_ios true)
+    elseif(Rust_CARGO_TARGET_OS STREQUAL "visionos")
+        set(is_xros true)
     endif()
 
     # target file names
@@ -446,7 +449,7 @@ function(_corrosion_add_library_target)
 
     if(is_windows)
         set(dynamic_lib_name "${lib_name}.dll")
-    elseif(is_macos OR is_ios)
+    elseif(is_macos OR is_ios OR is_xros)
         set(dynamic_lib_name "lib${lib_name}.dylib")
     else()
         set(dynamic_lib_name "lib${lib_name}.so")
@@ -809,13 +812,22 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # assumes `cc` is a valid linker driver for the host platform (but in this case `cc` targets iOS).
     # To work around this we explicitly set the linker for the host platform.
     unset(cargo_host_target_linker)
-    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND (CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "visionOS"))
         string(TOUPPER "${Rust_CARGO_HOST_TARGET_CACHED}" host_target_upper)
         string(REPLACE "-" "_" host_target_upper_underscore "${host_target_upper}")
         set(cargo_host_target_linker "CARGO_TARGET_${host_target_upper_underscore}_LINKER=$CACHE{CORROSION_HOST_TARGET_LINKER}")
         message(DEBUG "Setting `${cargo_host_target_linker}` for target ${target_name} to workaround a hostbuild"
             " issue when building targets for iOS."
         )
+    endif()
+
+    # When using XCode to target visionOS, XCode exports `XROS_DEPLOYMENT_TARGET` into the environment of
+    # the build. Older versions of cc-rs (e.g. 1.0.73) pass an unversioned `--target=arm64-apple-darwin`
+    # when compiling for macOS, so clang falls back to the deployment target environment variables and
+    # silently compiles for visionOS instead.
+    unset(cargo_host_unset_env)
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "visionOS")
+        set(cargo_host_unset_env "$<${hostbuild_override}:--unset=XROS_DEPLOYMENT_TARGET>")
     endif()
 
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
@@ -880,6 +892,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 "${global_rustflags_genex}"
                 "${cargo_target_linker}"
                 "${cargo_host_target_linker}"
+                "${cargo_host_unset_env}"
                 "${corrosion_cc_rs_flags}"
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
@@ -1278,13 +1291,17 @@ function(corrosion_link_libraries target_name)
             # and is not correctly replaced at build time
             set(linker_dir "$<TARGET_LINKER_FILE_DIR:${library}>")
             # Probably should also affect other apple OSs with a simulator
-            if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+            if(CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "visionOS")
                 unset(platform_name)
                 message(CHECK_START "corrosion_link_libraries: Attempting to replace EFFECTIVE_PLATFORM_NAME")
                 if(CMAKE_OSX_SYSROOT MATCHES "iphoneos")
                     set(platform_name "-iphoneos")
                 elseif(CMAKE_OSX_SYSROOT MATCHES "iphonesimulator")
                     set(platform_name "-iphonesimulator")
+                elseif(CMAKE_OSX_SYSROOT MATCHES "xros")
+                    set(platform_name "-xros")
+                elseif(CMAKE_OSX_SYSROOT MATCHES "xrsimulator")
+                    set(platform_name "-xrsimulator")
                 else()
                     # Todo: CMAKE_OSX_SYSROOT can be not set - how do we handle that?
                     message(CHECK_FAIL "Failed to determine platform name for iOS target from sysroot ${CMAKE_OSX_SYSROOT}")

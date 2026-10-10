@@ -14,6 +14,8 @@ set(rustup_shipped_targets
         "aarch64-apple-darwin"
         "aarch64-apple-ios"
         "aarch64-apple-ios-sim"
+        "aarch64-apple-visionos"
+        "aarch64-apple-visionos-sim"
         "aarch64-fuchsia"
         "aarch64-linux-android"
         "aarch64-pc-windows-msvc"
