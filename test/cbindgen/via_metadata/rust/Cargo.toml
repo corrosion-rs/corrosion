@@ -1,0 +1,17 @@
+[package]
+name = "the-rust-lib-package-name"
+version = "0.1.0"
+license = "MIT"
+edition = "2018"
+
+[dependencies]
+
+[lib]
+crate-type=["staticlib"]
+name = "the_actual_library_crate_name"
+
+[package.metadata.corrosion]
+cbindgen = [
+	 { header = "rust-lib.h", target = "the_actual_library_crate_name", flags = "--config cbindgen.toml" },
+	 { header = "rust-lib-2.h", target = "the_actual_library_crate_name", flags = "--config cbindgen-2.toml" },
+]
