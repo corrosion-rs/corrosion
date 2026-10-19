@@ -310,6 +310,39 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
 
+  # Regression test for CMake >= 4.0 and rustc < 1.91 on macOS with non-Xcode generator.
+  # We can remove this if we update the minimum rust version beyond this, or the minimum CMake version.
+  darwin_toolchain_compiler:
+    name: Test MacOS (toolchain compiler, default SDK)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install CMake
+        uses: lukka/get-cmake@v4.4.2
+        with:
+          cmakeVersion: "^4.0.0"
+          ninjaVersion: "~1.11.0"
+      # Install cbindgen before Rust to use recent default Rust version.
+      - name: Install cbindgen
+        run: cargo install cbindgen
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+          components: rust-src
+      - name: Configure
+        run: >
+          cmake -S. -Bbuild --log-level=DEBUG -G Ninja
+          "-DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}}"
+          "-DCMAKE_C_COMPILER=$(xcrun -f clang)"
+          "-DCMAKE_CXX_COMPILER=$(xcrun -f clang++)"
+      - name: Check that CMAKE_OSX_SYSROOT is empty
+        run: grep -q '^CMAKE_OSX_SYSROOT:STRING=$' build/CMakeCache.txt
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3
+
   iOS:
     name: Test iOS (simulator)
     runs-on: macos-latest
@@ -517,6 +550,7 @@ jobs:
       - windows_gnullvm_msys2
       - linux_stage2
       - darwin
+      - darwin_toolchain_compiler
       - iOS
       - visionOS
       - test_cxxbridge

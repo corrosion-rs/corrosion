@@ -501,11 +501,6 @@ function(_corrosion_add_library_target)
                     TARGET ${target_name}-static
                     PROPERTY INTERFACE_LINK_OPTIONS ${Rust_CARGO_TARGET_LINK_OPTIONS}
             )
-            if(is_macos)
-                set_property(TARGET ${target_name}-static
-                        PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
-                        )
-            endif()
         endif()
     endif()
 
@@ -529,12 +524,6 @@ function(_corrosion_add_library_target)
                     "${implib_name}"
             )
             set_target_properties(${target_name}-shared PROPERTIES COR_IMPLIB_FILE_NAME ${implib_name})
-        endif()
-
-        if(is_macos)
-            set_property(TARGET ${target_name}-shared
-                    PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
-                    )
         endif()
     endif()
 
@@ -570,12 +559,6 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
     set(${out_bin_byproduct} "${bin_filename}" PARENT_SCOPE)
     add_dependencies(${bin_name} cargo-build_${bin_name})
 
-    if(Rust_CARGO_TARGET_OS STREQUAL "darwin")
-        set_property(TARGET ${bin_name}
-                PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
-                )
-    endif()
-
     _corrosion_set_imported_location("${bin_name}" "IMPORTED_LOCATION"
                         "RUNTIME_OUTPUT_DIRECTORY"
                         "${bin_filename}"
@@ -608,6 +591,31 @@ set(_CORROSION_RUST_CARGO_TARGET_UPPER
         "${_CORROSION_TARGET_TRIPLE_UPPER}"
         CACHE INTERNAL
         "target triple in uppercase with underscore"
+)
+
+# Since CMake 4.0 CMAKE_OSX_SYSROOT is empty by default, and the compiler is expected to choose a default SDK.
+# Compilers invoked directly from a toolchain directory don't do that (CMake passes -isysroot for them), and
+# rustc < 1.91 doesn't pass an SDK to the linker. In this case we use the default SDK reported by `xcrun`,
+# which is also what `/usr/bin/cc` would use. Xcode already exports SDKROOT to custom commands.
+set(_corrosion_default_sdkroot "")
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin"
+        AND NOT CMAKE_OSX_SYSROOT AND NOT CMAKE_GENERATOR STREQUAL "Xcode")
+    execute_process(
+        COMMAND xcrun --show-sdk-path
+        OUTPUT_VARIABLE _corrosion_default_sdkroot
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_VARIABLE _corrosion_xcrun_error
+        RESULT_VARIABLE _corrosion_xcrun_result
+    )
+    if(NOT _corrosion_xcrun_result EQUAL 0 OR NOT IS_DIRECTORY "${_corrosion_default_sdkroot}")
+        message(DEBUG "Failed to determine the default macOS SDK via `xcrun --show-sdk-path`: "
+                "${_corrosion_xcrun_error}")
+        set(_corrosion_default_sdkroot "")
+    endif()
+endif()
+set(_CORROSION_DEFAULT_SDKROOT "${_corrosion_default_sdkroot}"
+        CACHE INTERNAL
+        "SDKROOT passed to cargo if CMAKE_OSX_SYSROOT is empty"
 )
 
 # We previously specified some Custom properties as part of our public API, however the chosen names prevented us from
@@ -834,8 +842,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
     # CMAKE_OSX_SYSROOT. Fortunately the compilers Apple ships also respect the SDKROOT environment
     # variable, which we can set for use when cc-rs invokes the compiler.
+    # The linker invoked by rustc also inherits SDKROOT, which it needs to find libSystem.
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_OSX_SYSROOT)
         list(APPEND corrosion_cc_rs_flags "SDKROOT=${CMAKE_OSX_SYSROOT}")
+    elseif(_CORROSION_DEFAULT_SDKROOT)
+        list(APPEND corrosion_cc_rs_flags "SDKROOT=${_CORROSION_DEFAULT_SDKROOT}")
     endif()
 
     # Ensure that cc-rs targets same Apple platform version as the CMake build
