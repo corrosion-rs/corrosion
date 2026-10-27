@@ -31,6 +31,10 @@ option(
     OFF
 )
 
+set(CORROSION_CARGO_TARGET_DIR "" CACHE PATH
+    "Cargo target directory for all imported crates (default: a directory per workspace in the build tree)"
+)
+
 if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND (CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "visionOS"))
     if(DEFINED CORROSION_HOST_TARGET_LINKER)
         set(_corrosion_host_linker "${CORROSION_HOST_TARGET_LINKER}")
@@ -794,6 +798,10 @@ function(_add_cargo_build out_cargo_build_out_dir)
     string(SUBSTRING "${cargo_path_hash}" 0 5 cargo_path_hash)
     cmake_path(APPEND CMAKE_BINARY_DIR ${build_dir} cargo "${cargo_folder_name}_${cargo_path_hash}"
                OUTPUT_VARIABLE cargo_target_dir)
+    if(CORROSION_CARGO_TARGET_DIR)
+        cmake_path(ABSOLUTE_PATH CORROSION_CARGO_TARGET_DIR BASE_DIRECTORY "${CMAKE_BINARY_DIR}"
+                   OUTPUT_VARIABLE cargo_target_dir)
+    endif()
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
 

@@ -98,3 +98,26 @@ Todo: expand this documentation and link to other resources.
 [cxx]: https://cxx.rs/
 [autocxx]: https://google.github.io/autocxx/index.html
   
+## Caching the cargo build in GitHub Actions
+
+Caching the Rust build between CI runs avoids compiling all dependencies again in every job.
+On GitHub Actions, [Swatinem/rust-cache] restores cargo's target directory before the build,
+and prunes it before saving it.
+
+rust-cache needs to know the location of the target directory before CMake runs.
+Set the same directory in `CORROSION_CARGO_TARGET_DIR` and in the `workspaces` input of rust-cache.
+Each entry of `workspaces` maps the directory of a `Cargo.toml` to its target directory,
+relative to the directory of the `Cargo.toml`.
+For a crate in `rust/`:
+
+```yaml
+- uses: actions/checkout@v7
+- uses: dtolnay/rust-toolchain@stable
+- uses: Swatinem/rust-cache@v2
+  with:
+    workspaces: "rust -> ../build/cargo"
+- run: cmake -S . -B build "-DCORROSION_CARGO_TARGET_DIR=${{ github.workspace }}/build/cargo"
+- run: cmake --build build
+```
+
+[Swatinem/rust-cache]: https://github.com/Swatinem/rust-cache
