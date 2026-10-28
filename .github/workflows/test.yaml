@@ -85,9 +85,9 @@ jobs:
             arch: aarch64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ matrix.cmake }}"
           ninjaVersion: "~1.10.0"
@@ -130,9 +130,9 @@ jobs:
           - rust: 1.54.0
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ matrix.cmake }}"
           ninjaVersion: "~1.10.0"
@@ -175,7 +175,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Rust
         id: install_rust
         uses: dtolnay/rust-toolchain@master
@@ -206,9 +206,9 @@ jobs:
     name: Test Windows Cross
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "~3.22.0"
           ninjaVersion: "~1.10.0"
@@ -288,9 +288,9 @@ jobs:
           - rust: 1.54.0
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ matrix.cmake }}"
           ninjaVersion: "~1.10.0"
@@ -310,6 +310,39 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
 
+  # Regression test for CMake >= 4.0 and rustc < 1.91 on macOS with non-Xcode generator.
+  # We can remove this if we update the minimum rust version beyond this, or the minimum CMake version.
+  darwin_toolchain_compiler:
+    name: Test MacOS (toolchain compiler, default SDK)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install CMake
+        uses: lukka/get-cmake@v4.4.2
+        with:
+          cmakeVersion: "^4.0.0"
+          ninjaVersion: "~1.11.0"
+      # Install cbindgen before Rust to use recent default Rust version.
+      - name: Install cbindgen
+        run: cargo install cbindgen
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+          components: rust-src
+      - name: Configure
+        run: >
+          cmake -S. -Bbuild --log-level=DEBUG -G Ninja
+          "-DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}}"
+          "-DCMAKE_C_COMPILER=$(xcrun -f clang)"
+          "-DCMAKE_CXX_COMPILER=$(xcrun -f clang++)"
+      - name: Check that CMAKE_OSX_SYSROOT is empty
+        run: grep -q '^CMAKE_OSX_SYSROOT:STRING=$' build/CMakeCache.txt
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3
+
   iOS:
     name: Test iOS (simulator)
     runs-on: macos-latest
@@ -325,9 +358,9 @@ jobs:
           - rust: stable
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "${{ matrix.cmake }}"
           ninjaVersion: "~1.11.0"
@@ -347,6 +380,42 @@ jobs:
         working-directory: build
         run: ctest --output-on-failure --build-config Debug -j 3
 
+  visionOS:
+    name: Test visionOS (simulator)
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        generator:
+          - "Ninja"
+          - "Xcode"
+        include:
+          - os: macos-latest
+          - cmake: 3.28.4
+          - rust: stable
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install CMake
+        uses: lukka/get-cmake@v4.4.2
+        with:
+          cmakeVersion: "${{ matrix.cmake }}"
+          ninjaVersion: "~1.11.0"
+      # Install cbindgen before Rust to use recent default Rust version.
+      - name: Install cbindgen
+        run: cargo install cbindgen
+      - name: Install Rust
+        id: install_rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.rust}}
+          targets: aarch64-apple-visionos-sim
+          components: rust-src
+      - name: Configure
+        run: cmake -S. -Bbuild --log-level=DEBUG -G "${{ matrix.generator }}" -DCMAKE_SYSTEM_NAME=visionOS -DCMAKE_OSX_SYSROOT=xrsimulator -DCMAKE_OSX_ARCHITECTURES=arm64 -DRust_TOOLCHAIN=${{steps.install_rust.outputs.name}} -DRust_CARGO_TARGET=aarch64-apple-visionos-sim
+      - name: Run Tests
+        working-directory: build
+        run: ctest --output-on-failure --build-config Debug -j 3
 
   test_cxxbridge:
     name: Test cxxbridge integration
@@ -363,8 +432,8 @@ jobs:
           # otherwise the caching will not work and the cmd will be built from source.
           - cxxbridge_version: "1.0.86"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
         id: cache_cxxbridge
         with:
           path: "~/.cargo/bin/cxxbridge*"
@@ -379,7 +448,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "~3.24.0"
           ninjaVersion: "~1.10.0"
@@ -436,9 +505,9 @@ jobs:
     name: Test Auto-installing Cargo target via rustup
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
       - name: Install Rust
         id: install_rust
         uses: dtolnay/rust-toolchain@stable
@@ -470,12 +539,12 @@ jobs:
           - rust: 1.54.0
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup MSVC Development Environment
         uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "~3.22.0"
           ninjaVersion: "~1.10.0"
@@ -513,7 +582,9 @@ jobs:
       - windows_gnullvm_msys2
       - linux_stage2
       - darwin
+      - darwin_toolchain_compiler
       - iOS
+      - visionOS
       - test_cxxbridge
       - autoinstall_cargo_target
       - install

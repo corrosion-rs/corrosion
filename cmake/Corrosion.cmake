@@ -31,7 +31,7 @@ option(
     OFF
 )
 
-if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND (CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "visionOS"))
     if(DEFINED CORROSION_HOST_TARGET_LINKER)
         set(_corrosion_host_linker "${CORROSION_HOST_TARGET_LINKER}")
         message(DEBUG "Using user provided CORROSION_HOST_TARGET_LINKER: ${CORROSION_HOST_TARGET_LINKER}")
@@ -432,6 +432,7 @@ function(_corrosion_add_library_target)
     set(is_windows_msvc "")
     set(is_macos "")
     set(is_ios "")
+    set(is_xros "")
     if(Rust_CARGO_TARGET_OS STREQUAL "windows")
         set(is_windows TRUE)
         if(Rust_CARGO_TARGET_ENV STREQUAL "msvc")
@@ -443,6 +444,8 @@ function(_corrosion_add_library_target)
         set(is_macos TRUE)
     elseif(Rust_CARGO_TARGET_OS STREQUAL "ios")
         set(is_ios true)
+    elseif(Rust_CARGO_TARGET_OS STREQUAL "visionos")
+        set(is_xros true)
     endif()
 
     # target file names
@@ -456,7 +459,7 @@ function(_corrosion_add_library_target)
 
     if(is_windows)
         set(dynamic_lib_name "${lib_name}.dll")
-    elseif(is_macos OR is_ios)
+    elseif(is_macos OR is_ios OR is_xros)
         set(dynamic_lib_name "lib${lib_name}.dylib")
     else()
         set(dynamic_lib_name "lib${lib_name}.so")
@@ -509,11 +512,6 @@ function(_corrosion_add_library_target)
                     TARGET ${target_name}-static
                     PROPERTY INTERFACE_LINK_OPTIONS ${Rust_CARGO_TARGET_LINK_OPTIONS}
             )
-            if(is_macos)
-                set_property(TARGET ${target_name}-static
-                        PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
-                        )
-            endif()
         endif()
     endif()
 
@@ -537,12 +535,6 @@ function(_corrosion_add_library_target)
                     "${implib_name}"
             )
             set_target_properties(${target_name}-shared PROPERTIES COR_IMPLIB_FILE_NAME ${implib_name})
-        endif()
-
-        if(is_macos)
-            set_property(TARGET ${target_name}-shared
-                    PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
-                    )
         endif()
     endif()
 
@@ -587,12 +579,6 @@ function(_corrosion_add_bin_target workspace_manifest_path bin_name out_bin_bypr
     set(${out_bin_byproduct} "${bin_filename}" PARENT_SCOPE)
     add_dependencies(${bin_name} cargo-build_${bin_name})
 
-    if(Rust_CARGO_TARGET_OS STREQUAL "darwin")
-        set_property(TARGET ${bin_name}
-                PROPERTY INTERFACE_LINK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
-                )
-    endif()
-
     _corrosion_set_imported_location("${bin_name}" "IMPORTED_LOCATION"
                         "RUNTIME_OUTPUT_DIRECTORY"
                         "${bin_filename}"
@@ -627,6 +613,31 @@ set(_CORROSION_RUST_CARGO_TARGET_UPPER
         "${_CORROSION_TARGET_TRIPLE_UPPER}"
         CACHE INTERNAL
         "target triple in uppercase with underscore"
+)
+
+# Since CMake 4.0 CMAKE_OSX_SYSROOT is empty by default, and the compiler is expected to choose a default SDK.
+# Compilers invoked directly from a toolchain directory don't do that (CMake passes -isysroot for them), and
+# rustc < 1.91 doesn't pass an SDK to the linker. In this case we use the default SDK reported by `xcrun`,
+# which is also what `/usr/bin/cc` would use. Xcode already exports SDKROOT to custom commands.
+set(_corrosion_default_sdkroot "")
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin"
+        AND NOT CMAKE_OSX_SYSROOT AND NOT CMAKE_GENERATOR STREQUAL "Xcode")
+    execute_process(
+        COMMAND xcrun --show-sdk-path
+        OUTPUT_VARIABLE _corrosion_default_sdkroot
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_VARIABLE _corrosion_xcrun_error
+        RESULT_VARIABLE _corrosion_xcrun_result
+    )
+    if(NOT _corrosion_xcrun_result EQUAL 0 OR NOT IS_DIRECTORY "${_corrosion_default_sdkroot}")
+        message(DEBUG "Failed to determine the default macOS SDK via `xcrun --show-sdk-path`: "
+                "${_corrosion_xcrun_error}")
+        set(_corrosion_default_sdkroot "")
+    endif()
+endif()
+set(_CORROSION_DEFAULT_SDKROOT "${_corrosion_default_sdkroot}"
+        CACHE INTERNAL
+        "SDKROOT passed to cargo if CMAKE_OSX_SYSROOT is empty"
 )
 
 # We previously specified some Custom properties as part of our public API, however the chosen names prevented us from
@@ -838,7 +849,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # assumes `cc` is a valid linker driver for the host platform (but in this case `cc` targets iOS).
     # To work around this we explicitly set the linker for the host platform.
     unset(cargo_host_target_linker)
-    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND (CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "visionOS"))
         string(TOUPPER "${Rust_CARGO_HOST_TARGET_CACHED}" host_target_upper)
         string(REPLACE "-" "_" host_target_upper_underscore "${host_target_upper}")
         set(cargo_host_target_linker "CARGO_TARGET_${host_target_upper_underscore}_LINKER=$CACHE{CORROSION_HOST_TARGET_LINKER}")
@@ -847,12 +858,24 @@ function(_add_cargo_build out_cargo_build_out_dir)
         )
     endif()
 
+    # When using XCode to target visionOS, XCode exports `XROS_DEPLOYMENT_TARGET` into the environment of
+    # the build. Older versions of cc-rs (e.g. 1.0.73) pass an unversioned `--target=arm64-apple-darwin`
+    # when compiling for macOS, so clang falls back to the deployment target environment variables and
+    # silently compiles for visionOS instead.
+    unset(cargo_host_unset_env)
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_NAME STREQUAL "visionOS")
+        set(cargo_host_unset_env "$<${hostbuild_override}:--unset=XROS_DEPLOYMENT_TARGET>")
+    endif()
+
     # Since we instruct cc-rs to use the compiler found by CMake, it is likely one that requires also
     # specifying the target sysroot to use. CMake's generator makes sure to pass --sysroot with
     # CMAKE_OSX_SYSROOT. Fortunately the compilers Apple ships also respect the SDKROOT environment
     # variable, which we can set for use when cc-rs invokes the compiler.
+    # The linker invoked by rustc also inherits SDKROOT, which it needs to find libSystem.
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_OSX_SYSROOT)
         list(APPEND corrosion_cc_rs_flags "SDKROOT=${CMAKE_OSX_SYSROOT}")
+    elseif(_CORROSION_DEFAULT_SDKROOT)
+        list(APPEND corrosion_cc_rs_flags "SDKROOT=${_CORROSION_DEFAULT_SDKROOT}")
     endif()
 
     # Ensure that cc-rs targets same Apple platform version as the CMake build
@@ -976,6 +999,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                 "${global_rustflags_genex}"
                 "${cargo_target_linker}"
                 "${cargo_host_target_linker}"
+                "${cargo_host_unset_env}"
                 "${corrosion_cc_rs_flags}"
                 "${cargo_library_path}"
                 "CORROSION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
@@ -989,12 +1013,16 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # to determine the correct target directory, depending on if the hostbuild target property is
         # set or not.
         # BYPRODUCTS  "${cargo_build_dir}/${build_byproducts}"
-        
+
         # Set WORKING_DIRECTORY to the directory containing the manifest, so that configuration files
         # such as `.cargo/config.toml` or `toolchain.toml` are applied as expected. Cargo searches for
         # configuration files by walking upward from the current directory.
         WORKING_DIRECTORY "${workspace_toml_dir}"
+<<<<<<< HEAD
         DEPENDS ${ACB_CRUBIT_DEPENDS}
+=======
+        COMMENT "Building Rust target ${target_name}"
+>>>>>>> upstream/master
         ${cor_uses_terminal}
         COMMAND_EXPAND_LISTS
         VERBATIM
@@ -1381,13 +1409,17 @@ function(corrosion_link_libraries target_name)
             # and is not correctly replaced at build time
             set(linker_dir "$<TARGET_LINKER_FILE_DIR:${library}>")
             # Probably should also affect other apple OSs with a simulator
-            if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+            if(CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "visionOS")
                 unset(platform_name)
                 message(CHECK_START "corrosion_link_libraries: Attempting to replace EFFECTIVE_PLATFORM_NAME")
                 if(CMAKE_OSX_SYSROOT MATCHES "iphoneos")
                     set(platform_name "-iphoneos")
                 elseif(CMAKE_OSX_SYSROOT MATCHES "iphonesimulator")
                     set(platform_name "-iphonesimulator")
+                elseif(CMAKE_OSX_SYSROOT MATCHES "xros")
+                    set(platform_name "-xros")
+                elseif(CMAKE_OSX_SYSROOT MATCHES "xrsimulator")
+                    set(platform_name "-xrsimulator")
                 else()
                     # Todo: CMAKE_OSX_SYSROOT can be not set - how do we handle that?
                     message(CHECK_FAIL "Failed to determine platform name for iOS target from sysroot ${CMAKE_OSX_SYSROOT}")
@@ -1926,7 +1958,8 @@ function(corrosion_add_cxxbridge cxx_target)
     endif()
 
     # First check if a suitable version of cxxbridge is installed
-    find_program(INSTALLED_CXXBRIDGE cxxbridge PATHS "$ENV{HOME}/.cargo/bin/")
+    _corrosion_find_rust_paths(_cxxbridge_rust_paths)
+    find_program(INSTALLED_CXXBRIDGE cxxbridge PATHS ${_cxxbridge_rust_paths})
     mark_as_advanced(INSTALLED_CXXBRIDGE)
     if(INSTALLED_CXXBRIDGE)
         execute_process(COMMAND ${INSTALLED_CXXBRIDGE} --version OUTPUT_VARIABLE cxxbridge_version_output)
@@ -1966,7 +1999,6 @@ function(corrosion_add_cxxbridge cxx_target)
                     $CACHE{CORROSION_TOOLS_CARGO} install
                     cxxbridge-cmd
                     --version "${cxx_required_version}"
-                    --locked
                     --root "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                     --quiet
                     # todo: use --target-dir to potentially reuse artifacts
@@ -2253,7 +2285,8 @@ function(corrosion_experimental_cbindgen)
 
     set(output_header_name "${CCN_HEADER_NAME}")
 
-    find_program(installed_cbindgen cbindgen)
+    _corrosion_find_rust_paths(_cbindgen_rust_paths)
+    find_program(installed_cbindgen cbindgen PATHS ${_cbindgen_rust_paths})
 
     # Install the newest cbindgen version into our build tree.
     if(installed_cbindgen)
