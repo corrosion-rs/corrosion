@@ -1263,6 +1263,10 @@ You can enable crubit by adding the following to your CMakeLists.txt:
 corrosion_experimental_crubit(<target_name>)
 ```
 * **target_name**: The name of the rust target to enable crubit for, must match the name of the crate package.
+
+The generated C++ bindings use Clang-specific constructs, so C++ code that includes them must be compiled
+with Clang (or AppleClang). Other compilers, such as GCC, fail to compile the generated headers. Select Clang
+when configuring, e.g. `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ...`.
 ANCHOR_END: corrosion-experimental-crubit
 #]=======================================================================]
 function(corrosion_experimental_crubit target_name)

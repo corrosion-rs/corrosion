@@ -494,6 +494,8 @@ jobs:
           -S.
           -Bbuild
           -GNinja
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
           -DCORROSION_VERBOSE_OUTPUT=ON
           -DCORROSION_TESTS_CRUBIT=ON
       - name: Run Tests
