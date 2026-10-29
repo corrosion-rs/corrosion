@@ -1018,11 +1018,8 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # such as `.cargo/config.toml` or `toolchain.toml` are applied as expected. Cargo searches for
         # configuration files by walking upward from the current directory.
         WORKING_DIRECTORY "${workspace_toml_dir}"
-<<<<<<< HEAD
-        DEPENDS ${ACB_CRUBIT_DEPENDS}
-=======
         COMMENT "Building Rust target ${target_name}"
->>>>>>> upstream/master
+        DEPENDS ${ACB_CRUBIT_DEPENDS}
         ${cor_uses_terminal}
         COMMAND_EXPAND_LISTS
         VERBATIM
