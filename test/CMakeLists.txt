@@ -8,6 +8,15 @@ endif()
 option(CORROSION_TESTS_CXXBRIDGE
         "Build cxxbridge tests which requires cxxbridge executable being available"
         OFF)
+find_program(_corrosion_crubit_installed cargo-cpp_api_from_rust)
+if(_corrosion_crubit_installed)
+    set(_corrosion_tests_crubit_default ON)
+else()
+    set(_corrosion_tests_crubit_default OFF)
+endif()
+option(CORROSION_TESTS_CRUBIT
+        "Build Crubit tests which requires Crubit and a compatible toolchain being available"
+        ${_corrosion_tests_crubit_default})
 option(CORROSION_TESTS_KEEP_BUILDDIRS
     "By default corrosion tests will cleanup after themselves. This option limits the cleaning up to the
      target directories and will keep the build directories, which may be useful for caching."
@@ -172,6 +181,9 @@ add_subdirectory(cpp2rust)
 if(Rust_VERSION VERSION_GREATER_EQUAL "1.64.0")
     # Flag `--crate-type` is only supported since Rust 1.64.0
     add_subdirectory(crate_type)
+    if(CORROSION_TESTS_CRUBIT)
+        add_subdirectory(crubit)
+    endif()
     add_subdirectory(override_crate_type)
 endif()
 add_subdirectory(custom_profiles)
