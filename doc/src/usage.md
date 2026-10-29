@@ -189,7 +189,6 @@ them **before** `find_package(Corrosion REQUIRED)`.
   [cache the dependency builds in CI](advanced.md#caching-the-cargo-build-in-github-actions).
   Cargo shares this directory between all imported workspaces and all build configurations,
   so workspaces that build a common dependency with different features rebuild it in turn.
-  A relative path is relative to `CMAKE_BINARY_DIR`.
   Default: a separate directory per workspace in the build tree.
 - `CORROSION_HOST_TARGET_LINKER`: This cache variable is currently **only used when targeting iOS** and allows the user
     to select a linker-driver (e.g. `/usr/bin/cc`) for linking artifacts for the host target. This option is useful

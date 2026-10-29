@@ -800,7 +800,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
                OUTPUT_VARIABLE cargo_target_dir)
     if(CORROSION_CARGO_TARGET_DIR)
         cmake_path(ABSOLUTE_PATH CORROSION_CARGO_TARGET_DIR BASE_DIRECTORY "${CMAKE_BINARY_DIR}"
-                   OUTPUT_VARIABLE cargo_target_dir)
+                   NORMALIZE OUTPUT_VARIABLE cargo_target_dir)
     endif()
     set(cargo_build_dir "${cargo_target_dir}/${target_artifact_dir}/${build_type_dir}")
     set("${out_cargo_build_out_dir}" "${cargo_build_dir}" PARENT_SCOPE)
