@@ -183,6 +183,13 @@ them **before** `find_package(Corrosion REQUIRED)`.
 - `CORROSION_TOOLS_RUST_TOOLCHAIN:STRING`: Specify a different toolchain (e.g. `stable`) to use for compiling helper 
    tools such as `cbindgen` or `cxxbridge`. This can be useful when you want to compile your project with an 
    older rust version (e.g. for checking the MSRV), but you can build build-tools with a newer installed rust version.
+- `CORROSION_CARGO_TARGET_DIR:PATH`: The cargo
+  [target directory](https://doc.rust-lang.org/cargo/reference/build-cache.html)
+  for all crates that `corrosion_import_crate` imports. Use it to give the cargo build a known location, for example to
+  [cache the dependency builds in CI](advanced.md#caching-the-cargo-build-in-github-actions).
+  Cargo shares this directory between all imported workspaces and all build configurations,
+  so workspaces that build a common dependency with different features rebuild it in turn.
+  Default: a separate directory per workspace in the build tree.
 - `CORROSION_HOST_TARGET_LINKER`: This cache variable is currently **only used when targeting iOS** and allows the user
     to select a linker-driver (e.g. `/usr/bin/cc`) for linking artifacts for the host target. This option is useful
    when the build contains build-scripts or proc-macros (which run on the host target) and the default value is not
