@@ -8,6 +8,11 @@ endif()
 option(CORROSION_TESTS_CXXBRIDGE
         "Build cxxbridge tests which requires cxxbridge executable being available"
         OFF)
+option(CORROSION_TESTS_CROSS_LANGUAGE_LTO
+        "Build end-to-end cross-language LTO tests. Requires a Clang whose LLVM version is \
+compatible with the LLVM version rustc was built against, and a linker that can consume LLVM \
+bitcode (lld, ld64, or GNU ld/gold with the LLVM plugin installed)."
+        OFF)
 option(CORROSION_TESTS_KEEP_BUILDDIRS
     "By default corrosion tests will cleanup after themselves. This option limits the cleaning up to the
      target directories and will keep the build directories, which may be useful for caching."
@@ -180,6 +185,7 @@ if(NOT Rust_CROSSCOMPILING AND Rust_VERSION VERSION_GREATER_EQUAL "1.60.0")
 endif()
 add_subdirectory(cbindgen)
 add_subdirectory(corrosion_install)
+add_subdirectory(cross_language_lto)
 add_subdirectory(cxxbridge)
 add_subdirectory(envvar)
 add_subdirectory(features)
