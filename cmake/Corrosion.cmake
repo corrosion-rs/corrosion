@@ -928,6 +928,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     message(DEBUG "TARGET ${target_name} produces byproducts ${build_byproducts}")
     message(DEBUG "corrosion_cc_rs_flags: ${corrosion_cc_rs_flags}")
 
+    set(crubit_header_byproducts "")
     if(is_crubit_lib)
         cmake_path(GET ACB_CARGO_CRUBIT_BIN PARENT_PATH cargo_cmd_dir)
         if(CMAKE_HOST_WIN32)
@@ -952,6 +953,11 @@ function(_add_cargo_build out_cargo_build_out_dir)
         endif()
 
         set(crubit_out_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated/crubit/${target_name}")
+        # Dependency headers are only known after Crubit has run. This is needed for Ninja to
+        # correctly detect it needs to rebuild C++ targets depending on these files.
+        file(GLOB crubit_header_byproducts CONFIGURE_DEPENDS "${crubit_out_dir}/include/crubit/*.h")
+        list(APPEND crubit_header_byproducts "${crubit_out_dir}/include/crubit/${target_name}.h")
+        list(REMOVE_DUPLICATES crubit_header_byproducts)
         # Since cargo cpp_api_from_rust uses cargo build internally, we pass cargo build args after `--`
         set(cargo_args
             cpp_api_from_rust
@@ -1019,6 +1025,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
         # to determine the correct target directory, depending on if the hostbuild target property is
         # set or not.
         # BYPRODUCTS  "${cargo_build_dir}/${build_byproducts}"
+        BYPRODUCTS ${crubit_header_byproducts}
 
         # Set WORKING_DIRECTORY to the directory containing the manifest, so that configuration files
         # such as `.cargo/config.toml` or `toolchain.toml` are applied as expected. Cargo searches for
