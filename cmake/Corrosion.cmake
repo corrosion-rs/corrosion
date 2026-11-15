@@ -335,10 +335,6 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
         endif()
     endif()
     set(src_file_names "${file_names}")
-    if(Rust_CARGO_TARGET_ENV STREQUAL "gnullvm")
-        # Workaround for cargo not exposing implibs yet.
-        list(TRANSFORM src_file_names PREPEND "deps/" REGEX "\.dll\.a$")
-    endif()
     list(TRANSFORM src_file_names PREPEND "${cargo_build_dir}/")
     list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
