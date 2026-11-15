@@ -932,26 +932,27 @@ function(_add_cargo_build out_cargo_build_out_dir)
     message(DEBUG "corrosion_cc_rs_flags: ${corrosion_cc_rs_flags}")
 
     if(is_crubit_lib)
+        cmake_path(GET ACB_CARGO_CRUBIT_BIN PARENT_PATH cargo_cmd_dir)
         if(CMAKE_HOST_WIN32)
-            set(lib_path_env_var "PATH")
-            set(path_sep ";")
-            # On Windows, DLLs are typically in the bin directory
+            # On Windows, DLLs are typically in the bin directory.
             get_filename_component(rustc_lib_dir "${_CORROSION_RUSTC}" DIRECTORY)
+            set(rustc_lib_dir_env "")
+            set(path_var "PATH=${cargo_cmd_dir};${rustc_lib_dir};$ENV{PATH}")
+            # Escape to prevent COMMAND_EXPAND_LISTS from splitting the command on windows.
+            string(REPLACE ";" "\\;" path_var "${path_var}")
         else()
             if (CMAKE_HOST_APPLE)
               set(lib_path_env_var "DYLD_LIBRARY_PATH")
             else()
               set(lib_path_env_var "LD_LIBRARY_PATH")
             endif()
-            set(path_sep ":")
             # On Linux, shared objects are typically in the lib directory
             get_filename_component(rustc_bin_dir "${_CORROSION_RUSTC}" DIRECTORY)
             get_filename_component(rustc_root_dir "${rustc_bin_dir}" DIRECTORY)
             set(rustc_lib_dir "${rustc_root_dir}/lib")
+            set(rustc_lib_dir_env "${lib_path_env_var}=${rustc_lib_dir}")
+            set(path_var "PATH=${cargo_cmd_dir}:$ENV{PATH}")
         endif()
-        set(rustc_lib_dir_env "${lib_path_env_var}=${rustc_lib_dir}")
-        cmake_path(GET ACB_CARGO_CRUBIT_BIN PARENT_PATH cargo_cmd_dir)
-        set(path_var "PATH=${cargo_cmd_dir}${path_sep}$ENV{PATH}")
 
         set(crubit_out_dir "${CMAKE_CURRENT_BINARY_DIR}/corrosion_generated/crubit/${target_name}")
         # Since cargo cpp_api_from_rust uses cargo build internally, we pass cargo build args after `--`
