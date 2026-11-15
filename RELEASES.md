@@ -1,4 +1,9 @@
-# v0.6.1 (2025-01-17)
+# Unreleased
+
+- Remove workaround for windows gnullvm targets. The minimum required Rust version for gnullvm targets is now 1.83.
+  This fixes gnullvm on Rust 1.100 and newer.
+
+# v0.6.1 (2026-01-17)
 
 ## Fixes
 
