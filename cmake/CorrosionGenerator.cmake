@@ -63,6 +63,7 @@ function(_corrosion_setup_crubit out_cargo_crubit out_crubit_depends)
       message(FATAL_ERROR "Internal error - Crubit should have defined a crubit_support cmake target, but did not. Please file a bug at https://github.com/google/crubit/")
     endif()
     _corrosion_find_rust_paths(_crubit_rust_paths)
+    # TODO: We should detect if the version matches!
     find_program(installed_cargo_crubit cargo-cpp_api_from_rust PATHS ${_crubit_rust_paths})
 
     if(installed_cargo_crubit)
@@ -84,8 +85,10 @@ function(_corrosion_setup_crubit out_cargo_crubit out_crubit_depends)
             add_custom_command(OUTPUT "${cargo_crubit}"
                 COMMAND ${CMAKE_COMMAND}
                 -E env
-                "CARGO_BUILD_RUSTC=$CACHE{CORROSION_TOOLS_RUSTC}"
-                $CACHE{CORROSION_TOOLS_CARGO} install
+                # We use _CORROSION_RUSTC instead of CORROSION_TOOLS_RUSTC here, since the rustc version
+                # must match what we are compiling later in the main build.
+                "CARGO_BUILD_RUSTC=$CACHE{_CORROSION_RUSTC}"
+                $CACHE{_CORROSION_CARGO} install
                     --path "${crubit_SOURCE_DIR}/cargo/cc_bindings_from_rs/cargo-cpp_api_from_rust"
                     --locked
                     --root "${local_crubit_install_dir}"
