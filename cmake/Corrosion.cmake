@@ -813,8 +813,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     # without workspace) they won't collide if they use a common dependency. This would confuse cargo and trigger
     # unnecessary rebuilds
     cmake_path(GET workspace_manifest_path PARENT_PATH parent_path)
-    cmake_path(GET parent_path PARENT_PATH grandparent_path)
-    string(REPLACE "${grandparent_path}/" "" cargo_folder_name "${parent_path}")
+    cmake_path(GET parent_path FILENAME cargo_folder_name)
     string(SHA1 cargo_path_hash ${workspace_manifest_path})
     # Include a hash of the full path in case there are multiple projects with the same folder name
     string(SUBSTRING "${cargo_path_hash}" 0 5 cargo_path_hash)
