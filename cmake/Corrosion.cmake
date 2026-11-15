@@ -930,25 +930,34 @@ function(_add_cargo_build out_cargo_build_out_dir)
 
     set(crubit_header_byproducts "")
     if(is_crubit_lib)
+        execute_process(
+            COMMAND "${_CORROSION_RUSTC}" --print sysroot
+            WORKING_DIRECTORY "${workspace_toml_dir}"
+            OUTPUT_VARIABLE rustc_sysroot
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY
+        )
         cmake_path(GET ACB_CARGO_CRUBIT_BIN PARENT_PATH cargo_cmd_dir)
         if(CMAKE_HOST_WIN32)
             # On Windows, DLLs are typically in the bin directory.
-            get_filename_component(rustc_lib_dir "${_CORROSION_RUSTC}" DIRECTORY)
+            set(rustc_lib_dir "${rustc_sysroot}/bin")
             set(rustc_lib_dir_env "")
             set(path_var "PATH=${cargo_cmd_dir};${rustc_lib_dir};$ENV{PATH}")
             # Escape to prevent COMMAND_EXPAND_LISTS from splitting the command on windows.
             string(REPLACE ";" "\\;" path_var "${path_var}")
         else()
-            if (CMAKE_HOST_APPLE)
+            if(CMAKE_HOST_APPLE)
               set(lib_path_env_var "DYLD_LIBRARY_PATH")
             else()
               set(lib_path_env_var "LD_LIBRARY_PATH")
             endif()
             # On Linux, shared objects are typically in the lib directory
-            get_filename_component(rustc_bin_dir "${_CORROSION_RUSTC}" DIRECTORY)
-            get_filename_component(rustc_root_dir "${rustc_bin_dir}" DIRECTORY)
-            set(rustc_lib_dir "${rustc_root_dir}/lib")
+            set(rustc_lib_dir "${rustc_sysroot}/lib")
             set(rustc_lib_dir_env "${lib_path_env_var}=${rustc_lib_dir}")
+            if(NOT "$ENV{${lib_path_env_var}}" STREQUAL "")
+                string(APPEND rustc_lib_dir_env ":$ENV{${lib_path_env_var}}")
+            endif()
+            string(REPLACE ";" "\\;" rustc_lib_dir_env "${rustc_lib_dir_env}")
             set(path_var "PATH=${cargo_cmd_dir}:$ENV{PATH}")
         endif()
 
