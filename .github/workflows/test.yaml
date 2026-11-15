@@ -478,9 +478,9 @@ jobs:
         os:
           - ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install CMake
-        uses: lukka/get-cmake@519de0c7b4812477d74976b2523a9417f552d126
+        uses: lukka/get-cmake@v4.4.2
         with:
           cmakeVersion: "~3.24.0"
           ninjaVersion: "~1.10.0"
