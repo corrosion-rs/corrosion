@@ -272,7 +272,6 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
 
     foreach(output_dir_prop_name ${output_dir_prop_names})
         get_target_property(output_dir ${target_name} "${output_dir_prop_name}")
-        set(output_prop_name "${output_dir_prop_name}")
         if(output_dir)
             break()
         endif()
@@ -343,13 +342,12 @@ function(_corrosion_copy_byproduct_deferred target_name output_dir_prop_names ca
     list(TRANSFORM src_file_names PREPEND "${cargo_build_dir}/")
     list(TRANSFORM file_names PREPEND "${output_dir}/" OUTPUT_VARIABLE dst_file_names)
     message(DEBUG "Adding command to copy byproducts `${file_names}` to ${dst_file_names}")
-    set(cli_command "copy_if_different")
     add_custom_command(TARGET _cargo-build_${target_name}
                         POST_BUILD
                         # output_dir may contain a Generator expression.
                         COMMAND  ${CMAKE_COMMAND} -E make_directory "${output_dir}"
                         COMMAND
-                        ${CMAKE_COMMAND} -E ${cli_command}
+                        ${CMAKE_COMMAND} -E copy_if_different
                             # tested to work with both multiple files and paths with spaces
                             ${src_file_names}
                             "${output_dir}"
@@ -484,7 +482,6 @@ function(_corrosion_add_library_target)
     if(has_staticlib)
         list(APPEND archive_output_byproducts ${static_lib_name})
     endif()
-  
 
     if(has_cdylib)
         set("${CALT_OUT_SHARED_LIB_BYPRODUCTS}" "${dynamic_lib_name}" PARENT_SCOPE)
@@ -685,7 +682,7 @@ function(_add_cargo_build out_cargo_build_out_dir)
     set(workspace_manifest_path "${ACB_WORKSPACE_MANIFEST_PATH}")
     set(build_byproducts "${ACB_BYPRODUCTS}")
 
-    unset(cargo_rustc_crate_types)    
+    unset(cargo_rustc_crate_types)
     get_property(crubit_enabled GLOBAL PROPERTY CORROSION_CRUBIT_${target_name})
     if(crubit_enabled AND ("lib" IN_LIST target_kinds OR "rlib" IN_LIST target_kinds))
         set(is_crubit_lib ON)
