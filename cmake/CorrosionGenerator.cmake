@@ -156,7 +156,7 @@ function(_generator_add_package_targets)
 
         math(EXPR target_kind_len-1 "${target_kind_len} - 1")
         set(kinds)
-        unset(override_package_crate_type)
+        set(crate_type_overridden FALSE)
         # OVERRIDE_CRATE_TYPE is more specific than the CRATE_TYPES argument to corrosion_import_crate, and thus takes
         # priority.
         if(DEFINED GAPT_OVERRIDE_CRATE_TYPE_ARGS)
@@ -165,10 +165,12 @@ function(_generator_add_package_targets)
                     message(DEBUG "Forcing crate ${target_name} to crate-type(s): ${override_crate_types}.")
                     # Convert to CMake list
                     string(REPLACE "," ";" kinds "${override_crate_types}")
+                    set(crate_type_overridden TRUE)
                     break()
                 endif()
             endforeach()
-        else()
+        endif()
+        if(NOT crate_type_overridden)
             foreach(ix RANGE ${target_kind_len-1})
                 string(JSON kind GET "${target_kind}" ${ix})
                 if(NOT crate_types OR ${kind} IN_LIST crate_types)

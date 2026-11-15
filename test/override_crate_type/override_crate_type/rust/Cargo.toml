@@ -8,3 +8,6 @@ edition = "2018"
 
 [lib]
 name = "my_rust_lib"
+
+[workspace]
+members = ["declared_staticlib"]
