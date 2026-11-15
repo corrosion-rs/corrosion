@@ -6,6 +6,7 @@ foreign languages.
 1. [bindgen](#bindgen)
 2. [cbindgen](#cbindgen-integration)
 3. [cxx](#cxx-integration)
+4. [crubit](#crubit-integration)
 
 ## bindgen
 
@@ -36,3 +37,11 @@ This is not available on a stable released version yet, and the details are subj
 [cxx] is a tool which generates bindings for C++/Rust interop.
 
 {{#include ../../cmake/Corrosion.cmake:corrosion_add_cxxbridge}}
+
+## Crubit integration
+
+⚠️⚠️⚠️ **EXPERIMENTAL** ⚠️⚠️⚠️
+
+[crubit](https://crubit.rs/) is another tool for C++/Rust interop.
+
+{{#include ../../cmake/Corrosion.cmake:corrosion-experimental-crubit}}

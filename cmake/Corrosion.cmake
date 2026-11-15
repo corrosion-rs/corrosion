@@ -1277,6 +1277,22 @@ corrosion_experimental_crubit(<target_name>)
 The generated C++ bindings use Clang-specific constructs, so C++ code that includes them must be compiled
 with Clang (or AppleClang). Other compilers, such as GCC, fail to compile the generated headers. Select Clang
 when configuring, e.g. `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ...`.
+
+### Configuration
+
+By default Corrosion will fetch the latest version of crubit. You can override this by specifying which version
+to depend on with `FetchContent_Declare()` before calling `corrosion_experimental_crubit()` for the first time.
+
+```CMake
+include(FetchContent)
+FetchContent_Declare(Crubit
+    GIT_REPOSITORY https://github.com/google/crubit.git
+    GIT_TAG <full-commit-sha>
+)
+
+corrosion_experimental_crubit(my_lib)
+corrosion_import_crate(MANIFEST_PATH rust/Cargo.toml)
+```
 ANCHOR_END: corrosion-experimental-crubit
 #]=======================================================================]
 function(corrosion_experimental_crubit target_name)
