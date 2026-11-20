@@ -2020,13 +2020,14 @@ function(corrosion_add_cxxbridge cxx_target)
 
     # No suitable version of cxxbridge was installed, so use custom target to build correct version.
     if(NOT cxxbridge)
-        if(NOT TARGET "cxxbridge_v${cxx_required_version}")
-            unset(executable_postfix)
-            if(Rust_CARGO_HOST_OS STREQUAL "windows")
-                set(executable_postfix ".exe")
-            endif()
+        unset(executable_postfix)
+        if(Rust_CARGO_HOST_OS STREQUAL "windows")
+            set(executable_postfix ".exe")
+        endif()
+        set(cxxbridge "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}")
 
-            add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}"
+        if(NOT TARGET "cxxbridge_v${cxx_required_version}")
+            add_custom_command(OUTPUT "${cxxbridge}"
                 COMMAND
                 ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}"
                 COMMAND
@@ -2041,10 +2042,9 @@ function(corrosion_add_cxxbridge cxx_target)
                 COMMENT "Building cxxbridge (version ${cxx_required_version}) with Rust toolchain $CACHE{CORROSION_TOOLS_RUST_TOOLCHAIN}"
                 )
             add_custom_target("cxxbridge_v${cxx_required_version}"
-                DEPENDS "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}"
+                DEPENDS "${cxxbridge}"
                 )
         endif()
-        set(cxxbridge "${CMAKE_BINARY_DIR}/corrosion/cxxbridge_v${cxx_required_version}/bin/cxxbridge${executable_postfix}")
     endif()
 
 
@@ -2095,7 +2095,7 @@ function(corrosion_add_cxxbridge cxx_target)
             OUTPUT "${generated_dir}/include/rust/cxx.h"
             COMMAND
             ${cxxbridge} --header --output "${generated_dir}/include/rust/cxx.h"
-            DEPENDS "cxxbridge_v${cxx_required_version}"
+            DEPENDS "cxxbridge_v${cxx_required_version}" "${cxxbridge}"
             COMMENT "Generating rust/cxx.h header"
     )
 
@@ -2128,7 +2128,7 @@ function(corrosion_add_cxxbridge cxx_target)
                 ${cxxbridge} ${rust_source_path}
                     --output "${source_placement_dir}/${cxx_source}"
                     --include "${cxx_target}/${cxx_header}"
-            DEPENDS "cxxbridge_v${cxx_required_version}" "${rust_source_path}"
+            DEPENDS "cxxbridge_v${cxx_required_version}" "${cxxbridge}" "${rust_source_path}"
             COMMENT "Generating cxx bindings for crate ${_arg_CRATE} and file src/${filepath}"
         )
 
