@@ -1,70 +1,22 @@
-# CMake script to configure and build a test project
+# CMake script to configure and build a test project. Added by `corrosion_tests_add_test()`.
+#
+# Usage:
+#   cmake -DTEST_SOURCE_DIR=<dir> -DTEST_BINARY_DIR=<dir> -DTEST_GENERATOR=<generator>
+#         [-DTEST_GENERATOR_PLATFORM=<platform>] -DTEST_INITIAL_CACHE=<file>
+#         -P ConfigureAndBuild.cmake
+#
+# All settings for the test project itself (compilers, Rust toolchain, test specific variables...)
+# are in TEST_INITIAL_CACHE, which is passed to the test project via `cmake -C`.
 
-set(TEST_ARG_LIST)
-
-# Expect actual arguments to start at index 3 (cmake -P <script_name>)
-foreach(ARG_INDEX RANGE 3 ${CMAKE_ARGC})
-    list(APPEND TEST_ARG_LIST "${CMAKE_ARGV${ARG_INDEX}}")
+foreach(required_var TEST_SOURCE_DIR TEST_BINARY_DIR TEST_GENERATOR TEST_INITIAL_CACHE)
+    if("${${required_var}}" STREQUAL "")
+        message(FATAL_ERROR "Test internal error: `${required_var}` must be set.")
+    endif()
 endforeach()
 
-set(options "USE_INSTALLED_CORROSION")
-set(oneValueArgs
-    SOURCE_DIR
-    BINARY_DIR
-    GENERATOR
-    GENERATOR_PLATFORM
-    RUST_TOOLCHAIN
-    CARGO_TARGET
-    C_COMPILER
-    CXX_COMPILER
-    C_COMPILER_TARGET
-    CXX_COMPILER_TARGET
-    SYSTEM_NAME
-    CARGO_PROFILE
-    OSX_ARCHITECTURES
-    OSX_SYSROOT
-    TOOLCHAIN_FILE
-)
-set(multiValueArgs "PASS_THROUGH_ARGS")
-cmake_parse_arguments(TEST "${options}" "${oneValueArgs}"
-                      "${multiValueArgs}" ${TEST_ARG_LIST} )
-
 set(configure_args "")
-if(TEST_CARGO_TARGET)
-    list(APPEND configure_args "-DRust_CARGO_TARGET=${TEST_CARGO_TARGET}")
-endif()
-if(TEST_USE_INSTALLED_CORROSION)
-    list(APPEND configure_args "-DCORROSION_TESTS_FIND_CORROSION=ON")
-endif()
 if(TEST_GENERATOR_PLATFORM)
     list(APPEND configure_args "-A${TEST_GENERATOR_PLATFORM}")
-endif()
-if(TEST_C_COMPILER)
-    list(APPEND configure_args "-DCMAKE_C_COMPILER=${TEST_C_COMPILER}")
-endif()
-if(TEST_CXX_COMPILER)
-    list(APPEND configure_args "-DCMAKE_CXX_COMPILER=${TEST_CXX_COMPILER}")
-endif()
-if(TEST_C_COMPILER_TARGET)
-    list(APPEND configure_args "-DCMAKE_C_COMPILER_TARGET=${TEST_C_COMPILER_TARGET}")
-endif()
-if(TEST_CXX_COMPILER_TARGET)
-    list(APPEND configure_args "-DCMAKE_CXX_COMPILER_TARGET=${TEST_CXX_COMPILER_TARGET}")
-endif()
-if(TEST_SYSTEM_NAME)
-    list(APPEND configure_args "-DCMAKE_SYSTEM_NAME=${TEST_SYSTEM_NAME}")
-endif()
-if(TEST_OSX_ARCHITECTURES)
-    list(APPEND configure_args "-DCMAKE_OSX_ARCHITECTURES=${TEST_OSX_ARCHITECTURES}")
-endif()
-if(TEST_OSX_SYSROOT)
-    list(APPEND configure_args "-DCMAKE_OSX_SYSROOT=${TEST_OSX_SYSROOT}")
-endif()
-if(TEST_TOOLCHAIN_FILE)
-    list(APPEND configure_args "-DCMAKE_TOOLCHAIN_FILE=${TEST_TOOLCHAIN_FILE}")
-endif()
-if(TEST_CARGO_PROFILE)
-    list(APPEND configure_args "-DCARGO_PROFILE=${TEST_CARGO_PROFILE}")
 endif()
 
 # Remove old binary directory
@@ -74,14 +26,17 @@ file(MAKE_DIRECTORY "${TEST_BINARY_DIR}")
 
 message(STATUS "TEST_BINARY_DIRECTORY: ${TEST_BINARY_DIR}")
 
+# The settings aren't visible in the echoed configure command, so print them for debugging.
+file(READ "${TEST_INITIAL_CACHE}" initial_cache_contents)
+message(STATUS "Initial cache `${TEST_INITIAL_CACHE}`:\n${initial_cache_contents}")
+
 execute_process(
     COMMAND
         "${CMAKE_COMMAND}"
             "-G${TEST_GENERATOR}"
-            "-DRust_TOOLCHAIN=${TEST_RUST_TOOLCHAIN}"
             --log-level Debug
             ${configure_args}
-            ${TEST_PASS_THROUGH_ARGS}
+            -C "${TEST_INITIAL_CACHE}"
             -S "${TEST_SOURCE_DIR}"
             -B "${TEST_BINARY_DIR}"
         COMMAND_ECHO STDOUT

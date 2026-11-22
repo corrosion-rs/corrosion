@@ -1,46 +1,6 @@
-set(configure_cmake_args)
-if(CMAKE_C_COMPILER)
-    list(APPEND configure_cmake_args "C_COMPILER" "${CMAKE_C_COMPILER}")
-endif()
-if(CMAKE_CXX_COMPILER)
-    list(APPEND configure_cmake_args "CXX_COMPILER" "${CMAKE_CXX_COMPILER}")
-endif()
-if(CMAKE_C_COMPILER_TARGET)
-    list(APPEND configure_cmake_args "C_COMPILER_TARGET" "${CMAKE_C_COMPILER_TARGET}")
-endif()
-if(CMAKE_CXX_COMPILER_TARGET)
-    list(APPEND configure_cmake_args "CXX_COMPILER_TARGET" "${CMAKE_CXX_COMPILER_TARGET}")
-endif()
-if(CMAKE_GENERATOR_PLATFORM)
-    list(APPEND configure_cmake_args "GENERATOR_PLATFORM" "${CMAKE_GENERATOR_PLATFORM}")
-endif()
-if(CMAKE_OSX_ARCHITECTURES)
-    list(APPEND configure_cmake_args OSX_ARCHITECTURES "${CMAKE_OSX_ARCHITECTURES}")
-endif()
-if(CMAKE_OSX_SYSROOT)
-    list(APPEND configure_cmake_args OSX_SYSROOT "${CMAKE_OSX_SYSROOT}")
-endif()
-if(CMAKE_TOOLCHAIN_FILE)
-    list(APPEND configure_cmake_args TOOLCHAIN_FILE "${CMAKE_TOOLCHAIN_FILE}")
-endif()
-
-add_test(NAME "output_directory_build"
-    COMMAND
-        ${CMAKE_COMMAND}
-        -P "${CMAKE_SOURCE_DIR}/test/ConfigureAndBuild.cmake"
-        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/output directory"
-        BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build"
-        GENERATOR "${CMAKE_GENERATOR}"
-        RUST_TOOLCHAIN "${Rust_TOOLCHAIN}"
-        CARGO_TARGET "${Rust_CARGO_TARGET}"
-        SYSTEM_NAME "${CMAKE_SYSTEM_NAME}"
-        ${configure_cmake_args}
-        COMMAND_EXPAND_LISTS
-)
-set_tests_properties("output_directory_build" PROPERTIES FIXTURES_SETUP "build_fixture_output_directory")
-if(CORROSION_TESTS_INSTALL_CORROSION)
-    set_tests_properties("output_directory_build" PROPERTIES FIXTURES_REQUIRED "fixture_corrosion_install")
-endif()
+# The source directory intentionally contains a space.
+corrosion_tests_add_test(output_directory "" TEST_SRC_DIR "output directory")
+set(build_dir "${CMAKE_CURRENT_BINARY_DIR}/build-output_directory")
 
 get_cmake_property(IS_MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
 
@@ -67,7 +27,7 @@ foreach(output_approach targetprop var targetprop_pdb_fallback)
             COMMAND
             "${CMAKE_COMMAND}"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/../TestFileExists.cmake"
-            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_bin_${output_approach}/${config_path_str}${bin_name}"
+            "${build_dir}/custom_bin_${output_approach}/${config_path_str}${bin_name}"
     )
     set_tests_properties("output_directory_bin_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
@@ -79,7 +39,7 @@ foreach(output_approach targetprop var targetprop_pdb_fallback)
             COMMAND
             "${CMAKE_COMMAND}"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/../TestFileExists.cmake"
-            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_archive_${output_approach}/${config_path_str}${static_lib_name}"
+            "${build_dir}/custom_archive_${output_approach}/${config_path_str}${static_lib_name}"
     )
     set_tests_properties("output_directory_staticlib_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
@@ -95,7 +55,7 @@ foreach(output_approach targetprop var targetprop_pdb_fallback)
             COMMAND
             "${CMAKE_COMMAND}"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/../TestFileExists.cmake"
-            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_lib_${output_approach}/${config_path_str}${dynamic_lib_name}"
+            "${build_dir}/custom_lib_${output_approach}/${config_path_str}${dynamic_lib_name}"
     )
     set_tests_properties("output_directory_cdylib_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
@@ -108,7 +68,7 @@ foreach(output_approach targetprop var targetprop_pdb_fallback)
             -P "${CMAKE_CURRENT_SOURCE_DIR}/../TestFileExists.cmake"
             # Implib is an ARCHIVE artifact, see:
             # https://cmake.org/cmake/help/v3.25/manual/cmake-buildsystem.7.html#archive-output-artifacts
-            "${CMAKE_CURRENT_BINARY_DIR}/build/custom_archive_${output_approach}/${config_path_str}${implib_name}"
+            "${build_dir}/custom_archive_${output_approach}/${config_path_str}${implib_name}"
             )
         set_tests_properties("output_directory_implib_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
@@ -133,7 +93,7 @@ foreach(output_approach targetprop var targetprop_pdb_fallback)
                 COMMAND
                 "${CMAKE_COMMAND}"
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/../TestFileExists.cmake"
-                "${CMAKE_CURRENT_BINARY_DIR}/build/${expected_lib_pdb_path}/${config_path_str}${lib_pdb_name}"
+                "${build_dir}/${expected_lib_pdb_path}/${config_path_str}${lib_pdb_name}"
                 )
             set_tests_properties("output_directory_cdylib_pdb_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
 
@@ -142,7 +102,7 @@ foreach(output_approach targetprop var targetprop_pdb_fallback)
                 COMMAND
                 "${CMAKE_COMMAND}"
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/../TestFileExists.cmake"
-                "${CMAKE_CURRENT_BINARY_DIR}/build/${expected_bin_pdb_path}/${config_path_str}${bin_pdb_name}"
+                "${build_dir}/${expected_bin_pdb_path}/${config_path_str}${bin_pdb_name}"
                 )
             set_tests_properties("output_directory_bin_pdb_${output_approach}" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
         endif()
@@ -154,12 +114,9 @@ add_test(NAME postbuild_custom_command
     COMMAND
     "${CMAKE_COMMAND}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/../TestFileExists.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/build/another_dir/moved_bin"
+    "${build_dir}/another_dir/moved_bin"
     )
 set_tests_properties("postbuild_custom_command" PROPERTIES FIXTURES_REQUIRED "build_fixture_output_directory")
-
-add_test(NAME "output_directory_cleanup" COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/build")
-set_tests_properties("output_directory_cleanup" PROPERTIES FIXTURES_CLEANUP "build_fixture_output_directory")
 
 ####################################
 # output_directory_config
