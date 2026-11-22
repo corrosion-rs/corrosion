@@ -1,12 +1,12 @@
 if(CORROSION_TESTS_CRUBIT)
     corrosion_tests_add_test(crubit "main")
-    set(library_path_args)
+    set(library_path_cache_vars)
     if(FETCHCONTENT_SOURCE_DIR_CRUBIT)
-        list(APPEND library_path_args "-DFETCHCONTENT_SOURCE_DIR_CRUBIT=${FETCHCONTENT_SOURCE_DIR_CRUBIT}")
+        list(APPEND library_path_cache_vars "FETCHCONTENT_SOURCE_DIR_CRUBIT=${FETCHCONTENT_SOURCE_DIR_CRUBIT}")
     endif()
     corrosion_tests_add_test(crubit_library_path ""
         TEST_SRC_DIR library_path
-        PASS_THROUGH_ARGS ${library_path_args})
+        CACHE_VARS ${library_path_cache_vars})
     add_test(NAME crubit_incremental
         COMMAND "${CMAKE_COMMAND}"
             "-DTEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/build-crubit-incremental"

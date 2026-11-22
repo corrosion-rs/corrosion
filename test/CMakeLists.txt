@@ -21,23 +21,9 @@ option(CORROSION_TESTS_KEEP_BUILDDIRS
     "By default corrosion tests will cleanup after themselves. This option limits the cleaning up to the
      target directories and will keep the build directories, which may be useful for caching."
     OFF)
-mark_as_advanced(CORROSION_TESTS_NO_CLEANUP)
+mark_as_advanced(CORROSION_TESTS_KEEP_BUILDDIRS)
 
 set(test_install_path "${CMAKE_CURRENT_BINARY_DIR}/test-install-corrosion")
-file(REAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.." corrosion_source_dir)
-set(test_header_contents
-        "option(CORROSION_TESTS_FIND_CORROSION \"Use Corrosion as a subdirectory\" OFF)"
-        "if (CORROSION_TESTS_FIND_CORROSION)"
-        "    set(CMAKE_PREFIX_PATH \"${test_install_path}\" CACHE INTERNAL \"\" FORCE)"
-        "    find_package(Corrosion REQUIRED PATHS \"${test_install_path}\" NO_CMAKE_SYSTEM_PATH)"
-        "else()"
-        "    add_subdirectory(\"${corrosion_source_dir}\" corrosion)"
-        "endif()"
-)
-
-string(REPLACE ";" "\n" test_header_contents "${test_header_contents}")
-
-file(WRITE test_header.cmake "${test_header_contents}")
 
 option(CORROSION_TESTS_INSTALL_CORROSION
         "Install Corrosion to a test directory and let tests use the installed Corrosion"
@@ -81,12 +67,74 @@ if(CORROSION_TESTS_INSTALL_CORROSION)
     )
 endif()
 
+# Settings of this build that every test project inherits. A variable is forwarded if it
+# is non-empty when `corrosion_tests_add_test()` is called, so a test can override one by setting
+# a normal variable before the call (see `custom_target`) or via `CACHE_VARS`.
+set(_corrosion_tests_forwarded_variables
+    CMAKE_C_COMPILER
+    CMAKE_CXX_COMPILER
+    CMAKE_C_COMPILER_TARGET
+    CMAKE_CXX_COMPILER_TARGET
+    CMAKE_OSX_ARCHITECTURES
+    CMAKE_OSX_SYSROOT
+    CMAKE_TOOLCHAIN_FILE
+    CORROSION_VERBOSE_OUTPUT
+    Rust_TOOLCHAIN
+    Rust_CARGO_TARGET
+    Rust_RUSTUP_INSTALL_MISSING_TARGET
+)
+if(CMAKE_CROSSCOMPILING)
+    list(APPEND _corrosion_tests_forwarded_variables CMAKE_SYSTEM_NAME)
+    # Only forward a user-specified version, not one CMake computed itself (e.g. for Android).
+    if(DEFINED CACHE{CMAKE_SYSTEM_VERSION})
+        list(APPEND _corrosion_tests_forwarded_variables CMAKE_SYSTEM_VERSION)
+    endif()
+endif()
+get_property(_corrosion_tests_is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(NOT _corrosion_tests_is_multi_config)
+    list(APPEND _corrosion_tests_forwarded_variables CMAKE_BUILD_TYPE)
+endif()
+
+# Appends a `set(<name> [=[<value>]=] CACHE <type> "" FORCE)` line for an initial-cache script
+# (`cmake -C`) to the variable <out_var>. CMake reads bracket arguments verbatim, so we don't need to escape.
+function(_corrosion_tests_append_cache_entry out_var name type value)
+    string(FIND "${value}]" "]=]" closing_bracket_pos)
+    if(NOT closing_bracket_pos EQUAL -1 OR "${value}" MATCHES "^\n|\r\n")
+        message(FATAL_ERROR "The value of `${name}` can't be passed to a test project: `${value}`")
+    endif()
+    set(${out_var} "${${out_var}}set(${name} [=[${value}]=] CACHE ${type} \"\" FORCE)\n" PARENT_SCOPE)
+endfunction()
+
+# corrosion_tests_add_test(<test_name> <bin_names>
+#                          [TEST_SRC_DIR <dir>]
+#                          [IS_HOSTBUILD]
+#                          [CACHE_VARS <name>[:<type>]=<value>...])
+#
+# Adds the test `<test_name>_build`, which configures and builds the CMake project in the directory
+# `<dir>` (default: `<test_name>`) in `build-<test_name>`, and a test `<test_name>_run_<bin>` for each
+# executable in the list <bin_names> (may be ""). The run tests are disabled when cross-compiling,
+# unless IS_HOSTBUILD is given.
+#
+# The test project is configured with an initial cache file (`cmake -C`), which contains the settings
+# in `_corrosion_tests_forwarded_variables` and then the CACHE_VARS, so CACHE_VARS take precedence.
+# Values are written verbatim, so lists and spaces need no special care, as long as each entry is a
+# single (quoted) argument:
+#     CACHE_VARS "CMAKE_OSX_ARCHITECTURES=arm64;x86_64" MY_OPTION:BOOL=ON
 function(corrosion_tests_add_test test_name bin_names)
     set(options "IS_HOSTBUILD")
-    set(one_value_kewords "TEST_SRC_DIR")
-    set(multi_value_keywords "")
-    cmake_parse_arguments(PARSE_ARGV 2 TST "${options}" "${one_value_kewords}" "${multi_value_keywords}")
-    set(pass_through_arguments "${TST_UNPARSED_ARGUMENTS}")
+    set(one_value_keywords "TEST_SRC_DIR")
+    set(multi_value_keywords "CACHE_VARS")
+    cmake_parse_arguments(PARSE_ARGV 2 TST "${options}" "${one_value_keywords}" "${multi_value_keywords}")
+    if(TST_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "corrosion_tests_add_test(${test_name}): Unexpected arguments: `${TST_UNPARSED_ARGUMENTS}`.\n"
+            "Valid keywords are: ${options} ${one_value_keywords} ${multi_value_keywords}. "
+            "Variables for the test project are passed as `CACHE_VARS <name>=<value>`.")
+    endif()
+    foreach(keyword IN LISTS TST_KEYWORDS_MISSING_VALUES)
+        if(keyword IN_LIST one_value_keywords)
+            message(FATAL_ERROR "corrosion_tests_add_test(${test_name}): `${keyword}` requires a value.")
+        endif()
+    endforeach()
 
 # In the future we could add multiple tests here for different configurations (generator, build mode, rust version ...)
 # which would allow us to simplify the github job matrix
@@ -96,48 +144,44 @@ function(corrosion_tests_add_test test_name bin_names)
         set(test_dir "${test_name}")
     endif()
 
-    set(configure_cmake_args)
-    if(CMAKE_C_COMPILER)
-        list(APPEND configure_cmake_args "C_COMPILER" "${CMAKE_C_COMPILER}")
+    set(initial_cache "# Generated by corrosion_tests_add_test(${test_name}). Do not edit.\n")
+    foreach(var IN LISTS _corrosion_tests_forwarded_variables)
+        if(NOT "${${var}}" STREQUAL "")
+            _corrosion_tests_append_cache_entry(initial_cache "${var}" STRING "${${var}}")
+        endif()
+    endforeach()
+    if(CORROSION_TESTS_INSTALL_CORROSION)
+        _corrosion_tests_append_cache_entry(initial_cache CORROSION_TESTS_FIND_CORROSION BOOL ON)
+        _corrosion_tests_append_cache_entry(initial_cache CORROSION_TESTS_INSTALL_PREFIX PATH "${test_install_path}")
     endif()
-    if(CMAKE_CXX_COMPILER)
-        list(APPEND configure_cmake_args "CXX_COMPILER" "${CMAKE_CXX_COMPILER}")
-    endif()
-    if(CMAKE_C_COMPILER_TARGET)
-        list(APPEND configure_cmake_args "C_COMPILER_TARGET" "${CMAKE_C_COMPILER_TARGET}")
-    endif()
-    if(CMAKE_CXX_COMPILER_TARGET)
-        list(APPEND configure_cmake_args "CXX_COMPILER_TARGET" "${CMAKE_CXX_COMPILER_TARGET}")
-    endif()
-    if(CMAKE_GENERATOR_PLATFORM)
-        list(APPEND configure_cmake_args "GENERATOR_PLATFORM" "${CMAKE_GENERATOR_PLATFORM}")
-    endif()
-    if(CMAKE_CROSSCOMPILING)
-        list(APPEND configure_cmake_args SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
-    endif()
-    if(CMAKE_OSX_ARCHITECTURES)
-        list(APPEND configure_cmake_args OSX_ARCHITECTURES "${CMAKE_OSX_ARCHITECTURES}")
-    endif()
-    if(CMAKE_OSX_SYSROOT)
-        list(APPEND configure_cmake_args OSX_SYSROOT "${CMAKE_OSX_SYSROOT}")
-    endif()
-    if(CMAKE_TOOLCHAIN_FILE)
-        list(APPEND configure_cmake_args TOOLCHAIN_FILE "${CMAKE_TOOLCHAIN_FILE}")
-    endif()
+    foreach(entry IN LISTS TST_CACHE_VARS)
+        if(NOT "${entry}" MATCHES "^([A-Za-z_][A-Za-z0-9_.+-]*)(:([A-Za-z]+))?=(.*)$")
+            message(FATAL_ERROR "corrosion_tests_add_test(${test_name}): CACHE_VARS entry `${entry}` "
+                "is not of the form `<name>[:<type>]=<value>` (note: without a leading `-D`).")
+        endif()
+        set(name "${CMAKE_MATCH_1}")
+        set(value "${CMAKE_MATCH_4}")
+        string(TOUPPER "${CMAKE_MATCH_3}" type)
+        if(type STREQUAL "")
+            set(type STRING)
+        elseif(NOT type MATCHES "^(BOOL|FILEPATH|PATH|STRING|INTERNAL)$")
+            message(FATAL_ERROR "corrosion_tests_add_test(${test_name}): Invalid cache type `${type}` in `${entry}`.")
+        endif()
+        _corrosion_tests_append_cache_entry(initial_cache "${name}" "${type}" "${value}")
+    endforeach()
+    # Note: This file must be outside of the test's binary directory, which is deleted before configuring.
+    set(initial_cache_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}-initial-cache.cmake")
+    file(WRITE "${initial_cache_file}" "${initial_cache}")
 
     add_test(NAME "${test_name}_build"
             COMMAND
             ${CMAKE_COMMAND}
-            -P "${CMAKE_SOURCE_DIR}/test/ConfigureAndBuild.cmake"
-            SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/${test_dir}"
-            BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}"
-            GENERATOR "${CMAKE_GENERATOR}"
-            RUST_TOOLCHAIN "${Rust_TOOLCHAIN}"
-            CARGO_TARGET "${Rust_CARGO_TARGET}"
-            ${configure_cmake_args}
-            ${pass_through_arguments}
-
-            COMMAND_EXPAND_LISTS
+            "-DTEST_SOURCE_DIR=${CMAKE_CURRENT_LIST_DIR}/${test_dir}"
+            "-DTEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/build-${test_name}"
+            "-DTEST_GENERATOR=${CMAKE_GENERATOR}"
+            "-DTEST_GENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM}"
+            "-DTEST_INITIAL_CACHE=${initial_cache_file}"
+            -P "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/ConfigureAndBuild.cmake"
             )
     set_tests_properties("${test_name}_build" PROPERTIES FIXTURES_SETUP "build_fixture_${test_name}")
     if(CORROSION_TESTS_INSTALL_CORROSION)
